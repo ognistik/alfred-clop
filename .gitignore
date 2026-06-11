@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+
+# Alfred workflow user state
+prefs.plist
+workflow/prefs.plist
+UserInterfaceState.xcuserstate
+
+# Swift Package Manager
+.build/
+src/.build/
+.swiftpm/
+src/.swiftpm/
+Package.resolved
+src/Package.resolved
+
+# Xcode
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+
+# Local workflow builds and exports
+dist/
+*.alfredworkflow
+
+# Local environment and logs
+.env
+.env.*
+*.log
+
+# Python cache files from local tooling
+__pycache__/
+*.py[cod]
