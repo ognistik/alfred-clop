@@ -62,6 +62,25 @@ Run all three before completing a task that changes Swift code or the workflow.
 Fresh Universal Action and External Trigger routes clear stale
 `alfred_clop_input_json` before entering the Script Filter.
 
+Immediate actions leave the shared Script Filter through a Run Script action.
+Keep successful execution quiet because Clop's own UI presents progress and
+results. Use visible notifications only for execution errors. Parameter actions
+may use a Script Filter when their searchable parameter menus are implemented.
+
+## Local Alfred development
+
+The active development workflow is loaded in place through this symlink:
+
+```text
+~/Documents/Alfred/Alfred.alfredpreferences/workflows/com.aft.clop
+  -> ../../../GitHubRepos/alfred-clop/workflow
+```
+
+- Edit `workflow/info.plist` and `workflow/alfred-clop` in this repository.
+- Do not import or copy a separate `.alfredworkflow` for local testing.
+- Alfred can cache workflow topology. Restart Alfred after adding, removing, or
+  changing the type of workflow objects or connections.
+
 ## Testing rules
 
 - Add focused tests for every behavior change.

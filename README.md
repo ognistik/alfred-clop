@@ -18,9 +18,12 @@ executable will:
 The Swift executable accepts files from Alfred's Universal Actions, the
 clipboard, and the `paths` External Trigger. It normalizes and validates those
 inputs, detects supported media types, and returns a source-aware,
-fuzzy-searchable action menu.
+fuzzy-searchable action menu. Optimize, Aggressive Optimize, Uncrop PDF, and
+Strip Metadata now execute through the discovered Clop CLI. Successful
+immediate actions rely on Clop's own UI; Alfred shows a notification only when
+execution fails.
 
-Parameter menus and Clop execution are not implemented yet. See the
+Parameter menus and their related actions are not implemented yet. See the
 [project status](docs/project-status.md) for the current checkpoint and next
 recommended task.
 
@@ -65,6 +68,10 @@ The built binary is copied to:
 ```text
 workflow/alfred-clop
 ```
+
+The local Alfred development workflow is symlinked directly to `workflow/`, so
+edits and rebuilt binaries are used in place. Restart Alfred after changing
+workflow objects or connections so it reloads the topology.
 
 ## Requirements
 

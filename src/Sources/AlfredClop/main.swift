@@ -7,16 +7,40 @@ enum AlfredClopCommand {
             JSONOutput.print(ProbeMode.response())
         case "menu":
             JSONOutput.print(menuResponse(arguments: Array(arguments.dropFirst())))
+        case "execute":
+            execute(arguments: Array(arguments.dropFirst()))
         case nil:
             JSONOutput.print(errorResponse(
                 title: "Missing Alfred Clop mode",
-                subtitle: "Run alfred-clop menu or alfred-clop probe."
+                subtitle: "Run alfred-clop menu, execute, or probe."
             ))
         default:
             JSONOutput.print(errorResponse(
                 title: "Unknown Alfred Clop mode",
                 subtitle: "Unsupported mode: \(arguments[0])"
             ))
+        }
+    }
+
+    private static func execute(arguments: [String]) {
+        guard let requestJSON = value(after: "--request-json", in: arguments) else {
+            if arguments.contains("--quiet") {
+                printText("Missing Clop request: The execute mode requires OperationRequest JSON.")
+            } else {
+                JSONOutput.print(errorResponse(
+                    title: "Missing Clop request",
+                    subtitle: "The execute mode requires OperationRequest JSON."
+                ))
+            }
+            return
+        }
+
+        if arguments.contains("--quiet") {
+            if let feedback = ExecuteMode.quietFeedback(requestJSON: requestJSON) {
+                printText(feedback)
+            }
+        } else {
+            JSONOutput.print(ExecuteMode.response(requestJSON: requestJSON))
         }
     }
 
@@ -89,6 +113,10 @@ enum AlfredClopCommand {
                 valid: false
             )
         ])
+    }
+
+    private static func printText(_ text: String) {
+        FileHandle.standardOutput.write(Data("\(text)\n".utf8))
     }
 }
 

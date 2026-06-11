@@ -19,6 +19,19 @@
 				<false/>
 			</dict>
 		</array>
+		<key>086222E0-0634-41BB-8795-059C6B8AF42C</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
 		<array>
 			<dict>
@@ -120,7 +133,7 @@
 				<key>acceptsurls</key>
 				<false/>
 				<key>name</key>
-				<string>clopp</string>
+				<string>Clop</string>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.trigger.universalaction</string>
@@ -189,6 +202,36 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
+if [[ -n "$feedback" ]]; then
+  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+on run argv
+  display notification (item 1 of argv) with title "Alfred Clop"
+end run
+APPLESCRIPT
+fi</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>argument</key>
 				<string></string>
 				<key>passthroughargument</key>
@@ -249,6 +292,13 @@ fi</string>
 			<real>500</real>
 			<key>ypos</key>
 			<real>255</real>
+		</dict>
+		<key>B30C287D-7137-4B63-8FA2-95B849C440FA</key>
+		<dict>
+			<key>xpos</key>
+			<real>865</real>
+			<key>ypos</key>
+			<real>225</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
