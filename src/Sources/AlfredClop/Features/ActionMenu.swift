@@ -28,16 +28,6 @@ enum ActionCatalog {
             supportsFolders: true
         ),
         ActionDefinition(
-            action: .aggressiveOptimise,
-            title: "Aggressive Optimize",
-            subtitle: "Use Clop's aggressive optimization",
-            aliases: ["aggressive", "smaller", "compress more"],
-            supportedKinds: [.image, .video, .audio, .pdf],
-            requiresParameters: false,
-            supportsURLs: true,
-            supportsFolders: true
-        ),
-        ActionDefinition(
             action: .crop,
             title: "Crop / Resize",
             subtitle: "Crop to dimensions, aspect ratio, or edge size",
@@ -58,11 +48,31 @@ enum ActionCatalog {
             supportsFolders: true
         ),
         ActionDefinition(
-            action: .convert,
+            action: .convertImage,
             title: "Convert Image",
-            subtitle: "Convert images to WebP, AVIF, or HEIC",
-            aliases: ["convert", "webp", "avif", "heic", "format"],
+            subtitle: "Choose an image format",
+            aliases: ["convert", "webp", "avif", "heic", "jxl", "jpeg", "png", "format"],
             supportedKinds: [.image],
+            requiresParameters: true,
+            supportsURLs: true,
+            supportsFolders: true
+        ),
+        ActionDefinition(
+            action: .convertVideo,
+            title: "Convert Video",
+            subtitle: "Choose a video format or codec",
+            aliases: ["convert", "mp4", "gif", "webm", "hevc", "x265", "av1", "codec"],
+            supportedKinds: [.video],
+            requiresParameters: true,
+            supportsURLs: true,
+            supportsFolders: true
+        ),
+        ActionDefinition(
+            action: .convertAudio,
+            title: "Convert Audio",
+            subtitle: "Choose an audio format",
+            aliases: ["convert", "mp3", "aac", "m4a", "opus", "ogg", "flac", "wav", "aiff"],
+            supportedKinds: [.audio],
             requiresParameters: true,
             supportsURLs: true,
             supportsFolders: true
@@ -139,6 +149,7 @@ enum ActionMenu {
     static let inputContextVariable = "alfred_clop_input_context"
     static let menuStateVariable = "alfred_clop_menu_state"
     static let requestKindVariable = "alfred_clop_request_kind"
+    static let publicRequestVariable = "alfred_clop_request"
 
     static func response(
         clipboard: ClipboardReading,
@@ -261,6 +272,11 @@ enum ActionMenu {
             return errorItem(
                 title: "No supported content in folder",
                 subtitle: path
+            )
+        case InputCollectionError.recursionDisabledFolder:
+            return workflowSettingsItem(
+                title: "Supported media is in subfolders",
+                subtitle: "Press Return to open workflow configuration."
             )
         case InputCollectionError.unreadableFolder(let path):
             return errorItem(title: "Unable to read folder", subtitle: path)
@@ -600,13 +616,12 @@ enum ActionMenu {
             switch definition.action {
             case .optimise:
                 action = .optimise(aggressive: false)
-            case .aggressiveOptimise:
-                action = .optimise(aggressive: true)
             case .uncropPDF:
                 action = .uncropPDF
             case .stripMetadata:
                 action = .stripMetadata
-            case .crop, .downscale, .convert, .cropPDF:
+            case .crop, .downscale, .convertImage, .convertVideo,
+                 .convertAudio, .cropPDF:
                 preconditionFailure("Parameter actions must use ParameterStepRequest")
             }
 
@@ -646,14 +661,15 @@ enum ActionMenu {
         switch definition.action {
         case .crop:
             state = .crop(request)
-        case .downscale, .convert, .cropPDF:
+        case .downscale, .convertImage, .convertVideo, .convertAudio, .cropPDF:
             state = MenuState(mode: .actions, parameterRequest: request)
-        case .optimise, .aggressiveOptimise, .uncropPDF, .stripMetadata:
+        case .optimise, .uncropPDF, .stripMetadata:
             preconditionFailure("Immediate actions do not have parameter state")
         }
 
         return [
             requestKindVariable: WorkflowRequestKind.parameterStep.rawValue,
+            publicRequestVariable: "",
             menuStateVariable: (try? JSONOutput.string(
                 for: state,
                 prettyPrinted: false
@@ -663,7 +679,8 @@ enum ActionMenu {
                     paths: selection.inputs,
                     mediaKinds: selection.mediaKinds,
                     itemKinds: selection.itemKinds,
-                    ambiguousKinds: selection.ambiguousKinds
+                    ambiguousKinds: selection.ambiguousKinds,
+                    processableItemCount: selection.processableItemCount
                 ),
                 prettyPrinted: false
             )) ?? "",
@@ -680,7 +697,8 @@ enum ActionMenu {
                 paths: selection.inputs,
                 mediaKinds: selection.mediaKinds,
                 itemKinds: selection.itemKinds,
-                ambiguousKinds: selection.ambiguousKinds
+                ambiguousKinds: selection.ambiguousKinds,
+                processableItemCount: selection.processableItemCount
             ),
             prettyPrinted: false
         ) else {
@@ -689,6 +707,7 @@ enum ActionMenu {
         return [
             inputJSONVariable: json,
             inputContextVariable: context.rawValue,
+            publicRequestVariable: "",
             menuStateVariable: (try? JSONOutput.string(
                 for: MenuState.actions,
                 prettyPrinted: false
@@ -702,29 +721,57 @@ enum ActionMenu {
         context: ActionInputContext
     ) -> String {
         guard !selection.ambiguousKinds.isEmpty else {
-            return "\(context.subtitlePrefix): \(definition.subtitle)"
+            return clearInputSubtitle(
+                definition: definition,
+                selection: selection,
+                context: context
+            )
         }
 
         let requirement: String?
         switch definition.action {
         case .crop:
-            requirement = "Requires image, video, or PDF content"
+            requirement = "Image, video, or PDF only"
         case .downscale:
-            requirement = "Requires image, video, or audio content"
-        case .convert:
-            requirement = "Requires image content"
+            requirement = "Image, video, or audio only"
+        case .convertImage:
+            requirement = "Images only"
+        case .convertVideo:
+            requirement = "Videos only"
+        case .convertAudio:
+            requirement = "Audio only"
         case .cropPDF, .uncropPDF:
-            requirement = "Requires PDF content"
+            requirement = "PDF only"
         case .stripMetadata:
-            requirement = "Requires image or video content"
-        case .optimise, .aggressiveOptimise:
+            requirement = "Images or videos only"
+        case .optimise:
             requirement = nil
         }
 
-        return [
-            "\(context.subtitlePrefix): \(definition.subtitle)",
-            requirement
-        ].compactMap(\.self).joined(separator: " - ")
+        if let requirement {
+            return "\(context.subtitlePrefix) · \(requirement)"
+        }
+        return "\(context.subtitlePrefix): \(definition.subtitle)"
+    }
+
+    private static func clearInputSubtitle(
+        definition: ActionDefinition,
+        selection: InputSelection,
+        context: ActionInputContext
+    ) -> String {
+        let includesFolder = selection.itemKinds.contains(.folder)
+        let count = selection.processableItemCount
+        let inputDescription: String
+        if includesFolder, let count, count > 1 {
+            inputDescription = "\(context.subtitlePrefix), folder: \(count) items"
+        } else if includesFolder {
+            inputDescription = "\(context.subtitlePrefix), folder"
+        } else if let count, count > 1 {
+            inputDescription = "\(context.subtitlePrefix): \(count) items"
+        } else {
+            inputDescription = context.subtitlePrefix
+        }
+        return "\(inputDescription): \(definition.subtitle)"
     }
 
     private static func errorItem(
@@ -737,6 +784,24 @@ enum ActionMenu {
                 subtitle: subtitle,
                 arg: "",
                 valid: false
+            )
+        ])
+    }
+
+    private static func workflowSettingsItem(
+        title: String,
+        subtitle: String
+    ) -> ScriptFilterResponse {
+        ScriptFilterResponse(items: [
+            ScriptFilterItem(
+                title: title,
+                subtitle: subtitle,
+                arg: "",
+                valid: true,
+                variables: [
+                    requestKindVariable:
+                        WorkflowRequestKind.workflowSettings.rawValue
+                ]
             )
         ])
     }

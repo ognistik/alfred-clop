@@ -18,6 +18,7 @@ enum ActionInputContext: String, Codable {
 enum WorkflowRequestKind: String, Codable {
     case operation
     case parameterStep
+    case workflowSettings
 }
 
 struct MenuInput: Codable, Equatable {
@@ -25,17 +26,20 @@ struct MenuInput: Codable, Equatable {
     var mediaKinds: [MediaKind]?
     var itemKinds: [InputItemKind]?
     var ambiguousKinds: [AmbiguousInputKind]?
+    var processableItemCount: Int?
 
     init(
         paths: [String],
         mediaKinds: [MediaKind]? = nil,
         itemKinds: [InputItemKind]? = nil,
-        ambiguousKinds: [AmbiguousInputKind]? = nil
+        ambiguousKinds: [AmbiguousInputKind]? = nil,
+        processableItemCount: Int? = nil
     ) {
         self.paths = paths
         self.mediaKinds = mediaKinds
         self.itemKinds = itemKinds
         self.ambiguousKinds = ambiguousKinds
+        self.processableItemCount = processableItemCount
     }
 }
 
@@ -52,6 +56,21 @@ struct ClopRequest: Codable, Equatable {
         self.version = version
         self.input = input
         self.route = route
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case input
+        case route
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = container.contains(.version)
+            ? try container.decode(Int.self, forKey: .version)
+            : 1
+        input = try container.decode(ClopInputRequest.self, forKey: .input)
+        route = try container.decode(ClopRouteRequest.self, forKey: .route)
     }
 }
 

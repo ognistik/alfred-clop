@@ -109,12 +109,16 @@ enum ExecuteMode {
         }
 
         if command.expectsJSON,
-           let appResult = try? JSONDecoder().decode(
+           var appResult = try? JSONDecoder().decode(
                ClopAppResult.self,
                from: result.standardOutput
-           ),
-           !appResult.failed.isEmpty {
-            return incompleteFeedback(for: request, result: appResult)
+           ) {
+            appResult.failed.removeAll {
+                isKnownRemoteURLFalseFailure($0, request: request)
+            }
+            if !appResult.failed.isEmpty {
+                return incompleteFeedback(for: request, result: appResult)
+            }
         }
 
         return successFeedback(for: request)
@@ -267,6 +271,21 @@ enum ExecuteMode {
 
     private static func isAlreadyAtRequestedSize(_ error: String?) -> Bool {
         error?.hasPrefix("Image is already at the correct size or smaller:") == true
+    }
+
+    private static func isKnownRemoteURLFalseFailure(
+        _ failure: ClopAppResult.Failure,
+        request: OperationRequest
+    ) -> Bool {
+        guard let value = failure.forURL,
+              request.inputs.contains(value),
+              value.hasPrefix("http://") || value.hasPrefix("https://"),
+              let error = failure.error?.lowercased() else {
+            return false
+        }
+        return error.contains("url type https")
+            && error.contains("isn")
+            && error.contains("supported")
     }
 
     private static func failureMessage(from result: ClopProcessResult) -> String {

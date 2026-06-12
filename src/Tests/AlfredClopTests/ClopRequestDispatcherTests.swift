@@ -62,6 +62,35 @@ struct ClopRequestDispatcherTests {
         #expect(response.items.first?.title == "Type crop or resize parameters")
     }
 
+    @Test(arguments: [
+        ("image.png", ClopAction.convertImage),
+        ("video.mp4", ClopAction.convertVideo),
+        ("audio.mp3", ClopAction.convertAudio)
+    ])
+    func mediaSpecificConversionRoutesRemainHonestAndNonExecutable(
+        filename: String,
+        action: ClopAction
+    ) throws {
+        let file = try temporaryFile(named: filename)
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .menu(action: action)
+        )
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder()
+        )
+
+        #expect(response.items.first?.title == "This action needs more information")
+        #expect(response.items.first?.valid == false)
+    }
+
     @Test
     func accidentalMenuParameterObjectIsIgnored() throws {
         let file = try temporaryFile(named: "image.png")
@@ -118,6 +147,31 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func aggressiveExecuteRouteUsesOptimizeCapabilityWithoutMenuItem() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(action: .optimise(aggressive: true))
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Aggressive optimization complete")
+        #expect(runner.command?.arguments.contains("--aggressive") == true)
+    }
+
+    @Test
     func emptyFinderSelectionStopsWithoutClipboardFallback() throws {
         let request = ClopRequest(
             input: .finderSelection,
@@ -159,6 +213,77 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func missingRequestVersionDefaultsToVersionOne() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let json = """
+        {
+          "input": {"source": "explicit", "items": ["\(file.path)"]},
+          "route": {"type": "menu"}
+        }
+        """
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: json,
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder()
+        )
+
+        #expect(response.items.map(\.title).contains("Optimize"))
+    }
+
+    @Test
+    func nullRequestVersionIsAVisibleDecodingError() {
+        let json = """
+        {
+          "version": null,
+          "input": {"source": "clipboard"},
+          "route": {"type": "menu"}
+        }
+        """
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: json,
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder()
+        )
+
+        #expect(response.items.first?.title == "Invalid Clop request")
+    }
+
+    @Test
+    func dndSuppressesQuietFailureFeedbackOnly() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(action: .optimise(aggressive: false))
+        )
+        let json = try JSONOutput.string(for: request, prettyPrinted: false)
+        let runner = FailingDispatcherRunner()
+
+        let quiet = ClopRequestDispatcher.quietFeedback(
+            requestJSON: json,
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: Environment(values: ["dnd": "true"]),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+        let interactive = ClopRequestDispatcher.response(
+            requestJSON: json,
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: Environment(values: ["dnd": "true"]),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(quiet == nil)
+        #expect(interactive.items.first?.title == "Clop operation failed")
+    }
+
+    @Test
     func ambiguousURLShowsOnlyURLCapableActions() {
         let response = ActionMenu.response(
             for: InputSelection(
@@ -172,12 +297,13 @@ struct ClopRequestDispatcherTests {
 
         #expect(response.items.map(\.title) == [
             "Optimize",
-            "Aggressive Optimize",
             "Crop / Resize",
             "Downscale",
-            "Convert Image"
+            "Convert Image",
+            "Convert Video",
+            "Convert Audio"
         ])
-        #expect(response.items[2].subtitle.contains("Requires image, video, or PDF"))
+        #expect(response.items[1].subtitle.contains("Image, video, or PDF only"))
     }
 }
 
@@ -212,6 +338,16 @@ private final class CapturingDispatcherRunner: ClopProcessRunning,
             terminationStatus: 0,
             standardOutput: Data(#"{"done":[],"failed":[]}"#.utf8),
             standardError: Data()
+        )
+    }
+}
+
+private struct FailingDispatcherRunner: ClopProcessRunning {
+    func run(_ command: ClopCommand) throws -> ClopProcessResult {
+        ClopProcessResult(
+            terminationStatus: 2,
+            standardOutput: Data(),
+            standardError: Data("Failed".utf8)
         )
     }
 }

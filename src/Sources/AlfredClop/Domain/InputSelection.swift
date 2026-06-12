@@ -14,12 +14,14 @@ struct InputSelection: Codable, Equatable {
     var mediaKinds: [MediaKind]
     var itemKinds: [InputItemKind]
     var ambiguousKinds: [AmbiguousInputKind]
+    var processableItemCount: Int?
 
     init(
         inputs: [String],
         mediaKinds: [MediaKind],
         itemKinds: [InputItemKind] = [],
-        ambiguousKinds: [AmbiguousInputKind] = []
+        ambiguousKinds: [AmbiguousInputKind] = [],
+        processableItemCount: Int? = nil
     ) {
         self.inputs = inputs
         self.mediaKinds = mediaKinds
@@ -27,5 +29,6 @@ struct InputSelection: Codable, Equatable {
             ? Array(repeating: .localFile, count: inputs.count)
             : itemKinds
         self.ambiguousKinds = ambiguousKinds
+        self.processableItemCount = processableItemCount
     }
 }

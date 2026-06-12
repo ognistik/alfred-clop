@@ -573,6 +573,11 @@ is independent of Clop's app settings.
 - The exact JSON schema should be captured with fixture files for optimize,
   convert, and pipeline results.
 - Mixed media batches need integration tests.
+- Clop 3.0.0 can return status 0 with a JSON `failed` entry saying URL type
+  HTTPS is unsupported for nested Substack CDN image URLs even though Clop's
+  app UI accepts and processes the same submitted URL. Alfred Clop treats only
+  that exact remote-URL false failure as a successful submission; other
+  failures in the same batch remain reportable.
 - Generic `--types audio` remains worth a runtime fixture test if exposed.
 - Pipeline syntax beyond the examples should be treated as opaque user input
   until Clop publishes a complete step grammar.

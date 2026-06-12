@@ -5,12 +5,14 @@ import Testing
 struct ActionMenuTests {
     @Test
     func imageShowsConvert() {
-        #expect(actions(for: [.image]).contains(.convert))
+        #expect(actions(for: [.image]).contains(.convertImage))
     }
 
     @Test
-    func videoDoesNotShowConvert() {
-        #expect(!actions(for: [.video]).contains(.convert))
+    func videoAndAudioShowTheirOwnConversionActions() {
+        #expect(actions(for: [.video]).contains(.convertVideo))
+        #expect(actions(for: [.audio]).contains(.convertAudio))
+        #expect(!actions(for: [.video]).contains(.convertImage))
     }
 
     @Test
@@ -33,7 +35,6 @@ struct ActionMenuTests {
     func imageAndVideoIntersectionIsCorrect() {
         #expect(actions(for: [.image, .video]) == [
             .optimise,
-            .aggressiveOptimise,
             .crop,
             .downscale,
             .stripMetadata
@@ -44,7 +45,6 @@ struct ActionMenuTests {
     func imageAndPDFIntersectionIsCorrect() {
         #expect(actions(for: [.image, .pdf]) == [
             .optimise,
-            .aggressiveOptimise,
             .crop
         ])
     }
@@ -75,15 +75,16 @@ struct ActionMenuTests {
 
         #expect(response.items.map(\.title) == [
             "Optimize",
-            "Aggressive Optimize",
             "Crop / Resize",
             "Downscale",
             "Convert Image",
+            "Convert Video",
+            "Convert Audio",
             "Reversible PDF Crop",
             "Uncrop PDF",
             "Strip Metadata"
         ])
-        #expect(response.items[2].subtitle.contains("Requires image, video, or PDF"))
+        #expect(response.items[1].subtitle.contains("Image, video, or PDF only"))
     }
 
     @Test
@@ -223,10 +224,11 @@ struct ActionMenuTests {
 
         #expect(response.items.map(\.title) == [
             "Optimize",
-            "Aggressive Optimize",
             "Crop / Resize",
             "Downscale",
-            "Convert Image"
+            "Convert Image",
+            "Convert Video",
+            "Convert Audio"
         ])
     }
 
@@ -293,6 +295,7 @@ struct ActionMenuTests {
             item.variables?[ActionMenu.inputContextVariable]
                 == context.rawValue
         )
+        #expect(item.variables?[ActionMenu.publicRequestVariable] == "")
         let inputJSON = try #require(
             item.variables?[ActionMenu.inputJSONVariable]
         )
@@ -301,6 +304,77 @@ struct ActionMenuTests {
             from: Data(inputJSON.utf8)
         )
         #expect(menuInput.paths == inputs)
+    }
+
+    @Test
+    func folderSubtitleIncludesExactCountWhenKnown() {
+        let response = ActionMenu.response(
+            for: InputSelection(
+                inputs: ["/tmp/media"],
+                mediaKinds: [.image],
+                itemKinds: [.folder],
+                processableItemCount: 3
+            ),
+            query: "optimize",
+            context: .arguments
+        )
+
+        #expect(
+            response.items[0].subtitle
+                == "Passed input, folder: 3 items: Compress with Clop"
+        )
+    }
+
+    @Test
+    func ambiguousFolderSubtitleDoesNotClaimAnExactCount() {
+        let response = ActionMenu.response(
+            for: InputSelection(
+                inputs: ["/tmp/media"],
+                mediaKinds: [],
+                itemKinds: [.folder],
+                ambiguousKinds: [.folder]
+            ),
+            query: "optimize"
+        )
+
+        #expect(!response.items[0].subtitle.contains("items"))
+    }
+
+    @Test
+    func extensionlessURLUsesConciseSourceAwareRequirements() {
+        let response = ActionMenu.response(
+            for: InputSelection(
+                inputs: ["https://afadingthought.substack.com/p/notes-and-content"],
+                mediaKinds: [],
+                itemKinds: [.remoteURL],
+                ambiguousKinds: [.remoteURL]
+            ),
+            query: "",
+            context: .arguments
+        )
+
+        #expect(response.items[1].subtitle == "Passed input · Image, video, or PDF only")
+        #expect(response.items[3].subtitle == "Passed input · Images only")
+        #expect(response.items.allSatisfy { $0.subtitle.count < 60 })
+    }
+
+    @Test
+    func recursionDisabledFolderErrorExplainsTheConfigurationFix() {
+        let response = ActionMenu.collectionErrorResponse(
+            InputCollectionError.recursionDisabledFolder("/tmp/media"),
+            context: .arguments
+        )
+
+        #expect(response.items[0].title == "Supported media is in subfolders")
+        #expect(
+            response.items[0].subtitle
+                == "Press Return to open workflow configuration."
+        )
+        #expect(response.items[0].valid)
+        #expect(
+            response.items[0].variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.workflowSettings.rawValue
+        )
     }
 
     @Test
@@ -323,16 +397,13 @@ struct ActionMenuTests {
     }
 
     @Test
-    func exactAliasRanksBeforePrefixAndSubsequenceMatches() {
+    func smallerSearchDoesNotExposeStandaloneAggressiveOptimize() {
         let response = ActionMenu.response(
             for: InputSelection(inputs: ["/tmp/image.png"], mediaKinds: [.image]),
             query: "smaller"
         )
 
-        #expect(response.items.map(\.title).prefix(2) == [
-            "Aggressive Optimize",
-            "Downscale"
-        ])
+        #expect(response.items.map(\.title) == ["Downscale"])
     }
 
     private func actions(for kinds: [MediaKind]) -> [ClopAction] {

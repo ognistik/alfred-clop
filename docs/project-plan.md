@@ -353,6 +353,13 @@ routing are independent typed choices:
 - `execute`: run one complete typed operation without showing Alfred;
 - `recipe`: later run a stored recipe by stable identifier.
 
+Callers should continue sending `"version": 1`. For compatibility with early
+automation snippets, an omitted version is decoded as version 1. An explicit
+version remains authoritative: unsupported numbers are rejected visibly, and
+null or incorrectly typed versions are decoding errors. This preserves a
+forward-compatible discriminator without making the first public contract
+needlessly brittle.
+
 Use `items`, not `paths`, because explicit input may include local files,
 folders, and remote URLs.
 
@@ -539,8 +546,8 @@ Suggested top-level actions:
 
 Keep fast defaults near the top. Advanced controls should remain discoverable
 through searchable actions rather than turning every operation into a long
-mandatory wizard. Aggressive Optimize should not remain a separate top-level
-action once Command-Return is implemented for Optimize.
+mandatory wizard. Aggressive Optimize is not a separate top-level action;
+Command-Return will provide that override on Optimize.
 
 The query should fuzzy-match title, synonyms, and keywords. Examples:
 
@@ -777,12 +784,12 @@ Modifiers keep one meaning across top-level and parameter menus, but only
 appear where applicable. Unsupported modifiers must not silently acquire a
 different action-specific meaning.
 
-Remove the separate Aggressive Optimize action after Command-Return is
-available on Optimize. Option-Return depends on a tested output-preservation
-policy and must not be enabled before that policy exists. Control-Return is
-valid only when the selected item contains complete parameters that can be
-saved and replayed. On an existing preset it must route to a confirmation step
-before removal.
+Do not add a separate Aggressive Optimize action. Command-Return provides that
+override on Optimize once the modifier is implemented and verified.
+Option-Return depends on a tested output-preservation policy and must not be
+enabled before that policy exists. Control-Return is valid only when the
+selected item contains complete parameters that can be saved and replayed. On
+an existing preset it must route to a confirmation step before removal.
 
 Do not reserve modifiers for width/height syntax. Use `w128` and `h720` in the
 query grammar so modifier keys remain available for consistent workflow-wide

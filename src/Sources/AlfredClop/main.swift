@@ -11,6 +11,8 @@ enum AlfredClopCommand {
             execute(arguments: Array(arguments.dropFirst()))
         case "request":
             request(arguments: Array(arguments.dropFirst()))
+        case "route":
+            requestRoute(arguments: Array(arguments.dropFirst()))
         case "automate":
             automate(arguments: Array(arguments.dropFirst()))
         case nil:
@@ -36,6 +38,14 @@ enum AlfredClopCommand {
         }
         let context = value(after: "--input-context", in: arguments)
             .flatMap(ActionInputContext.init(rawValue:))
+        if arguments.contains("--quiet") {
+            if let feedback = ClopRequestDispatcher.quietFeedback(
+                requestJSON: requestJSON
+            ) {
+                printText(feedback)
+            }
+            return
+        }
         let response = ClopRequestDispatcher.response(
             requestJSON: requestJSON,
             query: value(after: "--query", in: arguments) ?? "",
@@ -56,6 +66,23 @@ enum AlfredClopCommand {
             return
         }
         JSONOutput.print(response)
+    }
+
+    private static func requestRoute(arguments: [String]) {
+        guard let requestJSON = value(after: "--request-json", in: arguments),
+              let request = try? JSONDecoder().decode(
+                  ClopRequest.self,
+                  from: Data(requestJSON.utf8)
+              ) else {
+            printText("invalid")
+            return
+        }
+        switch request.route {
+        case .menu:
+            printText("menu")
+        case .execute:
+            printText("execute")
+        }
     }
 
     private static func automate(arguments: [String]) {

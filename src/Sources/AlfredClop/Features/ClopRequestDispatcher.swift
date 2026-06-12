@@ -123,6 +123,9 @@ enum ClopRequestDispatcher {
             builder: builder,
             runner: runner
         )
+        if environment.checkbox("dnd") {
+            return nil
+        }
         guard let item = response.items.first else {
             return nil
         }
@@ -175,12 +178,12 @@ enum ClopRequestDispatcher {
                 query: query,
                 environment: environment
             )
-        case .downscale, .convert, .cropPDF:
+        case .downscale, .convertImage, .convertVideo, .convertAudio, .cropPDF:
             return feedback(
                 title: "This action needs more information",
                 subtitle: "Its parameter menu is not available yet."
             )
-        case .optimise, .aggressiveOptimise, .uncropPDF, .stripMetadata:
+        case .optimise, .uncropPDF, .stripMetadata:
             return ActionMenu.response(
                 for: selection,
                 query: query,
@@ -196,14 +199,22 @@ enum ClopRequestDispatcher {
     ) -> Bool {
         let menuAction: ClopAction
         switch action {
-        case let .optimise(aggressive):
-            menuAction = aggressive ? .aggressiveOptimise : .optimise
+        case .optimise:
+            menuAction = .optimise
         case .crop:
             menuAction = .crop
         case .downscale:
             menuAction = .downscale
         case .convert:
-            menuAction = .convert
+            if selection.mediaKinds == [.image] {
+                menuAction = .convertImage
+            } else if selection.mediaKinds == [.video] {
+                menuAction = .convertVideo
+            } else if selection.mediaKinds == [.audio] {
+                menuAction = .convertAudio
+            } else {
+                return false
+            }
         case .cropPDF:
             menuAction = .cropPDF
         case .uncropPDF:

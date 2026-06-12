@@ -208,7 +208,7 @@ struct InputCollectorTests {
         )
         try Data().write(to: nested.appendingPathComponent("photo.png"))
 
-        #expect(throws: InputCollectionError.unsupportedFolder(root.path)) {
+        #expect(throws: InputCollectionError.recursionDisabledFolder(root.path)) {
             try InputCollector().collect(
                 items: [root.path],
                 extractText: false,
@@ -223,6 +223,24 @@ struct InputCollectorTests {
         )
         #expect(recursive.mediaKinds == [.image])
         #expect(recursive.itemKinds == [.folder])
+        #expect(recursive.processableItemCount == 1)
+    }
+
+    @Test
+    func folderSelectionCountsSupportedFilesWhenInspectionCompletes() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data().write(to: root.appendingPathComponent("one.png"))
+        try Data().write(to: root.appendingPathComponent("two.mp4"))
+        try Data().write(to: root.appendingPathComponent("notes.txt"))
+
+        let selection = try InputCollector().collect(
+            items: [root.path],
+            extractText: false,
+            recursiveFolders: false
+        )
+
+        #expect(selection.processableItemCount == 2)
     }
 
     @Test
@@ -288,6 +306,7 @@ struct InputCollectorTests {
 
         #expect(selection.mediaKinds.isEmpty)
         #expect(selection.ambiguousKinds == [.folder])
+        #expect(selection.processableItemCount == nil)
     }
 
     @Test

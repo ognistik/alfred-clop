@@ -9,6 +9,7 @@ enum InputCollectionError: Error, Equatable {
     case credentialedURL(String)
     case emptyFolder(String)
     case unsupportedFolder(String)
+    case recursionDisabledFolder(String)
     case unreadableFolder(String)
     case finderSelectionUnavailable
     case emptyFinderSelection
@@ -17,8 +18,10 @@ enum InputCollectionError: Error, Equatable {
 struct FolderInspection: Equatable {
     var mediaKinds: [MediaKind]
     var visibleEntryCount: Int
+    var supportedItemCount: Int
     var isAmbiguous: Bool
     var foundVisibleEntry: Bool
+    var containsSupportedNestedMedia: Bool
 }
 
 protocol FolderInspecting {
@@ -41,7 +44,9 @@ struct FoundationFolderInspector: FolderInspecting {
         var pending = [folder]
         var kinds = [MediaKind]()
         var count = 0
+        var supportedItemCount = 0
         var foundVisibleEntry = false
+        var skippedDirectories = [URL]()
 
         while let directory = pending.popLast() {
             let entries: [URL]
@@ -88,8 +93,10 @@ struct FoundationFolderInspector: FolderInspecting {
                     return FolderInspection(
                         mediaKinds: kinds,
                         visibleEntryCount: count,
+                        supportedItemCount: supportedItemCount,
                         isAmbiguous: true,
-                        foundVisibleEntry: true
+                        foundVisibleEntry: true,
+                        containsSupportedNestedMedia: false
                     )
                 }
                 count += 1
@@ -97,6 +104,8 @@ struct FoundationFolderInspector: FolderInspecting {
                 if values.isDirectory == true {
                     if recursive {
                         pending.append(entry)
+                    } else {
+                        skippedDirectories.append(entry)
                     }
                     continue
                 }
@@ -105,15 +114,68 @@ struct FoundationFolderInspector: FolderInspecting {
                 if kind != .unknown, !kinds.contains(kind) {
                     kinds.append(kind)
                 }
+                if kind != .unknown {
+                    supportedItemCount += 1
+                }
             }
         }
+
+        let containsSupportedNestedMedia = !recursive
+            && kinds.isEmpty
+            && skippedDirectories.contains(where: containsSupportedMedia)
 
         return FolderInspection(
             mediaKinds: kinds,
             visibleEntryCount: count,
+            supportedItemCount: supportedItemCount,
             isAmbiguous: false,
-            foundVisibleEntry: foundVisibleEntry
+            foundVisibleEntry: foundVisibleEntry,
+            containsSupportedNestedMedia: containsSupportedNestedMedia
         )
+    }
+
+    private func containsSupportedMedia(in root: URL) -> Bool {
+        guard let enumerator = fileManager.enumerator(
+            at: root,
+            includingPropertiesForKeys: [
+                .isDirectoryKey,
+                .isHiddenKey,
+                .isPackageKey,
+                .isSymbolicLinkKey
+            ],
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else {
+            return false
+        }
+
+        var inspected = 0
+        for case let entry as URL in enumerator {
+            guard inspected < InputCollector.folderInspectionBudget else {
+                return false
+            }
+            inspected += 1
+            guard let values = try? entry.resourceValues(forKeys: [
+                .isDirectoryKey,
+                .isHiddenKey,
+                .isPackageKey,
+                .isSymbolicLinkKey
+            ]) else {
+                continue
+            }
+            if values.isSymbolicLink == true {
+                if values.isDirectory == true {
+                    enumerator.skipDescendants()
+                }
+                continue
+            }
+            if values.isDirectory == true {
+                continue
+            }
+            if detector.kind(for: entry) != .unknown {
+                return true
+            }
+        }
+        return false
     }
 }
 
@@ -220,7 +282,8 @@ struct InputCollector {
                 inputs: input.paths,
                 mediaKinds: mediaKinds,
                 itemKinds: itemKinds,
-                ambiguousKinds: ambiguousKinds
+                ambiguousKinds: ambiguousKinds,
+                processableItemCount: input.processableItemCount
             )
         }
         return try collect(paths: input.paths)
@@ -266,6 +329,8 @@ struct InputCollector {
         var mediaKinds = [MediaKind]()
         var itemKinds = [InputItemKind]()
         var ambiguousKinds = [AmbiguousInputKind]()
+        var processableItemCount = 0
+        var hasAmbiguousCount = false
 
         for candidate in candidates {
             if let remoteURL = try validatedRemoteURL(candidate) {
@@ -283,6 +348,7 @@ struct InputCollector {
                 } else {
                     mediaKinds.append(kind)
                 }
+                processableItemCount += 1
                 continue
             }
 
@@ -316,6 +382,9 @@ struct InputCollector {
                     throw InputCollectionError.emptyFolder(candidate)
                 }
                 if inspection.mediaKinds.isEmpty, !inspection.isAmbiguous {
+                    if inspection.containsSupportedNestedMedia {
+                        throw InputCollectionError.recursionDisabledFolder(candidate)
+                    }
                     throw InputCollectionError.unsupportedFolder(candidate)
                 }
                 inputs.append(path)
@@ -326,10 +395,16 @@ struct InputCollector {
                 if inspection.isAmbiguous, !ambiguousKinds.contains(.folder) {
                     ambiguousKinds.append(.folder)
                 }
+                if inspection.isAmbiguous {
+                    hasAmbiguousCount = true
+                } else {
+                    processableItemCount += inspection.supportedItemCount
+                }
             } else {
                 inputs.append(path)
                 itemKinds.append(.localFile)
                 mediaKinds.append(kind)
+                processableItemCount += 1
             }
         }
 
@@ -341,7 +416,8 @@ struct InputCollector {
             inputs: inputs,
             mediaKinds: mediaKinds,
             itemKinds: itemKinds,
-            ambiguousKinds: ambiguousKinds
+            ambiguousKinds: ambiguousKinds,
+            processableItemCount: hasAmbiguousCount ? nil : processableItemCount
         )
     }
 

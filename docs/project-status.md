@@ -18,6 +18,10 @@ independent typed input and route values. Files, folders, HTTP/HTTPS URLs,
 clipboard content, Finder selection, Universal Actions, and six configurable
 Hotkeys all normalize through `InputCollector`.
 
+The routing and feedback hardening checkpoint is complete: public execute
+requests bypass Alfred's interactive Script Filter, normalized menu reruns
+clear stale public-request state, and quiet errors honor the `dnd` setting.
+
 ## Completed
 
 ### Swift foundation
@@ -41,6 +45,9 @@ Hotkeys all normalize through `InputCollector`.
 - Path normalization, symlink resolution, validation, and deduplication
 - Media detection for images, video, audio, and PDFs
 - Context-aware action capability intersection for mixed inputs
+- One Optimize result in the main menu; aggressive optimization remains
+  available to typed execution and Hotkeys pending the planned Command-Return
+  modifier
 - Source-aware subtitles for selected, copied, and passed files
 - Visible Alfred errors for missing, unsupported, and invalid inputs
 - Injectable clipboard abstraction with no real clipboard dependency in tests
@@ -71,6 +78,13 @@ Hotkeys all normalize through `InputCollector`.
   actions with concise media requirements
 - Typed routes open the main menu, a clean implemented parameter menu, or
   quiet execution
+- Omitted public request versions default to version 1; explicit unsupported
+  versions and malformed version values remain errors
+- Folder subtitles identify folders and show exact processable item counts only
+  when bounded inspection completes
+- Non-recursive folders with supported media only in ordinary subfolders
+  offer a Return action that opens Alfred's workflow configuration for manual
+  adjustment
 - Menu routes ignore accidental parameter objects instead of inferring an
   execution route
 - Quiet execution inherits current workflow `copyResult` and
@@ -83,13 +97,17 @@ Hotkeys all normalize through `InputCollector`.
 - Universal Action wired through an Args and Vars object
 - Clipboard keyword `clop`
 - Public External Trigger `clop` accepts versioned typed requests
+- Public menu requests enter the internal `mainMenu` route, while execute
+  requests bypass the Script Filter and run headlessly
 - Internal `mainMenu` trigger remains reserved for Script Filter navigation
 - Shared normalized input state stored in `alfred_clop_input_json`
 - Immediate actions handed to a quiet Run Script execution action
 - Clop UI used for successful progress/results, with notifications for errors
+- `dnd` suppresses quiet/headless error notifications without hiding
+  interactive Script Filter errors
 - Release binary built at `workflow/alfred-clop`
-- User configuration fields for optional `presetsPath`, `copyResult`, and
-  `recursiveFolders`
+- User configuration fields for optional `presetsPath`, `copyResult`,
+  `recursiveFolders`, and `dnd`
 - `copyResult` is applied to supported app-backed commands
 - `recursiveFolders` controls both folder inspection and supported Clop
   command arguments
@@ -109,6 +127,8 @@ Hotkeys all normalize through `InputCollector`.
   Clop, launch failures, invalid JSON results, and nonzero exits
 - Per-file JSON result inspection for app-backed commands, including visible
   notifications when Clop exits successfully but skips some or all inputs
+- Known false-negative HTTPS failures for submitted nested Substack CDN URLs
+  are ignored without suppressing unrelated partial failures
 - Focused fake-based tests that never launch the real Clop CLI
 
 ### Crop and resize
@@ -207,6 +227,9 @@ structure.
 - Product plan now targets complete supported CLI coverage across typed
   optimization, conversion, PDF controls, folders, URLs, shared switches, and
   pipeline management
+- Main-menu conversion discovery is media-specific for homogeneous image,
+  video, and audio input; ambiguous broad input shows separate honest,
+  non-executable conversion routes until their parameter menus are built
 
 ## Not implemented
 
@@ -260,9 +283,8 @@ structure.
 Implement capability-aware modifier behavior and finish the remaining global
 execution-setting foundation:
 
-1. Add Command-Return aggressive optimization requests to supported action
-   results and remove the separate top-level Aggressive Optimize action once
-   the modifier is verified in Alfred.
+1. Add Command-Return aggressive optimization requests to supported Optimize
+   results and verify the modifier in Alfred.
 2. Resolve the remaining shared execution settings into typed
    `ExecutionOptions` without adding output or backup policies prematurely.
 3. Keep URL and folder capability validation shared between interactive and
@@ -276,7 +298,7 @@ action parameter menus in that slice.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 129 tests.
+- `./scripts/test.sh` passes 145 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

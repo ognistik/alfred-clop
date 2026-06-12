@@ -45,19 +45,6 @@
 				<false/>
 			</dict>
 		</array>
-		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
-		<array>
-			<dict>
-				<key>destinationuid</key>
-				<string>086222E0-0634-41BB-8795-059C6B8AF42C</string>
-				<key>modifiers</key>
-				<integer>0</integer>
-				<key>modifiersubtext</key>
-				<string></string>
-				<key>vitoclose</key>
-				<false/>
-			</dict>
-		</array>
 		<key>22222222-2222-4222-8222-222222222222</key>
 		<array>
 			<dict>
@@ -165,6 +152,18 @@
 			</dict>
 			<dict>
 				<key>destinationuid</key>
+				<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>498E7A69-76E2-48E1-89F4-1C6FC647BA23</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
 				<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
 				<key>modifiers</key>
 				<integer>0</integer>
@@ -203,6 +202,48 @@
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>request="${1:-}"
+route="$(./alfred-clop route --request-json "$request")"
+if [[ "$route" == "execute" ]]; then
+  feedback="$(./alfred-clop request --request-json "$request" --quiet)"
+  if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+    /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+on run argv
+  display notification (item 1 of argv) with title "Alfred Clop"
+end run
+APPLESCRIPT
+  fi
+else
+  /usr/bin/osascript - "$request" &lt;&lt;'APPLESCRIPT'
+on run argv
+  tell application id "com.runningwithcrayons.Alfred"
+    run trigger "mainMenu" in workflow "com.aft.clop" with argument (item 1 of argv)
+  end tell
+end run
+APPLESCRIPT
+fi</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>externaltriggerid</key>
 				<string>mainMenu</string>
 				<key>passinputasargument</key>
@@ -216,34 +257,6 @@
 			<string>alfred.workflow.output.callexternaltrigger</string>
 			<key>uid</key>
 			<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
-			<key>version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>argument</key>
-				<string></string>
-				<key>passthroughargument</key>
-				<false/>
-				<key>variables</key>
-				<dict>
-					<key>alfred_clop_input_context</key>
-					<string>arguments</string>
-					<key>alfred_clop_input_json</key>
-					<string></string>
-					<key>alfred_clop_menu_state</key>
-					<string></string>
-					<key>alfred_clop_paths</key>
-					<string></string>
-					<key>alfred_clop_request</key>
-					<string>{query}</string>
-				</dict>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.utility.argument</string>
-			<key>uid</key>
-			<string>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
@@ -275,8 +288,8 @@
 				<key>runningsubtext</key>
 				<string>Reading files...</string>
 				<key>script</key>
-				<string>if [[ -n "${alfred_clop_request:-}" ]]; then
-  ./alfred-clop request --request-json "$alfred_clop_request" --input-context "${alfred_clop_input_context:-arguments}" --query "${1:-}"
+				<string>if [[ "${1:-}" == \{* ]]; then
+  ./alfred-clop request --request-json "${1:-}" --input-context "arguments"
 elif [[ -n "${alfred_clop_menu_state:-}" ]]; then
   ./alfred-clop menu --menu-state "$alfred_clop_menu_state" --input-json "${alfred_clop_input_json:-}" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
 elif [[ -n "${alfred_clop_input_json:-}" ]]; then
@@ -350,27 +363,20 @@ fi</string>
 				<key>concurrently</key>
 				<false/>
 				<key>escaping</key>
-				<integer>102</integer>
+				<integer>68</integer>
 				<key>script</key>
-				<string>feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
-if [[ -n "$feedback" ]]; then
-  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
-end run
-APPLESCRIPT
-fi</string>
+				<string>tell application id "com.runningwithcrayons.Alfred" to reveal workflow (system attribute "alfred_workflow_bundleid") with configuration</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
 				<key>type</key>
-				<integer>11</integer>
+				<integer>6</integer>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
-			<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
+			<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -393,6 +399,20 @@ fi</string>
 						<key>uid</key>
 						<string>F32D25CA-0BC0-4196-B7EB-CBAA6EECF33A</string>
 					</dict>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_request_kind}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>workflowSettings</string>
+						<key>outputlabel</key>
+						<string>Workflow settings</string>
+						<key>uid</key>
+						<string>498E7A69-76E2-48E1-89F4-1C6FC647BA23</string>
+					</dict>
 				</array>
 				<key>elselabel</key>
 				<string>Execute operation</string>
@@ -405,6 +425,36 @@ fi</string>
 			<string>C81E575B-0A6B-45AE-B968-6A2313FB84A7</string>
 			<key>version</key>
 			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
+if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+on run argv
+  display notification (item 1 of argv) with title "Alfred Clop"
+end run
+APPLESCRIPT
+fi</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
+			<key>version</key>
+			<integer>2</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -497,7 +547,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard)"
-if [[ -n "$feedback" ]]; then
+if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -558,7 +608,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard --aggressive)"
-if [[ -n "$feedback" ]]; then
+if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -619,7 +669,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}")"
-if [[ -n "$feedback" ]]; then
+if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -711,7 +761,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --aggressive)"
-if [[ -n "$feedback" ]]; then
+if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -763,9 +813,9 @@ fi</string>
 		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
 		<dict>
 			<key>xpos</key>
-			<real>440</real>
+			<real>430</real>
 			<key>ypos</key>
-			<real>110</real>
+			<real>80</real>
 		</dict>
 		<key>22222222-2222-4222-8222-222222222222</key>
 		<dict>
@@ -857,7 +907,16 @@ fi</string>
 		<key>B30C287D-7137-4B63-8FA2-95B849C440FA</key>
 		<dict>
 			<key>xpos</key>
-			<real>1120</real>
+			<real>1095</real>
+			<key>ypos</key>
+			<real>250</real>
+		</dict>
+		<key>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</key>
+		<dict>
+			<key>note</key>
+			<string>Workflow Settings</string>
+			<key>xpos</key>
+			<real>1270</real>
 			<key>ypos</key>
 			<real>220</real>
 		</dict>

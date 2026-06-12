@@ -160,6 +160,77 @@ struct ExecuteModeTests {
     }
 
     @Test
+    func nestedSubstackURLFalseFailureRemainsQuiet() throws {
+        let url = "https://substackcdn.com/image/fetch/$s_!QUQr!,w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fc60d83b6-d1ce-40c5-a340-8954fa6406a3_1672x941.jpeg"
+        let json = try JSONOutput.string(
+            for: OperationRequest(
+                inputs: [url],
+                action: .optimise(aggressive: false),
+                execution: makeExecutionOptions()
+            ),
+            prettyPrinted: false
+        )
+        let runner = StubProcessRunner(result: ClopProcessResult(
+            terminationStatus: 0,
+            standardOutput: Data(
+                """
+                {"done":[],"failed":[{"error":"The file could not be opened because URL type https isn’t supported.","forURL":"\(url)"}]}
+                """.utf8
+            ),
+            standardError: Data()
+        ))
+
+        let response = ExecuteMode.response(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+        let quiet = ExecuteMode.quietFeedback(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+
+        #expect(response.items[0].title == "Optimization complete")
+        #expect(quiet == nil)
+    }
+
+    @Test
+    func remoteURLFalseFailureDoesNotHideOtherBatchFailures() throws {
+        let url = "https://example.com/nested/image.jpeg"
+        let json = try JSONOutput.string(
+            for: OperationRequest(
+                inputs: [url, "/tmp/local.jpg"],
+                action: .optimise(aggressive: false),
+                execution: makeExecutionOptions()
+            ),
+            prettyPrinted: false
+        )
+        let output = """
+        {
+          "done": [],
+          "failed": [
+            {"error": "URL type https isn’t supported.", "forURL": "\(url)"},
+            {"error": "Local processing failed.", "forURL": "file:///tmp/local.jpg"}
+          ]
+        }
+        """
+
+        let response = ExecuteMode.response(
+            requestJSON: json,
+            builder: builder(),
+            runner: StubProcessRunner(result: ClopProcessResult(
+                terminationStatus: 0,
+                standardOutput: Data(output.utf8),
+                standardError: Data()
+            ))
+        )
+
+        #expect(response.items[0].title == "Optimization not performed")
+        #expect(response.items[0].subtitle.contains("Local processing failed"))
+    }
+
+    @Test
     func cropOmitsFilenameWhenMultipleFilesAreAlreadySmallEnough() throws {
         let response = ExecuteMode.response(
             requestJSON: try requestJSON(action: .crop(
