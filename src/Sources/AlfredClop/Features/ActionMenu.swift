@@ -98,7 +98,10 @@ enum ActionMenu {
     static func response(
         clipboard: ClipboardReading,
         query: String,
-        collector: InputCollector = InputCollector()
+        collector: InputCollector = InputCollector(),
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
         do {
             let selection = try collector.collect(clipboard: clipboard)
@@ -114,7 +117,10 @@ enum ActionMenu {
             return response(
                 for: selection,
                 query: query,
-                context: .clipboard
+                context: .clipboard,
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
             )
         } catch InputCollectionError.noPaths {
             return errorItem(
@@ -138,14 +144,20 @@ enum ActionMenu {
         inputJSON: String,
         query: String,
         context: ActionInputContext = .selected,
-        collector: InputCollector = InputCollector()
+        collector: InputCollector = InputCollector(),
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
         do {
             let selection = try collector.collect(json: inputJSON)
             return response(
                 for: selection,
                 query: query,
-                context: context
+                context: context,
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
             )
         } catch InputCollectionError.invalidJSON {
             return errorItem(
@@ -174,14 +186,20 @@ enum ActionMenu {
         paths: [String],
         query: String,
         context: ActionInputContext = .selected,
-        collector: InputCollector = InputCollector()
+        collector: InputCollector = InputCollector(),
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
         do {
             let selection = try collector.collect(paths: paths)
             return response(
                 for: selection,
                 query: query,
-                context: context
+                context: context,
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
             )
         } catch InputCollectionError.noPaths {
             switch context {
@@ -214,7 +232,10 @@ enum ActionMenu {
     static func response(
         for selection: InputSelection,
         query: String,
-        context: ActionInputContext = .selected
+        context: ActionInputContext = .selected,
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
         if selection.mediaKinds.contains(.folder) {
             return errorItem(
@@ -231,8 +252,17 @@ enum ActionMenu {
 
         let validActions = ActionCatalog.validActions(for: selection.mediaKinds)
         let filteredActions = ActionMenuSearch.filter(validActions, query: query)
+        let migrationItem = presetMigrationItem(
+            status: PresetMigrationCoordinator(
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            ).status(),
+            selection: selection,
+            context: context
+        )
 
-        guard !filteredActions.isEmpty else {
+        guard !filteredActions.isEmpty || migrationItem != nil else {
             return errorItem(
                 title: "No matching actions",
                 subtitle: "Try another search term."
@@ -240,7 +270,7 @@ enum ActionMenu {
         }
 
         return ScriptFilterResponse(
-            items: filteredActions.map { definition in
+            items: [migrationItem].compactMap(\.self) + filteredActions.map { definition in
                 let argument = encodedArgument(
                     for: definition,
                     inputs: selection.inputs,
@@ -266,6 +296,109 @@ enum ActionMenu {
                 context: context
             )
         )
+    }
+
+    private static func presetMigrationItem(
+        status: PresetMigrationStatus,
+        selection: InputSelection,
+        context: ActionInputContext
+    ) -> ScriptFilterItem? {
+        switch status {
+        case .none:
+            return nil
+        case .available(let migration):
+            let request = PresetMigrationRequest(
+                sourcePath: migration.sourceURL.path,
+                destinationPath: migration.destinationURL.path,
+                inputs: selection.inputs,
+                mediaKinds: selection.mediaKinds,
+                inputContext: context
+            )
+            let state = MenuState.presetMigrationConfirmation(request)
+            let stateJSON = (try? JSONOutput.string(
+                for: state,
+                prettyPrinted: false
+            )) ?? ""
+            return ScriptFilterItem(
+                uid: "preset.migration",
+                title: "Move presets",
+                subtitle: "Move \(migration.sourceURL.path) to \(migration.destinationURL.path)",
+                arg: stateJSON,
+                valid: true,
+                autocomplete: "Move presets",
+                match: "move migrate presets location",
+                variables: migrationVariables(
+                    stateJSON: stateJSON,
+                    request: request
+                )
+            )
+        case .conflict(let migration):
+            return ScriptFilterItem(
+                title: "Preset location conflict",
+                subtitle: "Both \(migration.sourceURL.path) and \(migration.destinationURL.path) exist. Automatic migration is unavailable.",
+                arg: "",
+                valid: false
+            )
+        case .sourceMissing(let migration):
+            return ScriptFilterItem(
+                title: "Previous preset file is missing",
+                subtitle: "Expected \(migration.sourceURL.path); nothing was moved to \(migration.destinationURL.path).",
+                arg: "",
+                valid: false
+            )
+        case .sourceInvalid(let migration, let error):
+            return ScriptFilterItem(
+                title: "Previous preset file cannot be moved",
+                subtitle: "\(migration.sourceURL.path): \(migrationErrorDetail(error))",
+                arg: "",
+                valid: false
+            )
+        case .metadataInvalid(let error):
+            return ScriptFilterItem(
+                title: "Unable to read preset location metadata",
+                subtitle: migrationErrorDetail(error),
+                arg: "",
+                valid: false
+            )
+        }
+    }
+
+    static func migrationVariables(
+        stateJSON: String,
+        request: PresetMigrationRequest
+    ) -> [String: String] {
+        [
+            requestKindVariable: WorkflowRequestKind.parameterStep.rawValue,
+            menuStateVariable: stateJSON,
+            inputJSONVariable: (try? JSONOutput.string(
+                for: MenuInput(paths: request.inputs),
+                prettyPrinted: false
+            )) ?? "",
+            inputContextVariable: request.inputContext.rawValue
+        ]
+    }
+
+    static func migrationErrorDetail(_ error: PresetMigrationError) -> String {
+        switch error {
+        case .missingWorkflowDataDirectory:
+            return "Alfred did not provide a workflow data directory."
+        case .invalidMetadata:
+            return "The workflow-owned preset location metadata is malformed."
+        case .unsupportedMetadataVersion(let version):
+            return "Preset location metadata version \(version) is unsupported."
+        case .sourceMissing:
+            return "The previous presets.json file is missing."
+        case .sourceInvalid:
+            return "presets.json is malformed or contains unsupported presets."
+        case .sourceUnsupportedVersion(let version):
+            return "presets.json schema version \(version) is unsupported."
+        case .destinationConflict:
+            return "The destination already contains presets.json."
+        case .destinationValidationFailed:
+            return "The destination could not be reloaded and validated."
+        case .locationChanged:
+            return "The configured preset location changed before the move completed."
+        }
     }
 
     private static func encodedArgument(

@@ -59,16 +59,13 @@ enum AlfredClopCommand {
             }
 
             switch state.mode {
-            case .crop:
+            case .crop, .cropPresetRemoval:
                 return CropParameterMenu.response(
                     stateJSON: stateJSON,
                     query: query
                 )
-            case .cropPresetRemoval:
-                return CropParameterMenu.response(
-                    stateJSON: stateJSON,
-                    query: query
-                )
+            case .presetMigrationConfirmation, .presetMigration:
+                return PresetMigrationMenu.response(stateJSON: stateJSON)
             case .actions:
                 if state.parameterRequest != nil {
                     return errorResponse(

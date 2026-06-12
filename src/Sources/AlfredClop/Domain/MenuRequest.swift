@@ -46,6 +46,8 @@ enum MenuMode: String, Codable, Equatable {
     case actions
     case crop
     case cropPresetRemoval
+    case presetMigrationConfirmation
+    case presetMigration
 }
 
 enum PresetMenuActionKind: String, Codable, Equatable {
@@ -59,22 +61,40 @@ struct PresetMenuAction: Codable, Equatable {
     var preset: ActionPreset
 }
 
+struct PresetMigrationRequest: Codable, Equatable {
+    var sourcePath: String
+    var destinationPath: String
+    var inputs: [String]
+    var mediaKinds: [MediaKind]
+    var inputContext: ActionInputContext
+}
+
 struct MenuState: Codable, Equatable {
     var mode: MenuMode
     var parameterRequest: ParameterStepRequest?
     var presetAction: PresetMenuAction?
+    var presetMigration: PresetMigrationRequest?
+
+    init(
+        mode: MenuMode,
+        parameterRequest: ParameterStepRequest? = nil,
+        presetAction: PresetMenuAction? = nil,
+        presetMigration: PresetMigrationRequest? = nil
+    ) {
+        self.mode = mode
+        self.parameterRequest = parameterRequest
+        self.presetAction = presetAction
+        self.presetMigration = presetMigration
+    }
 
     static let actions = MenuState(
-        mode: .actions,
-        parameterRequest: nil,
-        presetAction: nil
+        mode: .actions
     )
 
     static func crop(_ request: ParameterStepRequest) -> MenuState {
         MenuState(
             mode: .crop,
-            parameterRequest: request,
-            presetAction: nil
+            parameterRequest: request
         )
     }
 
@@ -88,6 +108,22 @@ struct MenuState: Codable, Equatable {
                 : .crop,
             parameterRequest: request,
             presetAction: action
+        )
+    }
+
+    static func presetMigrationConfirmation(
+        _ request: PresetMigrationRequest
+    ) -> MenuState {
+        MenuState(
+            mode: .presetMigrationConfirmation,
+            presetMigration: request
+        )
+    }
+
+    static func presetMigration(_ request: PresetMigrationRequest) -> MenuState {
+        MenuState(
+            mode: .presetMigration,
+            presetMigration: request
         )
     }
 }

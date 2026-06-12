@@ -10,7 +10,8 @@ file whenever a task materially changes what works or what should happen next.
 
 Milestones 1 and 2 are substantially complete. Milestone 3 now includes
 parameter-free execution, a guided dynamic parameter step for crop and resize,
-and user-defined Crop / Resize action presets.
+user-defined Crop / Resize action presets, and explicit preset-location
+migration.
 
 ## Completed
 
@@ -108,6 +109,26 @@ and user-defined Crop / Resize action presets.
   overwritten
 - Configured paths and input filenames containing spaces are covered by tests
 
+### Preset location migration
+
+- Versioned workflow-owned location metadata stored under
+  `alfred_workflow_data`
+- Changed `presetsPath` values detected without silently moving, merging,
+  overwriting, or deleting preset data
+- Context-specific Move presets action in the main action menu with source and
+  destination paths shown explicitly
+- Separate typed confirmation and execution states
+- Atomic destination write followed by destination reload and validation
+  before source deletion
+- Default-to-custom and custom-to-default moves supported
+- Successful moves return to the main action menu with inputs and selected,
+  copied, or passed context preserved
+- Both-files conflicts, missing sources, malformed or unsupported sources, and
+  malformed or unsupported metadata produce visible non-destructive feedback
+- No accumulating migration backup copies
+- Paths containing spaces and injected write/validation failures covered by
+  focused tests
+
 Alfred was verified directly after implementation. Script Filter knowledge
 sorting is response-wide: after a UID result is learned, Alfred can promote it
 above a no-UID instructional row. Alfred does not support pinning one result
@@ -167,7 +188,7 @@ compatibility plan is implemented.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 89 tests.
+- `./scripts/test.sh` passes 100 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).
