@@ -4,14 +4,24 @@ import Testing
 
 struct CropParameterMenuTests {
     @Test(arguments: [
-        ("1200x630", CropSize(value: "1200x630", longEdge: false)),
-        ("16:9", CropSize(value: "16:9", longEdge: false)),
-        ("1920", CropSize(value: "1920", longEdge: true)),
-        ("128x0", CropSize(value: "128x0", longEdge: false)),
-        ("0x720", CropSize(value: "0x720", longEdge: false))
+        ("1200x630", "1200x630", false, CropSizeKind.exactDimensions(width: 1200, height: 630)),
+        ("16:9", "16:9", false, CropSizeKind.aspectRatio(width: 16, height: 9)),
+        ("1920", "1920", true, CropSizeKind.longEdge(1920)),
+        ("w128", "128x0", false, CropSizeKind.fixedWidth(128)),
+        ("h720", "0x720", false, CropSizeKind.fixedHeight(720)),
+        ("128x0", "128x0", false, CropSizeKind.fixedWidth(128)),
+        ("0x720", "0x720", false, CropSizeKind.fixedHeight(720))
     ])
-    func parsesVerifiedSizeForms(input: String, expected: CropSize) {
-        #expect(CropSizeParser.parse(input) == expected)
+    func parsesAndNormalizesVerifiedSizeForms(
+        input: String,
+        value: String,
+        longEdge: Bool,
+        kind: CropSizeKind
+    ) throws {
+        let parsed = try #require(CropSizeParser.parse(input))
+        #expect(parsed.value == value)
+        #expect(parsed.longEdge == longEdge)
+        #expect(parsed.kind == kind)
     }
 
     @Test(arguments: [
@@ -24,61 +34,94 @@ struct CropParameterMenuTests {
         "1200.5x630",
         "1200xx630",
         "16:9:1",
-        "1920px"
+        "1920px",
+        "w",
+        "h",
+        "w0",
+        "h0",
+        "W128",
+        "height720",
+        "128x",
+        "x720",
+        "128/720"
     ])
     func rejectsUnsupportedSizeForms(input: String) {
         #expect(CropSizeParser.parse(input) == nil)
     }
 
     @Test
-    func emptyQueryShowsUsefulPresets() throws {
+    func emptyQueryShowsOneInstructionalItem() throws {
         let response = CropParameterMenu.response(
             stateJSON: try cropStateJSON(context: .selected),
             query: ""
         )
 
-        #expect(response.items.contains(where: { $0.title == "1200 x 630" }))
-        #expect(response.items.contains(where: { $0.title == "16:9" }))
-        #expect(response.items.contains(where: { $0.title == "Long edge 1920" }))
-        #expect(response.items.contains(where: { $0.title == "Width 128, auto height" }))
+        #expect(response.items.count == 1)
+        #expect(response.items[0].title == "Type crop or resize parameters")
+        #expect(response.items[0].subtitle == "Examples: 1200x630, 16:9, 1920, w128, h720")
+        #expect(response.items[0].valid == false)
     }
 
-    @Test
-    func searchablePresetPreservesCopiedContext() throws {
-        let stateJSON = try cropStateJSON(context: .clipboard)
+    @Test(arguments: [
+        (ActionInputContext.selected, "Selected files"),
+        (ActionInputContext.clipboard, "Copied files"),
+        (ActionInputContext.arguments, "Passed files")
+    ])
+    func queryRerunsPreservePathsAndContext(
+        context: ActionInputContext,
+        subtitlePrefix: String
+    ) throws {
+        let stateJSON = try cropStateJSON(context: context)
         let response = CropParameterMenu.response(
             stateJSON: stateJSON,
-            query: "widescreen"
+            query: "w128"
         )
+        let request = try operationRequest(from: response.items[0])
 
-        #expect(response.items.contains(where: { $0.title == "16:9" }))
-        #expect(response.items[0].subtitle.hasPrefix("Copied files:"))
+        #expect(response.items.count == 1)
+        #expect(response.items[0].subtitle.hasPrefix("\(subtitlePrefix):"))
+        #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
         #expect(
             response.variables?[ActionMenu.menuStateVariable]
                 == stateJSON
         )
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
-                == ActionInputContext.clipboard.rawValue
+                == context.rawValue
         )
+        let inputJSON = try #require(
+            response.variables?[ActionMenu.inputJSONVariable]
+        )
+        let input = try JSONDecoder().decode(
+            MenuInput.self,
+            from: Data(inputJSON.utf8)
+        )
+        #expect(input.paths == ["/tmp/first image.png", "/tmp/second.pdf"])
     }
 
-    @Test
-    func customLongEdgeBuildsOperationRequest() throws {
+    @Test(arguments: [
+        ("1200x630", "exact dimensions 1200x630"),
+        ("16:9", "aspect ratio 16:9"),
+        ("1920", "long edge to 1920"),
+        ("w128", "fixed width 128 with calculated height"),
+        ("h720", "fixed height 720 with calculated width"),
+        ("128x0", "fixed width 128 with calculated height"),
+        ("0x720", "fixed height 720 with calculated width")
+    ])
+    func acceptedSyntaxProducesOneExplanatoryResult(
+        input: String,
+        explanation: String
+    ) throws {
         let response = CropParameterMenu.response(
             stateJSON: try cropStateJSON(context: .arguments),
-            query: "2048"
+            query: input
         )
-        let item = try #require(
-            response.items.first(where: { $0.title == "Use 2048" })
-        )
+        let item = try #require(response.items.first)
         let request = try operationRequest(from: item)
 
+        #expect(response.items.count == 1)
+        #expect(item.subtitle.contains(explanation))
         #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
-        #expect(
-            request.action
-                == .crop(size: "2048", smartCrop: false, longEdge: true)
-        )
         #expect(item.subtitle.hasPrefix("Passed files:"))
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
@@ -86,53 +129,73 @@ struct CropParameterMenuTests {
         )
     }
 
-    @Test
-    func exactPresetValueRanksBeforePartialMatches() throws {
+    @Test(arguments: [
+        ("w128", "Width 128, auto height"),
+        ("h1200", "Height 1200, auto width"),
+        ("128x0", "Width 128, auto height"),
+        ("0x1200", "Height 1200, auto width")
+    ])
+    func fixedDimensionTitlesHideNativeZeroForms(
+        input: String,
+        expectedTitle: String
+    ) throws {
         let response = CropParameterMenu.response(
             stateJSON: try cropStateJSON(context: .selected),
-            query: "1920"
+            query: input
+        )
+
+        #expect(response.items.count == 1)
+        #expect(response.items[0].title == expectedTitle)
+        #expect(!response.items[0].title.contains("x0"))
+        #expect(!response.items[0].title.contains("0x"))
+    }
+
+    @Test(arguments: [
+        ("1200x630", "1200x630", false),
+        ("16:9", "16:9", false),
+        ("1920", "1920", true),
+        ("w128", "128x0", false),
+        ("h720", "0x720", false),
+        ("128x0", "128x0", false),
+        ("0x720", "0x720", false)
+    ])
+    func validInputBuildsTypedOperationRequest(
+        input: String,
+        normalizedValue: String,
+        longEdge: Bool
+    ) throws {
+        let response = CropParameterMenu.response(
+            stateJSON: try cropStateJSON(context: .selected),
+            query: input
         )
         let request = try operationRequest(from: response.items[0])
 
-        #expect(response.items[0].title == "Long edge 1920")
         #expect(
             request.action
-                == .crop(size: "1920", smartCrop: false, longEdge: true)
+                == .crop(
+                    size: normalizedValue,
+                    smartCrop: false,
+                    longEdge: longEdge
+                )
         )
     }
 
-    @Test(arguments: ["1200x630", "16:9", "128x0", "0x720"])
-    func customNonLongEdgeValuesKeepSmartCropDisabled(value: String) throws {
+    @Test(arguments: [
+        "0", "0x0", "16:", "16:0", "-1", "1.5", "1200xx630",
+        "16:9:1", "q128", "128x720x1"
+    ])
+    func invalidAndIncompleteInputReturnsOneVisibleFeedbackItem(
+        input: String
+    ) throws {
         let response = CropParameterMenu.response(
             stateJSON: try cropStateJSON(context: .selected),
-            query: value
-        )
-        let requests = try response.items
-            .filter(\.valid)
-            .map(operationRequest(from:))
-        let request = try #require(requests.first(where: {
-            $0.action == .crop(
-                size: value,
-                smartCrop: false,
-                longEdge: false
-            )
-        }))
-
-        #expect(
-            request.action
-                == .crop(size: value, smartCrop: false, longEdge: false)
-        )
-    }
-
-    @Test
-    func invalidCustomInputIsVisibleAndNonExecutable() throws {
-        let response = CropParameterMenu.response(
-            stateJSON: try cropStateJSON(context: .selected),
-            query: "0x0"
+            query: input
         )
 
+        #expect(response.items.count == 1)
         #expect(response.items[0].title == "Invalid crop or resize value")
         #expect(response.items[0].valid == false)
+        #expect(response.items[0].arg == "")
     }
 
     @Test

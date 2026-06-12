@@ -9,7 +9,7 @@ file whenever a task materially changes what works or what should happen next.
 ## Current checkpoint
 
 Milestones 1 and 2 are substantially complete. Milestone 3 now includes
-parameter-free execution plus the first searchable parameter step for crop and
+parameter-free execution plus a guided dynamic parameter step for crop and
 resize.
 
 ## Completed
@@ -71,13 +71,20 @@ resize.
   shared Script Filter through its `mainMenu` inbound configuration
 - Immediate `OperationRequest` values continue to the existing quiet execution
   action
-- Searchable built-in presets currently exist as the first implementation;
-  the agreed next design removes them in favor of guided dynamic input
-- Free-form validation for `1200x630`, `16:9`, `1920`, `128x0`, and `0x720`
+- Empty crop queries show one non-executable instructional item instead of
+  workflow-authored presets
+- Typed values produce exactly one interpreted result or one visible validation
+  error
+- Free-form validation for `1200x630`, `16:9`, `1920`, `w128`, `h720`,
+  `128x0`, and `0x720`
+- `wNUMBER` and `hNUMBER` normalize to Clop's native `NUMBERx0` and `0xNUMBER`
+  forms
+- Result subtitles explain exact dimensions, aspect ratio, long edge, fixed
+  width, or fixed height behavior before execution
 - Bare positive integers encoded as long-edge resize requests
 - Invalid, malformed, negative, decimal, and zero-only values rejected visibly
 - Crop execution through `clop crop --size VALUE --json --no-progress`
-- Conditional `--long-edge` and explicitly modeled `--smart-crop` flags
+- Conditional `--long-edge`; menu-generated requests keep `smartCrop` disabled
 - Normalized inputs and selected, copied, or passed context preserved across
   inbound transitions and Script Filter query reruns
 
@@ -93,7 +100,6 @@ resize.
 
 ## Not implemented
 
-- Guided crop grammar for `wNUMBER` and `hNUMBER`
 - User-defined crop presets, preset naming, and preset persistence
 - Modifier behavior for aggressive processing, original preservation, and
   saving presets
@@ -108,17 +114,17 @@ resize.
 
 ## Next recommended task
 
-Polish the crop/resize interaction before adding another parameter family:
+Implement the reusable modifier model and user crop-preset storage:
 
-1. Replace built-in presets with one instructional empty-query item.
-2. Interpret typed values dynamically, including `w128` and `h720`.
-3. Show one clear executable interpretation or one visible validation error.
-4. Keep native `128x0` and `0x720` forms supported.
-5. Add focused tests and rebuild the workflow.
+1. Encode resolved modifier behavior in typed Alfred item requests.
+2. Add the Control-Return preset-naming flow for valid crop parameters.
+3. Store versioned presets in the default workflow data directory or configured
+   `presetsPath`.
+4. Keep workflow-authored and automatically promoted recent presets absent.
+5. Add focused persistence, modifier, and menu-ordering tests.
 
-After that bounded slice, implement the reusable modifier model and user preset
-storage. Keep downscale, conversion, and PDF crop encoded as
-`ParameterStepRequest` until their own tasks.
+Keep downscale, conversion, and PDF crop encoded as `ParameterStepRequest`
+until their own tasks.
 
 The longer-term automation route is one typed headless External Trigger that
 accepts a versioned JSON request for inputs, action parameters, and execution

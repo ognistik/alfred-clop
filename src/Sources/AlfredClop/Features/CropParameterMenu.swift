@@ -1,8 +1,17 @@
 import Foundation
 
+enum CropSizeKind: Equatable {
+    case exactDimensions(width: Int, height: Int)
+    case aspectRatio(width: Int, height: Int)
+    case longEdge(Int)
+    case fixedWidth(Int)
+    case fixedHeight(Int)
+}
+
 struct CropSize: Equatable {
     var value: String
     var longEdge: Bool
+    var kind: CropSizeKind
 }
 
 enum CropSizeParser {
@@ -15,7 +24,29 @@ enum CropSizeParser {
         if value.allSatisfy(\.isNumber),
            let edge = Int(value),
            edge > 0 {
-            return CropSize(value: value, longEdge: true)
+            return CropSize(
+                value: value,
+                longEdge: true,
+                kind: .longEdge(edge)
+            )
+        }
+
+        if value.first == "w",
+           let width = positiveInteger(String(value.dropFirst())) {
+            return CropSize(
+                value: "\(width)x0",
+                longEdge: false,
+                kind: .fixedWidth(width)
+            )
+        }
+
+        if value.first == "h",
+           let height = positiveInteger(String(value.dropFirst())) {
+            return CropSize(
+                value: "0x\(height)",
+                longEdge: false,
+                kind: .fixedHeight(height)
+            )
         }
 
         if let dimensions = components(of: value, separator: "x"),
@@ -25,7 +56,15 @@ enum CropSizeParser {
            width >= 0,
            height >= 0,
            width + height > 0 {
-            return CropSize(value: value, longEdge: false)
+            let kind: CropSizeKind
+            if height == 0 {
+                kind = .fixedWidth(width)
+            } else if width == 0 {
+                kind = .fixedHeight(height)
+            } else {
+                kind = .exactDimensions(width: width, height: height)
+            }
+            return CropSize(value: value, longEdge: false, kind: kind)
         }
 
         if let ratio = components(of: value, separator: ":"),
@@ -34,10 +73,24 @@ enum CropSizeParser {
            let height = Int(ratio[1]),
            width > 0,
            height > 0 {
-            return CropSize(value: value, longEdge: false)
+            return CropSize(
+                value: value,
+                longEdge: false,
+                kind: .aspectRatio(width: width, height: height)
+            )
         }
 
         return nil
+    }
+
+    private static func positiveInteger(_ value: String) -> Int? {
+        guard !value.isEmpty,
+              value.allSatisfy(\.isNumber),
+              let number = Int(value),
+              number > 0 else {
+            return nil
+        }
+        return number
     }
 
     private static func components(
@@ -55,46 +108,7 @@ enum CropSizeParser {
     }
 }
 
-private struct CropPreset {
-    var title: String
-    var value: String
-    var aliases: [String]
-
-    var searchText: String {
-        ([title, value] + aliases).joined(separator: " ")
-    }
-}
-
 enum CropParameterMenu {
-    private static let presets: [CropPreset] = [
-        CropPreset(
-            title: "1200 x 630",
-            value: "1200x630",
-            aliases: ["social", "open graph", "dimensions"]
-        ),
-        CropPreset(
-            title: "1920 x 1080",
-            value: "1920x1080",
-            aliases: ["full hd", "dimensions"]
-        ),
-        CropPreset(
-            title: "1080 x 1080",
-            value: "1080x1080",
-            aliases: ["square", "dimensions"]
-        ),
-        CropPreset(title: "16:9", value: "16:9", aliases: ["widescreen", "ratio"]),
-        CropPreset(title: "4:3", value: "4:3", aliases: ["standard", "ratio"]),
-        CropPreset(title: "3:2", value: "3:2", aliases: ["photo", "ratio"]),
-        CropPreset(title: "1:1", value: "1:1", aliases: ["square", "ratio"]),
-        CropPreset(title: "9:16", value: "9:16", aliases: ["vertical", "story", "ratio"]),
-        CropPreset(title: "Long edge 1920", value: "1920", aliases: ["resize", "edge"]),
-        CropPreset(title: "Long edge 1600", value: "1600", aliases: ["resize", "edge"]),
-        CropPreset(title: "Long edge 1280", value: "1280", aliases: ["resize", "edge"]),
-        CropPreset(title: "Long edge 1080", value: "1080", aliases: ["resize", "edge"]),
-        CropPreset(title: "Width 128, auto height", value: "128x0", aliases: ["width", "auto"]),
-        CropPreset(title: "Auto width, height 720", value: "0x720", aliases: ["height", "auto"])
-    ]
-
     static func response(stateJSON: String, query: String) -> ScriptFilterResponse {
         guard let state = try? JSONDecoder().decode(
             MenuState.self,
@@ -112,66 +126,40 @@ enum CropParameterMenu {
         }
 
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        var items = filteredPresets(query: trimmedQuery).compactMap {
-            item(for: $0.value, title: $0.title, request: request)
-        }
-
-        if !trimmedQuery.isEmpty {
-            if let parsed = CropSizeParser.parse(trimmedQuery) {
-                let custom = item(
-                    for: parsed.value,
-                    title: "Use \(parsed.value)",
+        let item: ScriptFilterItem
+        if trimmedQuery.isEmpty {
+            item = ScriptFilterItem(
+                title: "Type crop or resize parameters",
+                subtitle: "Examples: 1200x630, 16:9, 1920, w128, h720",
+                arg: "",
+                valid: false
+            )
+        } else if let size = CropSizeParser.parse(trimmedQuery),
+                  let interpretedItem = interpretedItem(
+                    for: size,
                     request: request
-                )
-                if !items.contains(where: { $0.arg == custom?.arg }),
-                   let custom {
-                    items.insert(custom, at: 0)
-                }
-            } else if items.isEmpty {
-                items.insert(
-                    ScriptFilterItem(
-                        title: "Invalid crop or resize value",
-                        subtitle: "Use 1200x630, 16:9, 1920, 128x0, or 0x720.",
-                        arg: "",
-                        valid: false
-                    ),
-                    at: 0
-                )
-            }
-        }
-
-        guard !items.isEmpty else {
-            return error(
-                title: "No matching crop presets",
-                subtitle: "Type dimensions, a ratio, or a positive long-edge size."
+                  ) {
+            item = interpretedItem
+        } else {
+            item = ScriptFilterItem(
+                title: "Invalid crop or resize value",
+                subtitle: "Use 1200x630, 16:9, 1920, w128, h720, 128x0, or 0x720.",
+                arg: "",
+                valid: false
             )
         }
 
         return ScriptFilterResponse(
-            items: items,
+            items: [item],
             variables: preservedVariables(for: request, stateJSON: stateJSON)
         )
     }
 
-    private static func filteredPresets(query: String) -> [CropPreset] {
-        guard !query.isEmpty else {
-            return presets
-        }
-        let normalized = query.lowercased()
-        let matches = presets.filter { preset in
-            preset.searchText.lowercased().contains(normalized)
-        }
-        return matches.filter { $0.value.lowercased() == normalized }
-            + matches.filter { $0.value.lowercased() != normalized }
-    }
-
-    private static func item(
-        for value: String,
-        title: String,
+    private static func interpretedItem(
+        for size: CropSize,
         request: ParameterStepRequest
     ) -> ScriptFilterItem? {
-        guard let size = CropSizeParser.parse(value),
-              let argument = try? JSONOutput.string(
+        guard let argument = try? JSONOutput.string(
                 for: OperationRequest(
                     inputs: request.inputs,
                     action: .crop(
@@ -186,14 +174,34 @@ enum CropParameterMenu {
             return nil
         }
 
+        let title: String
+        let interpretation: String
+        switch size.kind {
+        case let .exactDimensions(width, height):
+            title = "Use \(width)x\(height)"
+            interpretation = "Crop / resize to exact dimensions \(width)x\(height)"
+        case let .aspectRatio(width, height):
+            title = "Use \(width):\(height)"
+            interpretation = "Crop to aspect ratio \(width):\(height)"
+        case let .longEdge(edge):
+            title = "Use long edge \(edge)"
+            interpretation = "Resize the long edge to \(edge)"
+        case let .fixedWidth(width):
+            title = "Width \(width), auto height"
+            interpretation = "Resize to fixed width \(width) with calculated height"
+        case let .fixedHeight(height):
+            title = "Height \(height), auto width"
+            interpretation = "Resize to fixed height \(height) with calculated width"
+        }
+
         return ScriptFilterItem(
             uid: "crop.\(size.value)",
             title: title,
-            subtitle: "\(request.inputContext.subtitlePrefix): Crop / resize to \(size.value)",
+            subtitle: "\(request.inputContext.subtitlePrefix): \(interpretation)",
             arg: argument,
             valid: true,
             autocomplete: size.value,
-            match: "\(title) \(size.value)",
+            match: size.value,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue

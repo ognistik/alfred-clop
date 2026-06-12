@@ -219,12 +219,19 @@ struct ActionMenuTests {
         )
     }
 
-    @Test
-    func cropRoutesToTypedCropMenuState() throws {
+    @Test(arguments: [
+        ActionInputContext.selected,
+        ActionInputContext.clipboard,
+        ActionInputContext.arguments
+    ])
+    func cropRoutesToTypedCropMenuState(
+        context: ActionInputContext
+    ) throws {
+        let inputs = ["/tmp/first image.png", "/tmp/second image.jpg"]
         let response = ActionMenu.response(
-            for: InputSelection(inputs: ["/tmp/image.png"], mediaKinds: [.image]),
+            for: InputSelection(inputs: inputs, mediaKinds: [.image]),
             query: "crop",
-            context: .clipboard
+            context: context
         )
         let item = try #require(response.items.first)
         let argument = try #require(item.arg)
@@ -241,13 +248,26 @@ struct ActionMenuTests {
         )
 
         #expect(request.action == .crop)
-        #expect(request.inputContext == .clipboard)
+        #expect(request.inputs == inputs)
+        #expect(request.inputContext == context)
         #expect(state.mode == .crop)
         #expect(state.parameterRequest == request)
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
                 == "parameterStep"
         )
+        #expect(
+            item.variables?[ActionMenu.inputContextVariable]
+                == context.rawValue
+        )
+        let inputJSON = try #require(
+            item.variables?[ActionMenu.inputJSONVariable]
+        )
+        let menuInput = try JSONDecoder().decode(
+            MenuInput.self,
+            from: Data(inputJSON.utf8)
+        )
+        #expect(menuInput.paths == inputs)
     }
 
     @Test
