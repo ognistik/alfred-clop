@@ -48,6 +48,8 @@ resize.
 - Immediate actions handed to a quiet Run Script execution action
 - Clop UI used for successful progress/results, with notifications for errors
 - Release binary built at `workflow/alfred-clop`
+- User configuration fields added for optional `presetsPath` and `copyResult`;
+  they are not wired into Swift behavior yet
 
 ### Parameter-free execution
 
@@ -69,8 +71,8 @@ resize.
   shared Script Filter through its `mainMenu` inbound configuration
 - Immediate `OperationRequest` values continue to the existing quiet execution
   action
-- Searchable presets for common dimensions, aspect ratios, long-edge sizes,
-  and automatic width or height
+- Searchable built-in presets currently exist as the first implementation;
+  the agreed next design removes them in favor of guided dynamic input
 - Free-form validation for `1200x630`, `16:9`, `1920`, `128x0`, and `0x720`
 - Bare positive integers encoded as long-edge resize requests
 - Invalid, malformed, negative, decimal, and zero-only values rejected visibly
@@ -91,6 +93,12 @@ resize.
 
 ## Not implemented
 
+- Guided crop grammar for `wNUMBER` and `hNUMBER`
+- User-defined crop presets, preset naming, and preset persistence
+- Modifier behavior for aggressive processing, original preservation, and
+  saving presets
+- Wiring for the `presetsPath` and `copyResult` workflow settings
+- Typed headless automation request and External Trigger
 - Downscale, conversion, and PDF-crop parameter menus and parsing
 - Smart Crop menu choices
 - Output and backup policies
@@ -100,15 +108,22 @@ resize.
 
 ## Next recommended task
 
-Continue Milestone 3 with the next bounded parameter menu:
+Polish the crop/resize interaction before adding another parameter family:
 
-1. Add downscale factor choices and parsing.
-2. Encode the selected factor into `OperationRequest`.
-3. Extend the typed command builder for `downscale`.
-4. Add focused menu, parsing, command, and execution tests.
+1. Replace built-in presets with one instructional empty-query item.
+2. Interpret typed values dynamically, including `w128` and `h720`.
+3. Show one clear executable interpretation or one visible validation error.
+4. Keep native `128x0` and `0x720` forms supported.
+5. Add focused tests and rebuild the workflow.
 
-Keep conversion and PDF crop encoded as `ParameterStepRequest` until their own
-bounded slices.
+After that bounded slice, implement the reusable modifier model and user preset
+storage. Keep downscale, conversion, and PDF crop encoded as
+`ParameterStepRequest` until their own tasks.
+
+The longer-term automation route is one typed headless External Trigger that
+accepts a versioned JSON request for inputs, action parameters, and execution
+options. Do not replace the current interactive `paths` trigger until a
+compatibility plan is implemented.
 
 ## Verification baseline
 

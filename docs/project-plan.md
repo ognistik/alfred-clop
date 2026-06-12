@@ -26,7 +26,7 @@ feature being deferred must still have an explicit place in this plan.
 - Clipboard file-path entry point
 - Custom path/file selection entry point
 - Optimize
-- Aggressive optimize
+- Command-Return aggressive optimization override
 - Crop to dimensions or aspect ratio
 - Resize to long edge
 - Downscale by factor
@@ -67,7 +67,7 @@ feature being deferred must still have an explicit place in this plan.
 
 ### Product enhancements
 
-- Workflow-owned presets layered above Clop's saved pipelines
+- User-defined workflow presets layered above Clop's saved pipelines
 - Live progress UI
 - Automatic update/release mechanism
 
@@ -82,7 +82,7 @@ The project tracks CLI coverage by command family:
 | --- | --- |
 | `optimise` | Mixed-type defaults plus typed image, video, PDF, and audio controls |
 | `crop` | Size, ratio, single edge, long edge, smart crop, and every documented shared processing option |
-| `downscale` | Factor presets and custom factors plus every documented shared processing option |
+| `downscale` | Typed factors and percentages plus every documented shared processing option |
 | `convert image` | WebP, AVIF, HEIC, JXL, JPEG/JPG, and PNG |
 | `convert video` | MP4/H.264, GIF, WebM/VP9, HEVC, x265, and AV1/MKV |
 | `convert audio` | MP3, AAC, M4A, Opus, Ogg, FLAC, WAV, and AIFF |
@@ -147,6 +147,7 @@ binary with different subcommands:
 alfred-clop menu --input-env finder --query "crop"
 alfred-clop menu --input-env universal-action --query "webp"
 alfred-clop execute --request-json '{...}'
+alfred-clop automate --request-json '{...}'
 alfred-clop probe
 ```
 
@@ -319,6 +320,52 @@ class.
 Use Alfred's File Filter or Browse in Alfred object to collect files, then feed
 the selected paths into the same normalization route.
 
+### External automation
+
+Provide one stable headless External Trigger for callers that already know the
+desired operation and do not want to show Alfred's UI. Prefer the identifier
+`clop`; retain or alias the existing `paths` trigger while migrating existing
+interactive callers.
+
+The trigger argument must be a versioned JSON envelope, not comma-separated
+text or a shell-like command. Paths may contain commas, spaces, quotes, and
+newlines, and future actions require typed parameters and execution options.
+
+Example shape:
+
+```json
+{
+  "version": 1,
+  "inputs": ["/path/one.png", "/path/two.png"],
+  "action": {
+    "type": "crop",
+    "size": "1920",
+    "longEdge": true,
+    "smartCrop": false
+  },
+  "execution": {
+    "aggressive": false,
+    "preserveOriginal": false
+  }
+}
+```
+
+The External Trigger should pass this payload to the same Swift executable and
+typed validation used by Alfred menu results. It must normalize local inputs
+through `InputCollector`, capability-check the requested action, build process
+arguments as arrays, and report failures without requiring a Script Filter.
+Successful automation should remain quiet by default, with an explicit result
+mode added later if automation clients need structured output.
+
+The interactive `paths` route and headless `clop` route solve different
+problems:
+
+- `paths`: pass files, then let the user choose in Alfred;
+- `clop`: pass a complete typed request and execute without Alfred UI.
+
+Do not infer whether to show a menu from missing ad hoc string fields. Keep the
+two request modes explicit and typed.
+
 ### URLs
 
 Provide a dedicated keyword or External Trigger for one or more `http`/`https`
@@ -386,19 +433,19 @@ Suggested top-level actions:
 
 1. Optimize
 2. Optimize with Controls
-3. Aggressive Optimize
-4. Crop / Resize
-5. Downscale
-6. Convert
-7. PDF Crop
-8. PDF Uncrop
-9. Strip Metadata
-10. Run Pipeline
-11. Manage Pipelines
+3. Crop / Resize
+4. Downscale
+5. Convert
+6. PDF Crop
+7. PDF Uncrop
+8. Strip Metadata
+9. Run Pipeline
+10. Manage Pipelines
 
 Keep fast defaults near the top. Advanced controls should remain discoverable
 through searchable actions rather than turning every operation into a long
-mandatory wizard.
+mandatory wizard. Aggressive Optimize should not remain a separate top-level
+action once Command-Return is implemented for Optimize.
 
 The query should fuzzy-match title, synonyms, and keywords. Examples:
 
@@ -412,18 +459,57 @@ The query should fuzzy-match title, synonyms, and keywords. Examples:
 
 ### Crop and resize
 
-Offer presets plus free-form parsing:
+Do not ship workflow-authored size presets. With an empty query, show one
+non-executable instructional item:
 
-- common sizes: `1200x630`, `1920x1080`, `1080x1080`;
-- common ratios: `16:9`, `4:3`, `3:2`, `1:1`, `9:16`;
-- long edge: `1920`, `1600`, `1280`, `1080`;
-- width or height preserving ratio: `128x0`, `0x720`;
-- custom typed value.
+```text
+Type crop or resize parameters
+Examples: 1200x630, 16:9, 1920, w128, h720
+```
+
+Once the user types, show one primary interpreted result:
+
+| Input | Meaning | Clop size |
+| --- | --- | --- |
+| `1200x630` | Exact dimensions | `1200x630` |
+| `16:9` | Aspect ratio | `16:9` |
+| `1920` | Aspect-preserving long edge | `1920` with `--long-edge` |
+| `w128` | Fixed width, calculated height | `128x0` |
+| `h720` | Fixed height, calculated width | `0x720` |
+
+Continue accepting Clop's native `128x0` and `0x720` forms. Subtitles must
+explain the interpretation before execution. Invalid input should produce one
+clear, non-executable result with concise examples.
+
+Only user-created presets may appear below the instructional or interpreted
+item. Do not automatically promote recent values into presets.
+
+Control-Return on a valid parameter result should begin a small preset-saving
+flow. Presets need a user-visible name and must store typed action parameters,
+not an opaque command string.
+
+Preset storage:
+
+- if the `presetsPath` workflow setting is empty, store `presets.json` in
+  `alfred_workflow_data`;
+- if `presetsPath` points to a custom folder, read and write
+  `<presetsPath>/presets.json`;
+- create the file when absent and use an existing compatible file when present;
+- use a versioned JSON schema and atomic writes;
+- never store presets in the workflow bundle itself;
+- when the configured location changes, do not silently copy, merge, or delete
+  files. A future explicit migration action may move or merge presets between
+  the previous and new locations.
+
+The custom folder is the simple cross-Mac strategy: users may choose an iCloud
+Drive, Dropbox, or other locally available synchronized directory.
 
 ### Downscale
 
-Offer `0.9` through `0.1`, with `0.5` prominent. Accept percentages such as
-`75%` and normalize them to `0.75`.
+Use the same guided-input principle as crop: show syntax help when empty, then
+interpret a typed factor or percentage as one primary result. Accept values
+such as `0.5` and `75%`, normalizing percentages to factors such as `0.75`.
+Only user-created presets should appear as additional choices.
 
 ### Convert
 
@@ -511,17 +597,28 @@ Recommended defaults:
 | Input | Effect |
 | --- | --- |
 | Return | Run with configured defaults |
-| Command-Return | Toggle aggressive optimization |
-| Option-Return | Toggle preserving the original via output/backup policy |
-| Control-Return | Toggle Clop floating UI |
-| Shift-Return | Copy processed output to clipboard when supported |
+| Command-Return | Enable aggressive processing where the command supports it |
+| Option-Return | Preserve the original using the configured output policy |
+| Command-Option-Return | Enable aggressive processing and preserve the original |
+| Control-Return | Save a complete parameter choice as a named user preset |
 
 Do not hard-code "Command means aggressive" at execution time. Encode the
 modifier's resolved `OperationRequest` directly in that Alfred item's `mods`
 JSON. This makes the subtitle and actual operation impossible to drift apart.
 
-For an action that is already explicitly aggressive, Command can invert back
-to standard optimization.
+Modifiers keep one meaning across top-level and parameter menus, but only
+appear where applicable. Unsupported modifiers must not silently acquire a
+different action-specific meaning.
+
+Remove the separate Aggressive Optimize action after Command-Return is
+available on Optimize. Option-Return depends on a tested output-preservation
+policy and must not be enabled before that policy exists. Control-Return is
+valid only when the selected item contains complete parameters that can be
+saved and replayed.
+
+Do not reserve modifiers for width/height syntax. Use `w128` and `h720` in the
+query grammar so modifier keys remain available for consistent workflow-wide
+behavior.
 
 ## Workflow configuration
 
@@ -530,13 +627,14 @@ Suggested Alfred user configuration:
 | Setting | Initial values |
 | --- | --- |
 | Clop CLI path | Auto-detect, optional override |
+| Presets path | Empty for `alfred_workflow_data`, or a custom folder |
 | Default optimization | Standard / Aggressive |
 | Output behavior | Replace in place / Same folder / Specific folder |
 | Output template | `%P/%f_optimised.%e` or custom |
 | Backup behavior | Trust Clop / Workflow copy / None |
 | Backup folder | Same folder / Specific folder |
 | Show Clop UI | On / Off |
-| Copy result | On / Off |
+| Ensure result is copied | On / Off |
 | Default image conversion | WebP / AVIF / HEIC / JXL / JPEG / PNG |
 | Default video conversion | MP4 / GIF / WebM / HEVC / x265 / AV1 |
 | Default audio conversion | MP3 / AAC / M4A / Opus / Ogg / FLAC / WAV / AIFF |
@@ -560,6 +658,12 @@ There is an important distinction between output and backup:
 - Clop's own backup behavior is configured in Clop, not through a CLI flag.
 
 The interface should use those precise terms.
+
+The `copyResult` workflow checkbox should resolve into
+`ExecutionOptions.copyResult`. When enabled, supported commands must receive
+Clop's explicit `--copy` option. Do not assume that showing Clop's floating UI
+also guarantees clipboard copying; `--gui` and `--copy` are independent CLI
+options.
 
 ## Execution design
 
@@ -696,6 +800,9 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Add typed command builder.
 - Decode Clop JSON.
 - Add output and backup policies.
+- Replace built-in crop presets with a guided dynamic grammar.
+- Add user-defined preset persistence and naming.
+- Add capability-aware modifier requests.
 
 ### 4. Typed optimization and conversion
 
@@ -715,6 +822,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 
 - Add explicit folder and recursive routes.
 - Add URL input collection for documented commands.
+- Add a typed headless External Trigger for complete automation requests.
 - Add raw bitmap clipboard materialization into temporary image inputs.
 - Add include/exclude type filters, copy result, skip errors, and async mode.
 - Make option availability command-aware.
@@ -753,6 +861,13 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Dynamically read Clop's PDF presets.
 - Treat the installed Clop CLI as the capability authority.
 - Separate output preservation from true backups.
+- Keep empty parameter menus instructional rather than filling them with
+  workflow-authored presets.
+- Store user presets in a versioned `presets.json`, using
+  `alfred_workflow_data` by default or the configured custom folder.
+- Use one typed JSON automation contract for headless execution; never parse
+  comma-separated paths or shell-like request strings.
+- Keep `--gui` and `--copy` as independent execution options.
 - Target complete supported CLI coverage, staged across releases.
 - Keep pipeline expressions opaque until Clop exposes a stable full grammar.
 
@@ -762,6 +877,10 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Whether the released binary is universal or Apple Silicon only.
 - Whether Clop should be launched automatically when needed.
 - Exact default output and backup policy.
+- Exact preset naming, replacement, deletion, and location-migration flows.
+- Final External Trigger identifier and compatibility lifetime for `paths`.
+- Whether headless automation should optionally return structured result JSON
+  to callers in addition to quiet execution.
 - Which complete-coverage features ship in the first public release versus
   follow-up releases.
 - Whether recent-action ranking is desirable.
