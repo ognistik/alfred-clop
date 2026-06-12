@@ -559,7 +559,12 @@ enum CropParameterMenu {
     ) -> [String: String] {
         [
             ActionMenu.inputJSONVariable: (try? JSONOutput.string(
-                for: MenuInput(paths: request.inputs),
+                for: MenuInput(
+                    paths: request.inputs,
+                    mediaKinds: request.mediaKinds,
+                    itemKinds: request.itemKinds,
+                    ambiguousKinds: request.ambiguousKinds
+                ),
                 prettyPrinted: false
             )) ?? "",
             ActionMenu.inputContextVariable: request.inputContext.rawValue,
@@ -662,14 +667,7 @@ enum CropParameterMenu {
     }
 
     private static var defaultExecutionOptions: ExecutionOptions {
-        ExecutionOptions(
-            showClopUI: true,
-            copyResult: false,
-            output: .inPlace,
-            backup: .trustClop,
-            adaptiveOptimisation: nil,
-            pdfDPI: nil
-        )
+        Environment().executionOptions
     }
 
     private static func error(

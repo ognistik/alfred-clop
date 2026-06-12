@@ -7,6 +7,8 @@ struct ActionDefinition: Equatable {
     var aliases: [String]
     var supportedKinds: Set<MediaKind>
     var requiresParameters: Bool
+    var supportsURLs: Bool
+    var supportsFolders: Bool
 
     var searchTerms: [String] {
         [action.rawValue, title] + aliases
@@ -21,7 +23,9 @@ enum ActionCatalog {
             subtitle: "Compress with Clop",
             aliases: ["compress", "shrink", "small", "optimise", "optimize"],
             supportedKinds: [.image, .video, .audio, .pdf],
-            requiresParameters: false
+            requiresParameters: false,
+            supportsURLs: true,
+            supportsFolders: true
         ),
         ActionDefinition(
             action: .aggressiveOptimise,
@@ -29,7 +33,9 @@ enum ActionCatalog {
             subtitle: "Use Clop's aggressive optimization",
             aliases: ["aggressive", "smaller", "compress more"],
             supportedKinds: [.image, .video, .audio, .pdf],
-            requiresParameters: false
+            requiresParameters: false,
+            supportsURLs: true,
+            supportsFolders: true
         ),
         ActionDefinition(
             action: .crop,
@@ -37,7 +43,9 @@ enum ActionCatalog {
             subtitle: "Crop to dimensions, aspect ratio, or edge size",
             aliases: ["crop", "resize", "dimensions", "ratio", "edge"],
             supportedKinds: [.image, .video, .pdf],
-            requiresParameters: true
+            requiresParameters: true,
+            supportsURLs: true,
+            supportsFolders: true
         ),
         ActionDefinition(
             action: .downscale,
@@ -45,7 +53,9 @@ enum ActionCatalog {
             subtitle: "Scale images/videos or reduce audio bitrate",
             aliases: ["downscale", "scale", "half", "reduce", "smaller"],
             supportedKinds: [.image, .video, .audio],
-            requiresParameters: true
+            requiresParameters: true,
+            supportsURLs: true,
+            supportsFolders: true
         ),
         ActionDefinition(
             action: .convert,
@@ -53,7 +63,9 @@ enum ActionCatalog {
             subtitle: "Convert images to WebP, AVIF, or HEIC",
             aliases: ["convert", "webp", "avif", "heic", "format"],
             supportedKinds: [.image],
-            requiresParameters: true
+            requiresParameters: true,
+            supportsURLs: true,
+            supportsFolders: true
         ),
         ActionDefinition(
             action: .cropPDF,
@@ -61,7 +73,9 @@ enum ActionCatalog {
             subtitle: "Crop PDF pages using Clop's reversible crop box",
             aliases: ["pdf", "crop pdf", "ipad", "paper", "device"],
             supportedKinds: [.pdf],
-            requiresParameters: true
+            requiresParameters: true,
+            supportsURLs: false,
+            supportsFolders: true
         ),
         ActionDefinition(
             action: .uncropPDF,
@@ -69,7 +83,9 @@ enum ActionCatalog {
             subtitle: "Remove a reversible PDF crop box",
             aliases: ["uncrop", "restore pdf", "remove crop"],
             supportedKinds: [.pdf],
-            requiresParameters: false
+            requiresParameters: false,
+            supportsURLs: false,
+            supportsFolders: true
         ),
         ActionDefinition(
             action: .stripMetadata,
@@ -77,7 +93,9 @@ enum ActionCatalog {
             subtitle: "Remove EXIF and metadata from images/videos",
             aliases: ["metadata", "exif", "privacy", "strip"],
             supportedKinds: [.image, .video],
-            requiresParameters: false
+            requiresParameters: false,
+            supportsURLs: false,
+            supportsFolders: true
         )
     ]
 
@@ -85,6 +103,33 @@ enum ActionCatalog {
         let selectedKinds = Set(mediaKinds)
         return definitions.filter { definition in
             selectedKinds.allSatisfy(definition.supportedKinds.contains)
+        }
+    }
+
+    static func validActions(for selection: InputSelection) -> [ActionDefinition] {
+        definitions.filter { definition in
+            let supportsKnownKinds = selection.mediaKinds.allSatisfy(
+                definition.supportedKinds.contains
+            )
+            let supportsSources = selection.itemKinds.allSatisfy { kind in
+                switch kind {
+                case .localFile:
+                    return true
+                case .folder:
+                    return definition.supportsFolders
+                case .remoteURL:
+                    return definition.supportsURLs
+                }
+            }
+            let supportsAmbiguity = selection.ambiguousKinds.allSatisfy { kind in
+                switch kind {
+                case .folder:
+                    return definition.supportsFolders
+                case .remoteURL:
+                    return definition.supportsURLs
+                }
+            }
+            return supportsKnownKinds && supportsSources && supportsAmbiguity
         }
     }
 }
@@ -104,11 +149,15 @@ enum ActionMenu {
         writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
         do {
-            let selection = try collector.collect(clipboard: clipboard)
+            let selection = try collector.collect(
+                clipboard: clipboard,
+                recursiveFolders: environment.checkbox("recursiveFolders")
+            )
             let supportedKinds: Set<MediaKind> = [
                 .image, .video, .audio, .pdf
             ]
-            guard selection.mediaKinds.contains(where: supportedKinds.contains) else {
+            guard selection.mediaKinds.contains(where: supportedKinds.contains)
+                || !selection.ambiguousKinds.isEmpty else {
                 return errorItem(
                     title: "No supported files in clipboard",
                     subtitle: "Copy one or more images, videos, audio files, or PDFs."
@@ -122,7 +171,7 @@ enum ActionMenu {
                 fileManager: fileManager,
                 writer: writer
             )
-        } catch InputCollectionError.noPaths {
+        } catch InputCollectionError.noInputs {
             return responseWithoutInputs(
                 context: .clipboard,
                 title: "No supported files in clipboard",
@@ -137,8 +186,87 @@ enum ActionMenu {
                 subtitle: path
             )
         } catch {
+            return collectionErrorResponse(error, context: .clipboard)
+        }
+    }
+
+    static func response(
+        request: ClopInputRequest,
+        query: String,
+        context: ActionInputContext,
+        clipboard: ClipboardReading = SystemClipboardReader(),
+        finder: any FinderSelectionReading = SystemFinderSelectionReader(),
+        collector: InputCollector = InputCollector(),
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter()
+    ) -> ScriptFilterResponse {
+        do {
+            let selection = try collector.collect(
+                request: request,
+                clipboard: clipboard,
+                finder: finder,
+                recursiveFolders: environment.checkbox("recursiveFolders")
+            )
+            return response(
+                for: selection,
+                query: query,
+                context: context,
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            )
+        } catch {
+            return collectionErrorResponse(error, context: context)
+        }
+    }
+
+    static func collectionErrorResponse(
+        _ error: Error,
+        context: ActionInputContext
+    ) -> ScriptFilterResponse {
+        switch error {
+        case InputCollectionError.noInputs:
             return errorItem(
-                title: "Unable to read clipboard files",
+                title: context == .clipboard
+                    ? "No supported input in clipboard"
+                    : "No supported input provided",
+                subtitle: "Use files, folders, or HTTP/HTTPS URLs."
+            )
+        case InputCollectionError.emptyFinderSelection:
+            return errorItem(
+                title: "No Finder selection",
+                subtitle: "Select one or more Finder items and try again."
+            )
+        case InputCollectionError.finderSelectionUnavailable:
+            return errorItem(
+                title: "Unable to read Finder selection",
+                subtitle: "Allow Alfred to control Finder, then try again."
+            )
+        case InputCollectionError.missingPath(let path):
+            return errorItem(title: "Input was not found", subtitle: path)
+        case InputCollectionError.unsupportedURL(let value):
+            return errorItem(
+                title: "Unsupported URL",
+                subtitle: "Only HTTP and HTTPS URLs are accepted: \(value)"
+            )
+        case InputCollectionError.credentialedURL:
+            return errorItem(
+                title: "URL credentials are not allowed",
+                subtitle: "Remove the username or password from the URL."
+            )
+        case InputCollectionError.emptyFolder(let path):
+            return errorItem(title: "Folder is empty", subtitle: path)
+        case InputCollectionError.unsupportedFolder(let path):
+            return errorItem(
+                title: "No supported content in folder",
+                subtitle: path
+            )
+        case InputCollectionError.unreadableFolder(let path):
+            return errorItem(title: "Unable to read folder", subtitle: path)
+        default:
+            return errorItem(
+                title: "Unable to inspect input",
                 subtitle: error.localizedDescription
             )
         }
@@ -168,7 +296,7 @@ enum ActionMenu {
                 title: "Unable to read selected files",
                 subtitle: "The input JSON is invalid."
             )
-        } catch InputCollectionError.noPaths {
+        } catch InputCollectionError.noInputs {
             return responseWithoutInputs(
                 context: context,
                 title: "No files selected",
@@ -209,7 +337,7 @@ enum ActionMenu {
                 fileManager: fileManager,
                 writer: writer
             )
-        } catch InputCollectionError.noPaths {
+        } catch InputCollectionError.noInputs {
             switch context {
             case .arguments:
                 return responseWithoutInputs(
@@ -253,12 +381,6 @@ enum ActionMenu {
         fileManager: FileManager = .default,
         writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
-        if selection.mediaKinds.contains(.folder) {
-            return errorItem(
-                title: "Folders are not supported yet",
-                subtitle: "Select individual files instead."
-            )
-        }
         if selection.mediaKinds.contains(.unknown) {
             return errorItem(
                 title: "Unsupported file type",
@@ -266,7 +388,7 @@ enum ActionMenu {
             )
         }
 
-        let validActions = ActionCatalog.validActions(for: selection.mediaKinds)
+        let validActions = ActionCatalog.validActions(for: selection)
         let filteredActions = ActionMenuSearch.filter(validActions, query: query)
         let migrationItem = presetMigrationItem(
             status: PresetMigrationCoordinator(
@@ -290,25 +412,30 @@ enum ActionMenu {
                 let argument = encodedArgument(
                     for: definition,
                     inputs: selection.inputs,
-                    context: context
+                    context: context,
+                    environment: environment
                 )
                 return ScriptFilterItem(
                     uid: "action.\(definition.action.rawValue)",
                     title: definition.title,
-                    subtitle: "\(context.subtitlePrefix): \(definition.subtitle)",
+                    subtitle: actionSubtitle(
+                        definition: definition,
+                        selection: selection,
+                        context: context
+                    ),
                     arg: argument,
                     valid: true,
                     autocomplete: definition.title,
                     match: definition.searchTerms.joined(separator: " "),
                     variables: requestVariables(
                         for: definition,
-                        inputs: selection.inputs,
+                        selection: selection,
                         context: context
                     )
                 )
             },
             variables: inputVariables(
-                for: selection.inputs,
+                for: selection,
                 context: context
             )
         )
@@ -421,7 +548,10 @@ enum ActionMenu {
                     valid: false
                 )
             ],
-            variables: inputVariables(for: [], context: context)
+            variables: inputVariables(
+                for: InputSelection(inputs: [], mediaKinds: []),
+                context: context
+            )
         )
     }
 
@@ -451,7 +581,8 @@ enum ActionMenu {
     private static func encodedArgument(
         for definition: ActionDefinition,
         inputs: [String],
-        context: ActionInputContext
+        context: ActionInputContext,
+        environment: Environment
     ) -> String {
         do {
             if definition.requiresParameters {
@@ -483,7 +614,7 @@ enum ActionMenu {
                 for: OperationRequest(
                     inputs: inputs,
                     action: action,
-                    execution: defaultExecutionOptions
+                    execution: environment.executionOptions
                 ),
                 prettyPrinted: false
             )
@@ -494,7 +625,7 @@ enum ActionMenu {
 
     private static func requestVariables(
         for definition: ActionDefinition,
-        inputs: [String],
+        selection: InputSelection,
         context: ActionInputContext
     ) -> [String: String] {
         guard definition.requiresParameters else {
@@ -505,8 +636,11 @@ enum ActionMenu {
 
         let request = ParameterStepRequest(
             action: definition.action,
-            inputs: inputs,
-            inputContext: context
+            inputs: selection.inputs,
+            inputContext: context,
+            mediaKinds: selection.mediaKinds,
+            itemKinds: selection.itemKinds,
+            ambiguousKinds: selection.ambiguousKinds
         )
         let state: MenuState
         switch definition.action {
@@ -525,30 +659,29 @@ enum ActionMenu {
                 prettyPrinted: false
             )) ?? "",
             inputJSONVariable: (try? JSONOutput.string(
-                for: MenuInput(paths: inputs),
+                for: MenuInput(
+                    paths: selection.inputs,
+                    mediaKinds: selection.mediaKinds,
+                    itemKinds: selection.itemKinds,
+                    ambiguousKinds: selection.ambiguousKinds
+                ),
                 prettyPrinted: false
             )) ?? "",
             inputContextVariable: context.rawValue
         ]
     }
 
-    private static var defaultExecutionOptions: ExecutionOptions {
-        ExecutionOptions(
-            showClopUI: true,
-            copyResult: false,
-            output: .inPlace,
-            backup: .trustClop,
-            adaptiveOptimisation: nil,
-            pdfDPI: nil
-        )
-    }
-
     private static func inputVariables(
-        for paths: [String],
+        for selection: InputSelection,
         context: ActionInputContext
     ) -> [String: String]? {
         guard let json = try? JSONOutput.string(
-            for: MenuInput(paths: paths),
+            for: MenuInput(
+                paths: selection.inputs,
+                mediaKinds: selection.mediaKinds,
+                itemKinds: selection.itemKinds,
+                ambiguousKinds: selection.ambiguousKinds
+            ),
             prettyPrinted: false
         ) else {
             return nil
@@ -561,6 +694,37 @@ enum ActionMenu {
                 prettyPrinted: false
             )) ?? ""
         ]
+    }
+
+    private static func actionSubtitle(
+        definition: ActionDefinition,
+        selection: InputSelection,
+        context: ActionInputContext
+    ) -> String {
+        guard !selection.ambiguousKinds.isEmpty else {
+            return "\(context.subtitlePrefix): \(definition.subtitle)"
+        }
+
+        let requirement: String?
+        switch definition.action {
+        case .crop:
+            requirement = "Requires image, video, or PDF content"
+        case .downscale:
+            requirement = "Requires image, video, or audio content"
+        case .convert:
+            requirement = "Requires image content"
+        case .cropPDF, .uncropPDF:
+            requirement = "Requires PDF content"
+        case .stripMetadata:
+            requirement = "Requires image or video content"
+        case .optimise, .aggressiveOptimise:
+            requirement = nil
+        }
+
+        return [
+            "\(context.subtitlePrefix): \(definition.subtitle)",
+            requirement
+        ].compactMap(\.self).joined(separator: " - ")
     }
 
     private static func errorItem(

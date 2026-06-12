@@ -149,6 +149,36 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
+    func recursiveFolderSettingIsAppliedToSupportedCommands() throws {
+        var execution = makeExecutionOptions()
+        execution.recursiveFolders = true
+
+        let optimise = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/media folder"],
+            action: .optimise(aggressive: false),
+            execution: execution
+        ))
+        let uncrop = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/pdf folder"],
+            action: .uncropPDF,
+            execution: execution
+        ))
+        let metadata = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/media folder"],
+            action: .stripMetadata,
+            execution: execution
+        ))
+
+        #expect(optimise.arguments.contains("--recursive"))
+        #expect(uncrop.arguments == [
+            "uncrop-pdf", "--recursive", "/tmp/pdf folder"
+        ])
+        #expect(metadata.arguments == [
+            "strip-exif", "--recursive", "/tmp/media folder"
+        ])
+    }
+
+    @Test
     func cropRejectsInvalidOrInconsistentTypedSize() {
         #expect(throws: ClopCommandBuilderError.invalidCropSize) {
             try makeBuilder().command(for: OperationRequest(

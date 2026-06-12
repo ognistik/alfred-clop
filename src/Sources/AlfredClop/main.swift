@@ -9,16 +9,87 @@ enum AlfredClopCommand {
             JSONOutput.print(menuResponse(arguments: Array(arguments.dropFirst())))
         case "execute":
             execute(arguments: Array(arguments.dropFirst()))
+        case "request":
+            request(arguments: Array(arguments.dropFirst()))
+        case "automate":
+            automate(arguments: Array(arguments.dropFirst()))
         case nil:
             JSONOutput.print(errorResponse(
                 title: "Missing Alfred Clop mode",
-                subtitle: "Run alfred-clop menu, execute, or probe."
+                subtitle: "Run alfred-clop menu, request, execute, or probe."
             ))
         default:
             JSONOutput.print(errorResponse(
                 title: "Unknown Alfred Clop mode",
                 subtitle: "Unsupported mode: \(arguments[0])"
             ))
+        }
+    }
+
+    private static func request(arguments: [String]) {
+        guard let requestJSON = value(after: "--request-json", in: arguments) else {
+            JSONOutput.print(errorResponse(
+                title: "Missing Clop request",
+                subtitle: "The request mode requires versioned request JSON."
+            ))
+            return
+        }
+        let context = value(after: "--input-context", in: arguments)
+            .flatMap(ActionInputContext.init(rawValue:))
+        let response = ClopRequestDispatcher.response(
+            requestJSON: requestJSON,
+            query: value(after: "--query", in: arguments) ?? "",
+            contextOverride: context
+        )
+        if let request = try? JSONDecoder().decode(
+            ClopRequest.self,
+            from: Data(requestJSON.utf8)
+        ), case .execute = request.route {
+            if let feedback = response.items.first,
+               !ClopRequestDispatcher.isSuccessfulExecution(feedback.title) {
+                notify(feedback.subtitle.isEmpty
+                    ? feedback.title
+                    : "\(feedback.title): \(feedback.subtitle)"
+                )
+            }
+            JSONOutput.print(ScriptFilterResponse())
+            return
+        }
+        JSONOutput.print(response)
+    }
+
+    private static func automate(arguments: [String]) {
+        let input: ClopInputRequest
+        switch value(after: "--input-source", in: arguments) {
+        case "clipboard":
+            input = .clipboard
+        case "finderSelection":
+            input = .finderSelection
+        case "explicit":
+            guard let value = value(after: "--input-value", in: arguments) else {
+                printText("Missing Clop input: Explicit input requires a value.")
+                return
+            }
+            input = .explicit(items: [value], extractText: true)
+        default:
+            printText("Invalid Clop input: Use clipboard, finderSelection, or explicit.")
+            return
+        }
+
+        let aggressive = arguments.contains("--aggressive")
+        let request = ClopRequest(
+            input: input,
+            route: .execute(action: .optimise(aggressive: aggressive))
+        )
+        guard let json = try? JSONOutput.string(
+            for: request,
+            prettyPrinted: false
+        ) else {
+            printText("Unable to encode Clop request.")
+            return
+        }
+        if let feedback = ClopRequestDispatcher.quietFeedback(requestJSON: json) {
+            printText(feedback)
         }
     }
 
@@ -74,6 +145,25 @@ enum AlfredClopCommand {
                     )
                 }
             }
+        }
+        if let requestJSON = value(after: "--request-json", in: arguments) {
+            let context = value(after: "--input-context", in: arguments)
+                .flatMap(ActionInputContext.init(rawValue:))
+            return ClopRequestDispatcher.response(
+                requestJSON: requestJSON,
+                query: query,
+                contextOverride: context
+            )
+        }
+        if let explicitInput = value(after: "--explicit-input", in: arguments) {
+            let context = value(after: "--input-context", in: arguments)
+                .flatMap(ActionInputContext.init(rawValue:))
+                ?? .selected
+            return ActionMenu.response(
+                request: .explicit(items: [explicitInput], extractText: true),
+                query: query,
+                context: context
+            )
         }
         if value(after: "--input-source", in: arguments) == "clipboard" {
             return ActionMenu.response(
@@ -145,6 +235,26 @@ enum AlfredClopCommand {
 
     private static func printText(_ text: String) {
         FileHandle.standardOutput.write(Data("\(text)\n".utf8))
+    }
+
+    private static func notify(_ text: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-", text]
+        let input = Pipe()
+        process.standardInput = input
+        do {
+            try process.run()
+            input.fileHandleForWriting.write(Data("""
+            on run argv
+                display notification (item 1 of argv) with title "Alfred Clop"
+            end run
+            """.utf8))
+            try? input.fileHandleForWriting.close()
+            process.waitUntilExit()
+        } catch {
+            try? input.fileHandleForWriting.close()
+        }
     }
 }
 

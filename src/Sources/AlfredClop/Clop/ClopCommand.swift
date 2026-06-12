@@ -65,11 +65,14 @@ struct ClopCommandBuilder {
             expectsJSON = true
         case .uncropPDF:
             arguments = ["uncrop-pdf"]
+                + recursiveArguments(for: request.execution)
                 + outputArguments(for: request.execution.output)
                 + request.inputs
             expectsJSON = false
         case .stripMetadata:
-            arguments = ["strip-exif"] + request.inputs
+            arguments = ["strip-exif"]
+                + recursiveArguments(for: request.execution)
+                + request.inputs
             expectsJSON = false
         case .downscale, .convert, .cropPDF:
             throw ClopCommandBuilderError.unsupportedAction
@@ -102,6 +105,9 @@ struct ClopCommandBuilder {
         if request.execution.copyResult {
             arguments.append("--copy")
         }
+        if request.execution.recursiveFolders {
+            arguments.append("--recursive")
+        }
 
         return arguments
             + outputArguments(for: request.execution.output)
@@ -119,6 +125,9 @@ struct ClopCommandBuilder {
         }
         if request.execution.copyResult {
             arguments.append("--copy")
+        }
+        if request.execution.recursiveFolders {
+            arguments.append("--recursive")
         }
         if aggressive {
             arguments.append("--aggressive")
@@ -152,5 +161,11 @@ struct ClopCommandBuilder {
                 .path
             return ["--output", outputPath]
         }
+    }
+
+    private func recursiveArguments(
+        for execution: ExecutionOptions
+    ) -> [String] {
+        execution.recursiveFolders ? ["--recursive"] : []
     }
 }

@@ -50,7 +50,7 @@ struct PresetMigrationTests {
         #expect(!returnedMenu.items.contains {
             $0.title == "Move existing settings"
         })
-        #expect(returnedMenu.items.first?.subtitle.hasPrefix("Copied files:") == true)
+        #expect(returnedMenu.items.first?.subtitle.hasPrefix("Copied input:") == true)
         #expect(
             returnedMenu.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.clipboard.rawValue

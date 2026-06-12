@@ -6,11 +6,11 @@ enum ActionInputContext: String, Codable {
     var subtitlePrefix: String {
         switch self {
         case .selected:
-            return "Selected files"
+            return "Selected input"
         case .clipboard:
-            return "Copied files"
+            return "Copied input"
         case .arguments:
-            return "Passed files"
+            return "Passed input"
         }
     }
 }
@@ -22,6 +22,130 @@ enum WorkflowRequestKind: String, Codable {
 
 struct MenuInput: Codable, Equatable {
     var paths: [String]
+    var mediaKinds: [MediaKind]?
+    var itemKinds: [InputItemKind]?
+    var ambiguousKinds: [AmbiguousInputKind]?
+
+    init(
+        paths: [String],
+        mediaKinds: [MediaKind]? = nil,
+        itemKinds: [InputItemKind]? = nil,
+        ambiguousKinds: [AmbiguousInputKind]? = nil
+    ) {
+        self.paths = paths
+        self.mediaKinds = mediaKinds
+        self.itemKinds = itemKinds
+        self.ambiguousKinds = ambiguousKinds
+    }
+}
+
+struct ClopRequest: Codable, Equatable {
+    var version: Int
+    var input: ClopInputRequest
+    var route: ClopRouteRequest
+
+    init(
+        version: Int = 1,
+        input: ClopInputRequest,
+        route: ClopRouteRequest
+    ) {
+        self.version = version
+        self.input = input
+        self.route = route
+    }
+}
+
+enum ClopInputRequest: Codable, Equatable {
+    case clipboard
+    case finderSelection
+    case explicit(items: [String], extractText: Bool)
+
+    private enum CodingKeys: String, CodingKey {
+        case source
+        case items
+        case extractText
+    }
+
+    private enum Source: String, Codable {
+        case clipboard
+        case finderSelection
+        case explicit
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .clipboard:
+            try container.encode(Source.clipboard, forKey: .source)
+        case .finderSelection:
+            try container.encode(Source.finderSelection, forKey: .source)
+        case let .explicit(items, extractText):
+            try container.encode(Source.explicit, forKey: .source)
+            try container.encode(items, forKey: .items)
+            if extractText {
+                try container.encode(true, forKey: .extractText)
+            }
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(Source.self, forKey: .source) {
+        case .clipboard:
+            self = .clipboard
+        case .finderSelection:
+            self = .finderSelection
+        case .explicit:
+            self = .explicit(
+                items: try container.decode([String].self, forKey: .items),
+                extractText: try container.decodeIfPresent(
+                    Bool.self,
+                    forKey: .extractText
+                ) ?? false
+            )
+        }
+    }
+}
+
+enum ClopRouteRequest: Codable, Equatable {
+    case menu(action: ClopAction?)
+    case execute(action: ActionRequest)
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case action
+    }
+
+    private enum RouteType: String, Codable {
+        case menu
+        case execute
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case let .menu(action):
+            try container.encode(RouteType.menu, forKey: .type)
+            try container.encodeIfPresent(action, forKey: .action)
+        case let .execute(action):
+            try container.encode(RouteType.execute, forKey: .type)
+            try container.encode(action, forKey: .action)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(RouteType.self, forKey: .type) {
+        case .menu:
+            self = .menu(
+                action: try? container.decode(ClopAction.self, forKey: .action)
+            )
+        case .execute:
+            self = .execute(
+                action: try container.decode(ActionRequest.self, forKey: .action)
+            )
+        }
+    }
 }
 
 struct ParameterStepRequest: Codable, Equatable {
@@ -29,16 +153,25 @@ struct ParameterStepRequest: Codable, Equatable {
     var action: ClopAction
     var inputs: [String]
     var inputContext: ActionInputContext
+    var mediaKinds: [MediaKind]?
+    var itemKinds: [InputItemKind]?
+    var ambiguousKinds: [AmbiguousInputKind]?
 
     init(
         action: ClopAction,
         inputs: [String],
-        inputContext: ActionInputContext = .selected
+        inputContext: ActionInputContext = .selected,
+        mediaKinds: [MediaKind]? = nil,
+        itemKinds: [InputItemKind]? = nil,
+        ambiguousKinds: [AmbiguousInputKind]? = nil
     ) {
         self.step = "parameters"
         self.action = action
         self.inputs = inputs
         self.inputContext = inputContext
+        self.mediaKinds = mediaKinds
+        self.itemKinds = itemKinds
+        self.ambiguousKinds = ambiguousKinds
     }
 }
 

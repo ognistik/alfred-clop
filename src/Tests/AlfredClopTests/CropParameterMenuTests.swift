@@ -65,9 +65,9 @@ struct CropParameterMenuTests {
     }
 
     @Test(arguments: [
-        (ActionInputContext.selected, "Selected files"),
-        (ActionInputContext.clipboard, "Copied files"),
-        (ActionInputContext.arguments, "Passed files")
+        (ActionInputContext.selected, "Selected input"),
+        (ActionInputContext.clipboard, "Copied input"),
+        (ActionInputContext.arguments, "Passed input")
     ])
     func queryRerunsPreservePathsAndContext(
         context: ActionInputContext,
@@ -125,7 +125,7 @@ struct CropParameterMenuTests {
         #expect(response.items.count == 1)
         #expect(item.subtitle.contains(explanation))
         #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
-        #expect(item.subtitle.hasPrefix("Passed files:"))
+        #expect(item.subtitle.hasPrefix("Passed input:"))
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
                 == "operation"

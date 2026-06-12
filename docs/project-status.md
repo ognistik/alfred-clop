@@ -8,15 +8,15 @@ file whenever a task materially changes what works or what should happen next.
 
 ## Current checkpoint
 
-Milestones 1 and 2 are substantially complete. Milestone 3 now includes
+Milestones 1 and 2 are substantially complete. Milestone 3 includes
 parameter-free execution, a guided dynamic parameter step for crop and resize,
-user-defined Crop / Resize action presets, and explicit preset-location
-migration.
+user-defined Crop / Resize action presets, explicit preset-location migration,
+and the unified input and routing foundation planned for Milestone 6.
 
-The next architecture checkpoint is fully designed: replace the
-development-only public `paths` trigger with one typed `clop` request that
-separates input acquisition from menu or execution routing. This design is
-documented but not implemented.
+The public automation surface is now one versioned `clop` request with
+independent typed input and route values. Files, folders, HTTP/HTTPS URLs,
+clipboard content, Finder selection, Universal Actions, and six configurable
+Hotkeys all normalize through `InputCollector`.
 
 ## Completed
 
@@ -36,7 +36,8 @@ documented but not implemented.
 - Clipboard support using `NSPasteboard`
 - Clipboard parsing for native file URLs, `file://` URLs, newline-separated
   paths, and a single path
-- External Trigger `paths` for one or multiple directly passed file paths
+- External Trigger `clop` for typed clipboard, Finder-selection, and explicit
+  input requests
 - Path normalization, symlink resolution, validation, and deduplication
 - Media detection for images, video, audio, and PDFs
 - Context-aware action capability intersection for mixed inputs
@@ -45,19 +46,56 @@ documented but not implemented.
 - Injectable clipboard abstraction with no real clipboard dependency in tests
 - Input context preserved across Script Filter reruns
 
+### Unified input and routing
+
+- Versioned public `clop` request with separate typed `input` and `route`
+  models
+- Clipboard, explicit-item, and injectable Finder-selection acquisition
+- Universal Action and Alfred-selected text extraction for supported URLs,
+  quoted or backtick-wrapped paths with spaces, unquoted absolute paths,
+  `~/...` paths, and `file://` URLs
+- Native clipboard files take precedence over clipboard text
+- Exact structured explicit items remain distinct from prose extraction
+- Local files, folders, and remote URLs classified through `InputCollector`
+- HTTP/HTTPS query strings and fragments preserved
+- Credential-bearing and unsupported-scheme URLs rejected
+- Folder inspection controlled by `recursiveFolders`
+- Fixed 500-visible-entry budget per input folder, counting inspected files
+  and traversed directories
+- Hidden entries, packages, and symlinks excluded from folder scans
+- Empty, unsupported-only, unreadable, and budget-limited folders handled
+  distinctly
+- Clear media capabilities intersected across files, folder contents, and
+  recognizable URL extensions
+- Ambiguous URLs and budget-limited folders retain documented broad-input
+  actions with concise media requirements
+- Typed routes open the main menu, a clean implemented parameter menu, or
+  quiet execution
+- Menu routes ignore accidental parameter objects instead of inferring an
+  execution route
+- Quiet execution inherits current workflow `copyResult` and
+  `recursiveFolders` settings
+- Empty Finder selections stop visibly without clipboard fallback
+- Normalized source and ambiguity metadata survive Script Filter reruns
+
 ### Workflow
 
 - Universal Action wired through an Args and Vars object
 - Clipboard keyword `clop`
-- External Trigger `paths` wired through an Args and Vars object
+- Public External Trigger `clop` accepts versioned typed requests
+- Internal `mainMenu` trigger remains reserved for Script Filter navigation
 - Shared normalized input state stored in `alfred_clop_input_json`
 - Immediate actions handed to a quiet Run Script execution action
 - Clop UI used for successful progress/results, with notifications for errors
 - Release binary built at `workflow/alfred-clop`
-- User configuration fields added for optional `presetsPath`, `copyResult`,
-  and `recursiveFolders`
-- `presetsPath` is wired into preset storage; `copyResult` and
-  `recursiveFolders` are not wired yet
+- User configuration fields for optional `presetsPath`, `copyResult`, and
+  `recursiveFolders`
+- `copyResult` is applied to supported app-backed commands
+- `recursiveFolders` controls both folder inspection and supported Clop
+  command arguments
+- Universal Action accepts files, URLs, text, and multiple items
+- Six configurable Hotkeys: menu, optimize, and aggressive optimize for
+  clipboard or Alfred-selected input
 
 ### Parameter-free execution
 
@@ -173,10 +211,6 @@ structure.
 ## Not implemented
 
 - Modifier behavior for aggressive processing and original preservation
-- Wiring for the `copyResult` workflow setting
-- Typed unified `clop` request and External Trigger dispatcher
-- URL, folder, Finder-selection, and prose-extraction input support
-- Configurable Hotkey entry points
 - Downscale, conversion, and PDF-crop parameter menus and parsing
 - Smart Crop menu choices
 - Output and backup policies
@@ -186,7 +220,7 @@ structure.
 - Workflow icons, user configuration, packaging, and release automation
 - Raw bitmap clipboard data materialization
 
-### Finalized unified input design
+### Implemented unified input design
 
 - One public External Trigger identifier: `clop`; no compatibility alias for
   the unreleased `paths` trigger
@@ -223,35 +257,26 @@ structure.
 
 ## Next recommended task
 
-Implement the unified input foundation before expanding the action menus:
+Implement capability-aware modifier behavior and finish the remaining global
+execution-setting foundation:
 
-1. Add typed versioned request models separating `input` from `route`.
-2. Expand `InputCollector` to classify explicit files, folders, and URLs and
-   to extract supported inputs from clipboard or Alfred-provided text.
-3. Add injectable Finder-selection and bounded folder-inspection dependencies.
-4. Implement the 500-entry folder budget and `recursiveFolders` configuration
-   semantics.
-5. Update menu capability handling for clear and ambiguous broad inputs.
-6. Replace the public `paths` External Trigger with `clop` and dispatch typed
-   requests to the main menu, action parameter menu, or quiet execution.
-7. Update the Universal Action and add the six agreed Hotkey objects.
-8. Add focused tests for mixed inputs, prose extraction, URL validation,
-   folders, empty Finder selections, routing, spaces, and multiple-item
-   payloads.
+1. Add Command-Return aggressive optimization requests to supported action
+   results and remove the separate top-level Aggressive Optimize action once
+   the modifier is verified in Alfred.
+2. Resolve the remaining shared execution settings into typed
+   `ExecutionOptions` without adding output or backup policies prematurely.
+3. Keep URL and folder capability validation shared between interactive and
+   quiet execution.
+4. Add focused modifier and configuration-inheritance tests.
 
-Keep existing normalized menu-state reruns and the internal `mainMenu` route
-unchanged. Preserve workflow configuration inheritance during quiet execution.
 Do not implement recipes, raw bitmap materialization, output policies, or new
-action parameter menus in this slice.
-
-After this foundation, return to wiring `copyResult` and the remaining global
-execution settings.
+action parameter menus in that slice.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 107 tests.
+- `./scripts/test.sh` passes 129 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

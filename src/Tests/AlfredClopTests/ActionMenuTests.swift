@@ -62,15 +62,28 @@ struct ActionMenuTests {
     }
 
     @Test
-    func folderReturnsNotSupportedItem() {
+    func ambiguousFolderShowsDocumentedFolderActions() {
         let response = ActionMenu.response(
-            for: InputSelection(inputs: ["/tmp/folder"], mediaKinds: [.folder]),
+            for: InputSelection(
+                inputs: ["/tmp/folder"],
+                mediaKinds: [],
+                itemKinds: [.folder],
+                ambiguousKinds: [.folder]
+            ),
             query: ""
         )
 
-        #expect(response.items.count == 1)
-        #expect(response.items[0].title == "Folders are not supported yet")
-        #expect(response.items[0].valid == false)
+        #expect(response.items.map(\.title) == [
+            "Optimize",
+            "Aggressive Optimize",
+            "Crop / Resize",
+            "Downscale",
+            "Convert Image",
+            "Reversible PDF Crop",
+            "Uncrop PDF",
+            "Strip Metadata"
+        ])
+        #expect(response.items[2].subtitle.contains("Requires image, video, or PDF"))
     }
 
     @Test
@@ -106,7 +119,7 @@ struct ActionMenuTests {
         let response = ActionMenu.response(paths: [file.path], query: "exif")
 
         #expect(response.items.map(\.title) == ["Strip Metadata"])
-        #expect(response.items[0].subtitle.hasPrefix("Selected files:"))
+        #expect(response.items[0].subtitle.hasPrefix("Selected input:"))
         #expect(response.variables?[ActionMenu.inputJSONVariable] != nil)
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
@@ -125,7 +138,7 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[0].subtitle == "Passed files: Compress with Clop")
+        #expect(response.items[0].subtitle == "Passed input: Compress with Clop")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.arguments.rawValue
@@ -143,7 +156,7 @@ struct ActionMenuTests {
         )
 
         #expect(response.items.map(\.title) == ["Strip Metadata"])
-        #expect(response.items[0].subtitle.hasPrefix("Copied files:"))
+        #expect(response.items[0].subtitle.hasPrefix("Copied input:"))
         #expect(response.variables?[ActionMenu.inputJSONVariable] != nil)
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
@@ -166,7 +179,7 @@ struct ActionMenuTests {
             context: .clipboard
         )
 
-        #expect(response.items[0].subtitle == "Copied files: Compress with Clop")
+        #expect(response.items[0].subtitle == "Copied input: Compress with Clop")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.clipboard.rawValue
@@ -197,6 +210,24 @@ struct ActionMenuTests {
 
         #expect(response.items[0].title == "No supported files in clipboard")
         #expect(response.items[0].valid == false)
+    }
+
+    @Test
+    func ambiguousClipboardURLShowsURLCapableActions() {
+        let response = ActionMenu.response(
+            clipboard: ActionMenuClipboard(
+                text: "https://example.com/download"
+            ),
+            query: ""
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Optimize",
+            "Aggressive Optimize",
+            "Crop / Resize",
+            "Downscale",
+            "Convert Image"
+        ])
     }
 
     @Test
@@ -251,7 +282,9 @@ struct ActionMenuTests {
         #expect(request.inputs == inputs)
         #expect(request.inputContext == context)
         #expect(state.mode == .crop)
-        #expect(state.parameterRequest == request)
+        #expect(state.parameterRequest?.action == request.action)
+        #expect(state.parameterRequest?.inputs == request.inputs)
+        #expect(state.parameterRequest?.inputContext == request.inputContext)
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
                 == "parameterStep"

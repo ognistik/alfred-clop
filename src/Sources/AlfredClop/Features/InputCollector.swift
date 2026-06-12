@@ -1,26 +1,210 @@
+import AppKit
 import Foundation
 
 enum InputCollectionError: Error, Equatable {
     case invalidJSON
-    case noPaths
+    case noInputs
     case missingPath(String)
+    case unsupportedURL(String)
+    case credentialedURL(String)
+    case emptyFolder(String)
+    case unsupportedFolder(String)
+    case unreadableFolder(String)
+    case finderSelectionUnavailable
+    case emptyFinderSelection
 }
 
-struct InputCollector {
+struct FolderInspection: Equatable {
+    var mediaKinds: [MediaKind]
+    var visibleEntryCount: Int
+    var isAmbiguous: Bool
+    var foundVisibleEntry: Bool
+}
+
+protocol FolderInspecting {
+    func inspect(
+        folder: URL,
+        recursive: Bool,
+        budget: Int
+    ) throws -> FolderInspection
+}
+
+struct FoundationFolderInspector: FolderInspecting {
     var fileManager: FileManager = .default
     var detector = MediaKindDetector()
 
-    func collect(clipboard: ClipboardReading) throws -> InputSelection {
+    func inspect(
+        folder: URL,
+        recursive: Bool,
+        budget: Int
+    ) throws -> FolderInspection {
+        var pending = [folder]
+        var kinds = [MediaKind]()
+        var count = 0
+        var foundVisibleEntry = false
+
+        while let directory = pending.popLast() {
+            let entries: [URL]
+            do {
+                entries = try fileManager.contentsOfDirectory(
+                    at: directory,
+                    includingPropertiesForKeys: [
+                        .isDirectoryKey,
+                        .isHiddenKey,
+                        .isPackageKey,
+                        .isSymbolicLinkKey
+                    ],
+                    options: []
+                )
+            } catch {
+                throw InputCollectionError.unreadableFolder(folder.path)
+            }
+
+            for entry in entries.sorted(by: { $0.path < $1.path }) {
+                let values: URLResourceValues
+                do {
+                    values = try entry.resourceValues(forKeys: [
+                        .isDirectoryKey,
+                        .isHiddenKey,
+                        .isPackageKey,
+                        .isSymbolicLinkKey
+                    ])
+                } catch {
+                    throw InputCollectionError.unreadableFolder(folder.path)
+                }
+
+                if values.isHidden == true || entry.lastPathComponent.hasPrefix(".") {
+                    continue
+                }
+                if values.isSymbolicLink == true {
+                    continue
+                }
+                if values.isDirectory == true, values.isPackage == true {
+                    continue
+                }
+
+                foundVisibleEntry = true
+                if count == budget {
+                    return FolderInspection(
+                        mediaKinds: kinds,
+                        visibleEntryCount: count,
+                        isAmbiguous: true,
+                        foundVisibleEntry: true
+                    )
+                }
+                count += 1
+
+                if values.isDirectory == true {
+                    if recursive {
+                        pending.append(entry)
+                    }
+                    continue
+                }
+
+                let kind = detector.kind(for: entry)
+                if kind != .unknown, !kinds.contains(kind) {
+                    kinds.append(kind)
+                }
+            }
+        }
+
+        return FolderInspection(
+            mediaKinds: kinds,
+            visibleEntryCount: count,
+            isAmbiguous: false,
+            foundVisibleEntry: foundVisibleEntry
+        )
+    }
+}
+
+protocol FinderSelectionReading {
+    func selectedItems() throws -> [String]
+}
+
+struct SystemFinderSelectionReader: FinderSelectionReading {
+    func selectedItems() throws -> [String] {
+        let source = """
+        tell application "Finder"
+            set selectedItems to selection
+            set output to ""
+            repeat with selectedItem in selectedItems
+                set output to output & POSIX path of (selectedItem as alias) & linefeed
+            end repeat
+            return output
+        end tell
+        """
+        var error: NSDictionary?
+        guard let result = NSAppleScript(source: source)?
+            .executeAndReturnError(&error)
+            .stringValue else {
+            throw InputCollectionError.finderSelectionUnavailable
+        }
+        return result
+            .split(whereSeparator: \.isNewline)
+            .map(String.init)
+    }
+}
+
+struct InputCollector {
+    static let folderInspectionBudget = 500
+
+    var fileManager: FileManager = .default
+    var detector = MediaKindDetector()
+    var folderInspector: any FolderInspecting = FoundationFolderInspector()
+
+    func collect(
+        request: ClopInputRequest,
+        clipboard: ClipboardReading,
+        finder: any FinderSelectionReading,
+        recursiveFolders: Bool
+    ) throws -> InputSelection {
+        switch request {
+        case .clipboard:
+            return try collect(
+                clipboard: clipboard,
+                recursiveFolders: recursiveFolders
+            )
+        case .finderSelection:
+            let items = try finder.selectedItems()
+            guard !items.isEmpty else {
+                throw InputCollectionError.emptyFinderSelection
+            }
+            return try collect(
+                items: items,
+                extractText: false,
+                recursiveFolders: recursiveFolders
+            )
+        case let .explicit(items, extractText):
+            return try collect(
+                items: items,
+                extractText: extractText,
+                recursiveFolders: recursiveFolders
+            )
+        }
+    }
+
+    func collect(
+        clipboard: ClipboardReading,
+        recursiveFolders: Bool = false
+    ) throws -> InputSelection {
         let fileURLs = clipboard.fileURLs()
         if !fileURLs.isEmpty {
-            return try collect(paths: fileURLs.map(\.path))
+            return try collect(
+                items: fileURLs.map(\.path),
+                extractText: false,
+                recursiveFolders: recursiveFolders
+            )
         }
 
         guard let clipboardString = clipboard.string() else {
-            throw InputCollectionError.noPaths
+            throw InputCollectionError.noInputs
         }
 
-        return try collect(paths: clipboardPaths(from: clipboardString))
+        return try collect(
+            items: [clipboardString],
+            extractText: true,
+            recursiveFolders: recursiveFolders
+        )
     }
 
     func collect(json: String) throws -> InputSelection {
@@ -29,50 +213,144 @@ struct InputCollector {
             throw InputCollectionError.invalidJSON
         }
 
+        if let mediaKinds = input.mediaKinds,
+           let itemKinds = input.itemKinds,
+           let ambiguousKinds = input.ambiguousKinds {
+            return InputSelection(
+                inputs: input.paths,
+                mediaKinds: mediaKinds,
+                itemKinds: itemKinds,
+                ambiguousKinds: ambiguousKinds
+            )
+        }
         return try collect(paths: input.paths)
     }
 
     func collect(paths: [String]) throws -> InputSelection {
-        let paths = expandedAlfredPaths(paths)
-        guard !paths.isEmpty else {
-            throw InputCollectionError.noPaths
+        try collect(
+            items: expandedAlfredItems(paths),
+            extractText: false,
+            recursiveFolders: false
+        )
+    }
+
+    func collect(
+        items: [String],
+        extractText: Bool,
+        recursiveFolders: Bool
+    ) throws -> InputSelection {
+        let candidates: [String]
+        if extractText {
+            candidates = try items.flatMap { value in
+                if isExistingPath(value) || isStandaloneURL(value) {
+                    return [value]
+                }
+                let expanded = expandedAlfredItems([value])
+                if expanded.count > 1,
+                   expanded.allSatisfy({
+                       isExistingPath($0) || isStandaloneURL($0)
+                   }) {
+                    return expanded
+                }
+                return try extractInputs(from: value)
+            }
+        } else {
+            candidates = expandedAlfredItems(items)
+        }
+        guard !candidates.isEmpty else {
+            throw InputCollectionError.noInputs
         }
 
         var seen = Set<String>()
-        var inputs: [String] = []
-        var mediaKinds: [MediaKind] = []
+        var inputs = [String]()
+        var mediaKinds = [MediaKind]()
+        var itemKinds = [InputItemKind]()
+        var ambiguousKinds = [AmbiguousInputKind]()
 
-        for rawPath in paths {
-            let expanded = NSString(string: rawPath).expandingTildeInPath
+        for candidate in candidates {
+            if let remoteURL = try validatedRemoteURL(candidate) {
+                let value = remoteURL.absoluteString
+                guard seen.insert(value).inserted else {
+                    continue
+                }
+                inputs.append(value)
+                itemKinds.append(.remoteURL)
+                let kind = detector.kind(for: remoteURL)
+                if kind == .unknown {
+                    if !ambiguousKinds.contains(.remoteURL) {
+                        ambiguousKinds.append(.remoteURL)
+                    }
+                } else {
+                    mediaKinds.append(kind)
+                }
+                continue
+            }
+
+            let pathValue: String
+            if let url = URL(string: candidate), url.isFileURL {
+                pathValue = url.path
+            } else {
+                pathValue = candidate
+            }
+            let expanded = NSString(string: pathValue).expandingTildeInPath
             let url = URL(fileURLWithPath: expanded)
                 .standardizedFileURL
                 .resolvingSymlinksInPath()
             let path = url.path
 
             guard fileManager.fileExists(atPath: path) else {
-                throw InputCollectionError.missingPath(rawPath)
+                throw InputCollectionError.missingPath(candidate)
             }
             guard seen.insert(path).inserted else {
                 continue
             }
 
-            inputs.append(path)
-            mediaKinds.append(detector.kind(for: url))
+            let kind = detector.kind(for: url)
+            if kind == .folder {
+                let inspection = try folderInspector.inspect(
+                    folder: url,
+                    recursive: recursiveFolders,
+                    budget: Self.folderInspectionBudget
+                )
+                if !inspection.foundVisibleEntry {
+                    throw InputCollectionError.emptyFolder(candidate)
+                }
+                if inspection.mediaKinds.isEmpty, !inspection.isAmbiguous {
+                    throw InputCollectionError.unsupportedFolder(candidate)
+                }
+                inputs.append(path)
+                itemKinds.append(.folder)
+                for mediaKind in inspection.mediaKinds where !mediaKinds.contains(mediaKind) {
+                    mediaKinds.append(mediaKind)
+                }
+                if inspection.isAmbiguous, !ambiguousKinds.contains(.folder) {
+                    ambiguousKinds.append(.folder)
+                }
+            } else {
+                inputs.append(path)
+                itemKinds.append(.localFile)
+                mediaKinds.append(kind)
+            }
         }
 
         guard !inputs.isEmpty else {
-            throw InputCollectionError.noPaths
+            throw InputCollectionError.noInputs
         }
 
-        return InputSelection(inputs: inputs, mediaKinds: mediaKinds)
+        return InputSelection(
+            inputs: inputs,
+            mediaKinds: mediaKinds,
+            itemKinds: itemKinds,
+            ambiguousKinds: ambiguousKinds
+        )
     }
 
-    private func expandedAlfredPaths(_ paths: [String]) -> [String] {
-        guard paths.count == 1, let value = paths.first else {
-            return paths
+    private func expandedAlfredItems(_ items: [String]) -> [String] {
+        guard items.count == 1, let value = items.first else {
+            return items
         }
-        if fileManager.fileExists(atPath: NSString(string: value).expandingTildeInPath) {
-            return paths
+        if isExistingPath(value) || isStandaloneURL(value) {
+            return items
         }
         if let data = value.data(using: .utf8),
            let decoded = try? JSONDecoder().decode([String].self, from: data) {
@@ -82,21 +360,78 @@ struct InputCollector {
         let separated = value
             .split(whereSeparator: { $0 == "\n" || $0 == "\t" })
             .map(String.init)
-        return separated.isEmpty ? paths : separated
+        return separated.isEmpty ? items : separated
     }
 
-    private func clipboardPaths(from value: String) -> [String] {
-        value
-            .split(whereSeparator: \.isNewline)
-            .compactMap { rawLine in
-                let line = rawLine.trimmingCharacters(in: .whitespaces)
-                guard !line.isEmpty else {
-                    return nil
+    private func extractInputs(from text: String) throws -> [String] {
+        var matches = [(range: Range<String.Index>, value: String)]()
+        let wrappedPattern = #"(["'`])((?:file://|/|~/).*?)\1"#
+        let urlPattern = #"[A-Za-z][A-Za-z0-9+.-]*://[^\s"'`<>]+"#
+        let pathPattern = #"(?<![\w])(?:~/|/)[^\s"'`<>]+"#
+
+        for pattern in [wrappedPattern, urlPattern, pathPattern] {
+            let expression = try NSRegularExpression(pattern: pattern)
+            let range = NSRange(text.startIndex..., in: text)
+            for result in expression.matches(in: text, range: range) {
+                let capture = pattern == wrappedPattern ? 2 : 0
+                guard let matchRange = Range(result.range(at: capture), in: text) else {
+                    continue
                 }
-                if let url = URL(string: line), url.isFileURL {
-                    return url.path
+                let value = trimTrailingPunctuation(String(text[matchRange]))
+                let fullRange = Range(result.range, in: text) ?? matchRange
+                if matches.contains(where: { $0.range.overlaps(fullRange) }) {
+                    continue
                 }
-                return line
+                if isURLLike(value) {
+                    _ = try validatedRemoteURL(value)
+                }
+                matches.append((fullRange, value))
             }
+        }
+
+        return matches
+            .sorted { $0.range.lowerBound < $1.range.lowerBound }
+            .map(\.value)
+    }
+
+    private func validatedRemoteURL(_ value: String) throws -> URL? {
+        guard isURLLike(value), let url = URL(string: value) else {
+            return nil
+        }
+        if url.isFileURL {
+            return nil
+        }
+        guard let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            throw InputCollectionError.unsupportedURL(value)
+        }
+        guard url.user == nil, url.password == nil else {
+            throw InputCollectionError.credentialedURL(value)
+        }
+        guard url.host != nil else {
+            throw InputCollectionError.unsupportedURL(value)
+        }
+        return url
+    }
+
+    private func isExistingPath(_ value: String) -> Bool {
+        fileManager.fileExists(
+            atPath: NSString(string: value).expandingTildeInPath
+        )
+    }
+
+    private func isURLLike(_ value: String) -> Bool {
+        value.range(
+            of: #"^[A-Za-z][A-Za-z0-9+.-]*://"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    private func isStandaloneURL(_ value: String) -> Bool {
+        isURLLike(value) && !value.contains(where: \.isWhitespace)
+    }
+
+    private func trimTrailingPunctuation(_ value: String) -> String {
+        value.trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!?)]}"))
     }
 }
