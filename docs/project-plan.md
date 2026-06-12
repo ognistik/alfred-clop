@@ -297,89 +297,182 @@ validation. Do not pass remote URLs through local existence checks or
 
 ### Alfred Universal Action
 
-Configure it to accept multiple files. Alfred passes paths to the executable;
-do not combine them into a comma-delimited string because commas are valid in
-filenames.
+Configure it to accept multiple files, URLs, and text. Treat Alfred's argument
+as explicit input: structured file and URL values remain exact items, while
+text may contain extractable paths or URLs. Do not combine inputs into a
+comma-delimited string because commas are valid in filenames and URLs.
 
 ### Finder selection
 
-Prefer a small AppleScript/JXA bridge only for obtaining Finder's selected
-paths. Pass one path per line or as JSON to Swift. All validation and action
-logic stays in Swift.
+Use a small injectable AppleScript/JXA bridge only when an External Trigger
+request explicitly asks for `finderSelection`. The bridge obtains Finder's
+selected paths and returns them to Swift as structured input. If Finder has no
+selection, notify the user and stop; do not fall back to the clipboard.
+
+Alfred Hotkey and Universal Action objects should pass their macOS selection
+directly as explicit input. This may be files, URLs, or selected text and does
+not require the Finder bridge.
 
 ### Clipboard
 
-Swift can inspect `NSPasteboard` for:
+Swift should inspect `NSPasteboard` in this order:
 
-1. file URLs;
-2. newline-separated paths;
-3. a single path or supported URL.
+1. native file URLs;
+2. text containing paths or supported URLs.
 
-This is more robust than relying only on AppleScript's file URL clipboard
-class.
+Native files take precedence and must not be combined with the clipboard's
+text representation because applications often publish the same selection in
+several pasteboard formats.
 
-### Custom paths
+Text extraction is intentionally broader than one item per line:
 
-Use Alfred's File Filter or Browse in Alfred object to collect files, then feed
-the selected paths into the same normalization route.
+- extract every valid `http` or `https` URL from surrounding prose;
+- accept quoted or backtick-wrapped local paths containing spaces;
+- accept unquoted absolute paths and `~/...` paths when they contain no spaces;
+- accept `file://` URLs as local paths;
+- ignore unrelated prose and preserve the order of recognized inputs.
 
-### External automation
+Structured explicit input is not prose. Every item supplied in the typed
+External Trigger request is treated as one exact file, folder, or URL value.
 
-Provide one stable headless External Trigger for callers that already know the
-desired operation and do not want to show Alfred's UI. Prefer the identifier
-`clop`; retain or alias the existing `paths` trigger while migrating existing
-interactive callers.
+### Unified External Trigger
 
-The trigger argument must be a versioned JSON envelope, not comma-separated
-text or a shell-like command. Paths may contain commas, spaces, quotes, and
-newlines, and future actions require typed parameters and execution options.
+Provide one public External Trigger with the stable identifier `clop`. The
+project is unreleased, so replace the development-only `paths` trigger without
+a compatibility alias. Keep the Script Filter's `mainMenu` inbound External
+Trigger as an internal workflow navigation mechanism, not part of the public
+API.
 
-Example shape:
+The public trigger accepts one versioned JSON envelope. Input acquisition and
+routing are independent typed choices:
+
+- `clipboard`: inspect the current clipboard dynamically;
+- `finderSelection`: ask Finder for its selected items;
+- `explicit`: classify the supplied exact `items`;
+- `menu`: open the main action menu or one action's parameter menu;
+- `execute`: run one complete typed operation without showing Alfred;
+- `recipe`: later run a stored recipe by stable identifier.
+
+Use `items`, not `paths`, because explicit input may include local files,
+folders, and remote URLs.
+
+Open the main menu for clipboard content:
 
 ```json
 {
   "version": 1,
-  "inputs": ["/path/one.png", "/path/two.png"],
-  "action": {
-    "type": "crop",
-    "size": "1920",
-    "longEdge": true,
-    "smartCrop": false
+  "input": {
+    "source": "clipboard"
   },
-  "execution": {
-    "aggressive": false,
-    "preserveOriginal": false
+  "route": {
+    "type": "menu"
   }
 }
 ```
 
-The External Trigger should pass this payload to the same Swift executable and
-typed validation used by Alfred menu results. It must normalize local inputs
-through `InputCollector`, capability-check the requested action, build process
-arguments as arrays, and report failures without requiring a Script Filter.
-Successful automation should remain quiet by default, with an explicit result
-mode added later if automation clients need structured output.
+Open Crop / Resize for Finder's current selection:
 
-The interactive `paths` route and headless `clop` route solve different
-problems:
+```json
+{
+  "version": 1,
+  "input": {
+    "source": "finderSelection"
+  },
+  "route": {
+    "type": "menu",
+    "action": "crop"
+  }
+}
+```
 
-- `paths`: pass files, then let the user choose in Alfred;
-- `clop`: pass a complete typed request and execute without Alfred UI.
+Execute a complete operation for explicit mixed input:
 
-Do not infer whether to show a menu from missing ad hoc string fields. Keep the
-two request modes explicit and typed.
+```json
+{
+  "version": 1,
+  "input": {
+    "source": "explicit",
+    "items": [
+      "/path/one image.png",
+      "/path/media folder",
+      "https://example.com/video.mp4"
+    ]
+  },
+  "route": {
+    "type": "execute",
+    "action": {
+      "type": "optimise",
+      "aggressive": false
+    }
+  }
+}
+```
+
+A `menu` route without an action opens the main menu. A `menu` route with an
+action opens that action's clean parameter menu. Action parameter values are
+not part of a menu request; if accidentally present, ignore them. An `execute`
+route requires a complete typed action. Do not infer the route from missing
+fields or supplied parameter values.
+
+Automation uses the same `InputCollector`, capability validation,
+configuration resolution, command builder, and execution path as interactive
+results. Successful execution stays quiet while Clop's configured UI may show
+progress and results; failures produce a visible notification. Automation
+inherits workflow execution settings. Recipes may later override those
+settings.
+
+### Hotkeys
+
+Provide six configurable Hotkey objects as thin predefined requests into the
+same input and routing pipeline:
+
+1. Open the main menu for clipboard input.
+2. Open the main menu for Alfred-selected input.
+3. Optimize clipboard input.
+4. Aggressively optimize clipboard input.
+5. Optimize Alfred-selected input.
+6. Aggressively optimize Alfred-selected input.
+
+The selected-input Hotkeys use the files, URLs, or text passed by Alfred; they
+do not invoke the Finder-selection bridge. Hotkeys must not duplicate input,
+capability, or execution logic.
 
 ### URLs
 
-Provide a dedicated keyword or External Trigger for one or more `http`/`https`
-URLs. Show only commands whose help documents URL support. Preserve each URL
-as one argument and reject unsupported schemes visibly.
+Accept only `http` and `https` remote URLs. Reject URLs containing credentials.
+Preserve query strings and fragments. Pass recognized URLs directly to Clop;
+the workflow should not download them.
+
+Infer a media kind from a recognizable URL path extension when possible.
+Extensionless and otherwise unclear URLs remain ambiguous rather than
+unsupported. For ambiguous input, show documented URL-capable actions and add
+concise media requirements only to actions whose validity depends on the
+unknown type. Do not add this explanatory text when the input types are clear.
 
 ### Folders
 
-Treat a folder as an explicit input mode. Before execution, let the user choose
-top-level-only or recursive processing and, where supported, include/exclude
-type filters. Do not enumerate a large folder merely to build the action menu.
+Inspect folder contents to derive menu capabilities. The `recursiveFolders`
+workflow checkbox controls both inspection depth and whether supported Clop
+commands receive `--recursive`:
+
+- disabled: inspect only immediate contents;
+- enabled: descend into ordinary subdirectories.
+
+Use one budget of 500 visible filesystem entries per input folder, counting
+both inspected files and traversed directories. Ignore hidden entries. Do not
+descend into macOS packages or directory symlinks, and do not follow symlinks
+while scanning.
+
+When inspection completes within the budget, derive actions from the supported
+media found. An empty folder returns one non-executable item explaining that
+the folder is empty. A folder containing no Clop-compatible files returns one
+non-executable item explaining that no supported content was found. An
+unreadable folder returns an error.
+
+When the 500-entry budget is reached before inspection completes, mark the
+folder ambiguous. Show documented folder-capable actions and add concise media
+requirements only where needed. The budget is an internal safety threshold,
+not user configuration.
 
 ### Validation
 
@@ -389,7 +482,9 @@ type filters. Do not enumerate a large folder merely to build the action menu.
 - identify directories separately;
 - determine media type with `UTType`, then extension fallback;
 - deduplicate paths without changing user order;
-- validate remote URLs without requiring local existence;
+- extract valid inputs from clipboard and Alfred-provided text;
+- validate remote URLs without requiring local existence or downloading them;
+- reject unsupported schemes and credential-bearing URLs;
 - handle mixed selections deliberately.
 
 ## Context-aware action menu
@@ -412,13 +507,10 @@ conversion may appear only if the workflow first offers an explicit
 media-specific split; do not send mixed media to one ambiguous conversion
 request.
 
-If a folder is selected, either:
-
-- show recursive actions explicitly; or
-- inspect only when the user chooses a recursive action.
-
-Avoid recursively scanning large folders while Alfred is waiting for a Script
-Filter response.
+For ambiguous URLs or budget-limited folders, show actions documented for that
+broad input type rather than removing potentially valid choices. Add concise
+media requirements only to affected results and let typed validation or Clop
+report the final incompatibility.
 
 ## Menu flow
 
@@ -711,6 +803,7 @@ Suggested Alfred user configuration:
 | Backup folder | Same folder / Specific folder |
 | Show Clop UI | On / Off |
 | Ensure result is copied | On / Off |
+| Recurse into folders | On / Off |
 | Default image conversion | WebP / AVIF / HEIC / JXL / JPEG / PNG |
 | Default video conversion | MP4 / GIF / WebM / HEVC / x265 / AV1 |
 | Default audio conversion | MP3 / AAC / M4A / Opus / Ogg / FLAC / WAV / AIFF |
@@ -723,7 +816,6 @@ Suggested Alfred user configuration:
 | Default audio compression | App default / 5-100 |
 | Adaptive optimization | App default / On / Off |
 | PDF aggressive DPI | App default / Adaptive / fixed DPI |
-| Folder recursion | Ask / Top level / Recursive |
 | Skip errors | On / Off |
 | Conversion engine | App-backed / Legacy local when available |
 
@@ -740,6 +832,10 @@ The `copyResult` workflow checkbox should resolve into
 Clop's explicit `--copy` option. Do not assume that showing Clop's floating UI
 also guarantees clipboard copying; `--gui` and `--copy` are independent CLI
 options.
+
+The `recursiveFolders` checkbox should resolve once and control both folder
+inspection depth and `--recursive` command construction. Recipes may later
+override it.
 
 ## Execution design
 
@@ -798,7 +894,16 @@ micro-optimization.
 ### Unit tests
 
 - media type detection
+- exact explicit-input classification
+- prose extraction for URLs and local paths
+- native clipboard file precedence over text
+- remote URL validation, including credentials, queries, and fragments
+- folder inspection depth, exclusions, and the 500-entry budget
+- empty, unsupported-only, unreadable, and ambiguous folders
+- typed External Trigger request decoding and route dispatch
+- empty Finder selection without clipboard fallback
 - mixed-selection capability intersection
+- ambiguous-input capability presentation
 - fuzzy ranking
 - size, ratio, percentage, and quality parsing
 - compression, bitrate, DPI, encoder, layout, and format validation
@@ -843,12 +948,17 @@ Run tests against a temporary copy, never the original fixture. Capture:
 
 - Finder selection
 - clipboard file URLs
+- clipboard prose containing multiple URLs and quoted paths
 - Universal Action with multiple files
+- Universal Action and selected-input Hotkeys with text or URLs
+- all six configurable Hotkeys
+- public `clop` trigger routes for clipboard, Finder selection, and explicit
+  input
 - filenames containing spaces, quotes, commas, and Unicode
 - every modifier
 - fixed instructional-row placement alongside Alfred-learned preset ordering
-- folder recursion and type filters
-- URL input routes
+- folder recursion, the inspection budget, and type filters
+- clear and ambiguous URL inputs
 - every media-specific conversion target
 - saved pipeline browsing and destructive pipeline confirmation
 - missing Clop installation
@@ -866,7 +976,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 
 ### 2. Inputs and action menu
 
-- Normalize Universal Action, Finder, clipboard, and custom paths.
+- Normalize Universal Action, Finder, clipboard, and explicit inputs.
 - Detect media kinds.
 - Produce context-aware Script Filter JSON.
 - Add fuzzy action filtering.
@@ -898,9 +1008,14 @@ Run tests against a temporary copy, never the original fixture. Capture:
 
 ### 6. Folders, URLs, and shared options
 
-- Add explicit folder and recursive routes.
-- Add URL input collection for documented commands.
-- Add a typed headless External Trigger for complete automation requests.
+- Replace the development-only `paths` trigger with the typed public `clop`
+  request dispatcher.
+- Add unified clipboard, Finder-selection, and explicit input acquisition.
+- Classify files, folders, and URLs through `InputCollector`.
+- Extract paths and URLs from clipboard and Alfred-provided prose.
+- Add bounded folder inspection and wire `recursiveFolders`.
+- Route typed requests to the main menu, parameter menus, or quiet execution.
+- Add the six predefined configurable Hotkey entry points.
 - Add raw bitmap clipboard materialization into temporary image inputs.
 - Add include/exclude type filters, copy result, skip errors, and async mode.
 - Make option availability command-aware.
@@ -954,6 +1069,21 @@ Run tests against a temporary copy, never the original fixture. Capture:
   `alfred_workflow_data` by default or the configured custom folder.
 - Use one typed JSON automation contract for headless execution; never parse
   comma-separated paths or shell-like request strings.
+- Use one public `clop` External Trigger for interactive menus and quiet
+  execution; keep `mainMenu` internal.
+- Keep input source separate from route: clipboard, Finder selection, or
+  explicit items may target a menu, complete action, or future recipe.
+- Let `InputCollector` classify files, folders, and `http`/`https` URLs;
+  extract supported inputs from prose only for clipboard and Alfred text.
+- Prefer native clipboard files over text and do not merge pasteboard formats.
+- Inspect at most 500 visible entries per folder, controlled by the
+  `recursiveFolders` setting; treat budget-limited scans as ambiguous.
+- Use `menu` for both the main action menu and action parameter menus; ignore
+  accidental action values on menu routes.
+- Inherit workflow execution settings for automation; recipes may override
+  them later.
+- Provide configurable Hotkeys for menu, standard optimization, and aggressive
+  optimization using clipboard or Alfred's selected input.
 - Keep `--gui` and `--copy` as independent execution options.
 - Target complete supported CLI coverage, staged across releases.
 - Keep pipeline expressions opaque until Clop exposes a stable full grammar.
@@ -966,7 +1096,6 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Exact default output and backup policy.
 - Exact preset location-migration flow.
 - Recipe schema, naming, editing, deletion, ordering, and execution behavior.
-- Final External Trigger identifier and compatibility lifetime for `paths`.
 - Whether headless automation should optionally return structured result JSON
   to callers in addition to quiet execution.
 - Which complete-coverage features ship in the first public release versus
