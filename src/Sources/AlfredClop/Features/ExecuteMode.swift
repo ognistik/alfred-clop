@@ -108,6 +108,15 @@ enum ExecuteMode {
             )
         }
 
+        if command.expectsJSON,
+           let appResult = try? JSONDecoder().decode(
+               ClopAppResult.self,
+               from: result.standardOutput
+           ),
+           !appResult.failed.isEmpty {
+            return incompleteFeedback(for: request, result: appResult)
+        }
+
         return successFeedback(for: request)
     }
 
@@ -174,6 +183,92 @@ enum ExecuteMode {
         }
     }
 
+    private static func incompleteFeedback(
+        for request: OperationRequest,
+        result: ClopAppResult
+    ) -> ScriptFilterResponse {
+        let completedCount = result.done.count
+        let failedCount = result.failed.count
+        let totalCount = completedCount + failedCount
+        let label = operationLabel(for: request.action)
+        let title = completedCount == 0
+            ? "\(label) not performed"
+            : "\(label) partly complete"
+
+        let countMessage: String
+        if completedCount == 0 {
+            countMessage = failedCount == 1
+                ? "The file was not processed."
+                : "\(failedCount) files were not processed."
+        } else {
+            countMessage = "Processed \(completedCount) of \(totalCount) files."
+        }
+
+        let detail = failureDetail(from: result.failed)
+        let subtitle = detail.isEmpty
+            ? countMessage
+            : "\(countMessage) \(detail)"
+
+        return feedback(title: title, subtitle: subtitle, valid: false)
+    }
+
+    private static func operationLabel(for action: ActionRequest) -> String {
+        switch action {
+        case .optimise:
+            return "Optimization"
+        case .crop:
+            return "Crop / resize"
+        case .downscale:
+            return "Downscale"
+        case .convert:
+            return "Conversion"
+        case .cropPDF:
+            return "PDF crop"
+        case .uncropPDF:
+            return "PDF uncrop"
+        case .stripMetadata:
+            return "Metadata removal"
+        }
+    }
+
+    private static func failureDetail(
+        from failures: [ClopAppResult.Failure]
+    ) -> String {
+        guard let failure = failures.first else {
+            return ""
+        }
+
+        if failures.count > 1,
+           failures.allSatisfy({ isAlreadyAtRequestedSize($0.error) }) {
+            return "They are already at the requested size or smaller."
+        }
+
+        guard failures.count == 1 else {
+            return ""
+        }
+
+        let filename = failure.forURL
+            .flatMap(URL.init(string:))?
+            .lastPathComponent
+
+        guard let error = failure.error?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !error.isEmpty else {
+            return filename.map { "Skipped \($0)." } ?? ""
+        }
+
+        if isAlreadyAtRequestedSize(error) {
+            let name = filename ?? "The image"
+            return "\(name) is already at the requested size or smaller."
+        }
+
+        return error.hasSuffix(".") ? error : "\(error)."
+    }
+
+    private static func isAlreadyAtRequestedSize(_ error: String?) -> Bool {
+        error?.hasPrefix("Image is already at the correct size or smaller:") == true
+    }
+
     private static func failureMessage(from result: ClopProcessResult) -> String {
         let error = String(decoding: result.standardError, as: UTF8.self)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -203,5 +298,28 @@ enum ExecuteMode {
                 valid: valid
             )
         ])
+    }
+}
+
+private struct ClopAppResult: Decodable {
+    struct Completed: Decodable {}
+
+    struct Failure: Decodable {
+        var error: String?
+        var forURL: String?
+    }
+
+    var done: [Completed]
+    var failed: [Failure]
+
+    private enum CodingKeys: String, CodingKey {
+        case done
+        case failed
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        done = try container.decodeIfPresent([Completed].self, forKey: .done) ?? []
+        failed = try container.decodeIfPresent([Failure].self, forKey: .failed) ?? []
     }
 }

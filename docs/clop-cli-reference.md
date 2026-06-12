@@ -558,6 +558,11 @@ is independent of Clop's app settings.
 ## Known limitations and items to probe
 
 - No CLI version flag exists.
+- `crop --json` exits with status 0 when requested dimensions would enlarge an
+  image. The JSON result reports the skipped input under `failed`, with an
+  "already at the correct size or smaller" error. Mixed batches include
+  processed inputs under `done` and skipped inputs under `failed`, so callers
+  must inspect both arrays rather than relying on termination status.
 - Legacy image conversion has no JSON output.
 - `crop-pdf`, `uncrop-pdf`, and `strip-exif` have no JSON output.
 - App-backed typed conversion's default replacement and backup behavior needs

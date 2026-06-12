@@ -62,6 +62,8 @@ migration.
 - Argument-array invocation preserving spaces and multiple-file payloads
 - Visible Alfred feedback for invalid and parameter-step requests, missing
   Clop, launch failures, invalid JSON results, and nonzero exits
+- Per-file JSON result inspection for app-backed commands, including visible
+  notifications when Clop exits successfully but skips some or all inputs
 - Focused fake-based tests that never launch the real Clop CLI
 
 ### Crop and resize
@@ -90,6 +92,8 @@ migration.
 - Invalid, malformed, negative, decimal, and zero-only values rejected visibly
 - Crop execution through `clop crop --size VALUE --json --no-progress`
 - Conditional `--long-edge`; menu-generated requests keep `smartCrop` disabled
+- Crop and resize notifications distinguish complete success, partial batches,
+  and all-skipped batches such as requests that would enlarge source images
 - Normalized inputs and selected, copied, or passed context preserved across
   inbound transitions and Script Filter query reruns
 

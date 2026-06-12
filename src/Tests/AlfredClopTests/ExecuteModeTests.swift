@@ -82,6 +82,123 @@ struct ExecuteModeTests {
     }
 
     @Test
+    func cropReportsWhenClopSkipsEveryFileAtStatusZero() throws {
+        let response = ExecuteMode.response(
+            requestJSON: try requestJSON(action: .crop(
+                size: "1920",
+                smartCrop: false,
+                longEdge: true
+            )),
+            builder: builder(),
+            runner: StubProcessRunner(result: ClopProcessResult(
+                terminationStatus: 0,
+                standardOutput: Data(
+                    #"""
+                    {
+                      "done": [],
+                      "failed": [{
+                        "error": "Image is already at the correct size or smaller: /tmp/first file.jpg",
+                        "forURL": "file:///tmp/first%20file.jpg"
+                      }]
+                    }
+                    """#.utf8
+                ),
+                standardError: Data()
+            ))
+        )
+
+        #expect(response.items[0].title == "Crop / resize not performed")
+        #expect(
+            response.items[0].subtitle
+                == "The file was not processed. first file.jpg is already at the requested size or smaller."
+        )
+    }
+
+    @Test
+    func cropReportsPartialBatchResultsAtStatusZero() throws {
+        let json = try requestJSON(action: .crop(
+            size: "1200x630",
+            smartCrop: false,
+            longEdge: false
+        ))
+        let runner = StubProcessRunner(result: ClopProcessResult(
+            terminationStatus: 0,
+            standardOutput: Data(
+                #"""
+                {
+                  "done": [{}],
+                  "failed": [{
+                    "error": "Image is already at the correct size or smaller: /tmp/second file.jpg",
+                    "forURL": "file:///tmp/second%20file.jpg"
+                  }]
+                }
+                """#.utf8
+            ),
+            standardError: Data()
+        ))
+
+        let response = ExecuteMode.response(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+        let quiet = ExecuteMode.quietFeedback(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+
+        #expect(response.items[0].title == "Crop / resize partly complete")
+        #expect(
+            response.items[0].subtitle
+                == "Processed 1 of 2 files. second file.jpg is already at the requested size or smaller."
+        )
+        #expect(
+            quiet
+                == "Crop / resize partly complete: Processed 1 of 2 files. second file.jpg is already at the requested size or smaller."
+        )
+    }
+
+    @Test
+    func cropOmitsFilenameWhenMultipleFilesAreAlreadySmallEnough() throws {
+        let response = ExecuteMode.response(
+            requestJSON: try requestJSON(action: .crop(
+                size: "1920",
+                smartCrop: false,
+                longEdge: true
+            )),
+            builder: builder(),
+            runner: StubProcessRunner(result: ClopProcessResult(
+                terminationStatus: 0,
+                standardOutput: Data(
+                    #"""
+                    {
+                      "done": [],
+                      "failed": [
+                        {
+                          "error": "Image is already at the correct size or smaller: /tmp/first file.jpg",
+                          "forURL": "file:///tmp/first%20file.jpg"
+                        },
+                        {
+                          "error": "Image is already at the correct size or smaller: /tmp/second file.jpg",
+                          "forURL": "file:///tmp/second%20file.jpg"
+                        }
+                      ]
+                    }
+                    """#.utf8
+                ),
+                standardError: Data()
+            ))
+        )
+
+        #expect(response.items[0].title == "Crop / resize not performed")
+        #expect(
+            response.items[0].subtitle
+                == "2 files were not processed. They are already at the requested size or smaller."
+        )
+    }
+
+    @Test
     func invalidRequestReturnsVisibleFeedback() {
         let response = ExecuteMode.response(
             requestJSON: "{not-json}",
