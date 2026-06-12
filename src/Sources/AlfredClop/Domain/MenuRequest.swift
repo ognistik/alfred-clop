@@ -44,12 +44,12 @@ struct MenuInput: Codable, Equatable {
 }
 
 struct ClopRequest: Codable, Equatable {
-    var version: Int
+    var version: Int?
     var input: ClopInputRequest
     var route: ClopRouteRequest
 
     init(
-        version: Int = 1,
+        version: Int? = nil,
         input: ClopInputRequest,
         route: ClopRouteRequest
     ) {
@@ -68,7 +68,7 @@ struct ClopRequest: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         version = container.contains(.version)
             ? try container.decode(Int.self, forKey: .version)
-            : 1
+            : nil
         input = try container.decode(ClopInputRequest.self, forKey: .input)
         route = try container.decode(ClopRouteRequest.self, forKey: .route)
     }

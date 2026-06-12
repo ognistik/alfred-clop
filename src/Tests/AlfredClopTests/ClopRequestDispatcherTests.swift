@@ -6,6 +6,7 @@ struct ClopRequestDispatcherTests {
     @Test
     func versionedInputAndRouteModelsRoundTrip() throws {
         let request = ClopRequest(
+            version: 1,
             input: .explicit(
                 items: [
                     "/tmp/first image.png",
@@ -16,6 +17,23 @@ struct ClopRequestDispatcherTests {
             route: .execute(action: .optimise(aggressive: true))
         )
 
+        #expect(try roundTrip(request) == request)
+    }
+
+    @Test
+    func currentContractRequestOmitsVersionWhenEncoded() throws {
+        let request = ClopRequest(
+            input: .clipboard,
+            route: .menu(action: nil)
+        )
+
+        let json = try JSONOutput.string(for: request, prettyPrinted: false)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: Data(json.utf8))
+                as? [String: Any]
+        )
+
+        #expect(object["version"] == nil)
         #expect(try roundTrip(request) == request)
     }
 
@@ -213,7 +231,7 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
-    func missingRequestVersionDefaultsToVersionOne() throws {
+    func missingRequestVersionUsesCurrentContract() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
         let json = """

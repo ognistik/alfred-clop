@@ -13,10 +13,10 @@ parameter-free execution, a guided dynamic parameter step for crop and resize,
 user-defined Crop / Resize action presets, explicit preset-location migration,
 and the unified input and routing foundation planned for Milestone 6.
 
-The public automation surface is now one versioned `clop` request with
-independent typed input and route values. Files, folders, HTTP/HTTPS URLs,
-clipboard content, Finder selection, Universal Actions, and six configurable
-Hotkeys all normalize through `InputCollector`.
+The public automation surface is now one typed `clop` request with independent
+input and route values. Files, folders, HTTP/HTTPS URLs, clipboard content,
+Finder selection, Universal Actions, and six configurable Hotkeys all
+normalize through `InputCollector`.
 
 The routing and feedback hardening checkpoint is complete: public execute
 requests bypass Alfred's interactive Script Filter, normalized menu reruns
@@ -55,8 +55,7 @@ clear stale public-request state, and quiet errors honor the `dnd` setting.
 
 ### Unified input and routing
 
-- Versioned public `clop` request with separate typed `input` and `route`
-  models
+- Public `clop` request with separate typed `input` and `route` models
 - Clipboard, explicit-item, and injectable Finder-selection acquisition
 - Universal Action and Alfred-selected text extraction for supported URLs,
   quoted or backtick-wrapped paths with spaces, unquoted absolute paths,
@@ -78,8 +77,9 @@ clear stale public-request state, and quiet errors honor the `dnd` setting.
   actions with concise media requirements
 - Typed routes open the main menu, a clean implemented parameter menu, or
   quiet execution
-- Omitted public request versions default to version 1; explicit unsupported
-  versions and malformed version values remain errors
+- Omitted public request versions use the installed workflow's current
+  contract; explicit version 1 pins compatibility, while unsupported and
+  malformed explicit versions remain errors
 - Folder subtitles identify folders and show exact processable item counts only
   when bounded inspection completes
 - Non-recursive folders with supported media only in ordinary subfolders
@@ -96,7 +96,8 @@ clear stale public-request state, and quiet errors honor the `dnd` setting.
 
 - Universal Action wired through an Args and Vars object
 - Clipboard keyword `clop`
-- Public External Trigger `clop` accepts versioned typed requests
+- Public External Trigger `clop` accepts typed requests with optional explicit
+  compatibility versions
 - Public menu requests enter the internal `mainMenu` route, while execute
   requests bypass the Script Filter and run headlessly
 - Internal `mainMenu` trigger remains reserved for Script Filter navigation
@@ -249,7 +250,9 @@ structure.
   the unreleased `paths` trigger
 - Internal `mainMenu` External Trigger retained only for Script Filter
   navigation
-- Versioned JSON request with independent `input` and `route` values
+- JSON request with independent `input` and `route` values; omitted `version`
+  tracks the installed workflow's current contract, while explicit version 1
+  remains a pinned compatibility target
 - Input sources: clipboard, explicit items, and an injectable Finder-selection
   bridge for External Trigger requests
 - Explicit items may be local files, folders, or `http`/`https` URLs

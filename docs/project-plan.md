@@ -343,8 +343,8 @@ a compatibility alias. Keep the Script Filter's `mainMenu` inbound External
 Trigger as an internal workflow navigation mechanism, not part of the public
 API.
 
-The public trigger accepts one versioned JSON envelope. Input acquisition and
-routing are independent typed choices:
+The public trigger accepts one JSON envelope. Input acquisition and routing
+are independent typed choices:
 
 - `clipboard`: inspect the current clipboard dynamically;
 - `finderSelection`: ask Finder for its selected items;
@@ -353,12 +353,17 @@ routing are independent typed choices:
 - `execute`: run one complete typed operation without showing Alfred;
 - `recipe`: later run a stored recipe by stable identifier.
 
-Callers should continue sending `"version": 1`. For compatibility with early
-automation snippets, an omitted version is decoded as version 1. An explicit
-version remains authoritative: unsupported numbers are rejected visibly, and
-null or incorrectly typed versions are decoding errors. This preserves a
-forward-compatible discriminator without making the first public contract
-needlessly brittle.
+Normal callers should omit `version`. An omitted version means "use the current
+request contract implemented by this installed workflow," so ordinary
+automations follow compatible workflow improvements without maintenance.
+
+An explicit `"version": 1` pins the caller to the version 1 contract and
+remains available for integrations that require a stable compatibility target.
+Explicit versions are authoritative: unsupported numbers are rejected
+visibly, and null or incorrectly typed versions are decoding errors. Evolve
+the unversioned current contract additively whenever practical. Add
+version-specific decoding only when a genuinely incompatible change makes it
+necessary.
 
 Use `items`, not `paths`, because explicit input may include local files,
 folders, and remote URLs.
@@ -367,7 +372,6 @@ Open the main menu for clipboard content:
 
 ```json
 {
-  "version": 1,
   "input": {
     "source": "clipboard"
   },
@@ -381,7 +385,6 @@ Open Crop / Resize for Finder's current selection:
 
 ```json
 {
-  "version": 1,
   "input": {
     "source": "finderSelection"
   },
@@ -396,7 +399,6 @@ Execute a complete operation for explicit mixed input:
 
 ```json
 {
-  "version": 1,
   "input": {
     "source": "explicit",
     "items": [

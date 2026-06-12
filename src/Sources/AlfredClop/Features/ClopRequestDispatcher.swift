@@ -32,14 +32,14 @@ enum ClopRequestDispatcher {
         } catch {
             return feedback(
                 title: "Invalid Clop request",
-                subtitle: "Use the versioned input and route JSON format."
+                subtitle: "Use the documented input and route JSON format."
             )
         }
 
-        guard request.version == 1 else {
+        if let version = request.version, version != 1 {
             return feedback(
                 title: "Unsupported Clop request",
-                subtitle: "Request version \(request.version) is not supported."
+                subtitle: "Request version \(version) is not supported."
             )
         }
 

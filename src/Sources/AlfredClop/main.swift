@@ -32,7 +32,7 @@ enum AlfredClopCommand {
         guard let requestJSON = value(after: "--request-json", in: arguments) else {
             JSONOutput.print(errorResponse(
                 title: "Missing Clop request",
-                subtitle: "The request mode requires versioned request JSON."
+                subtitle: "The request mode requires request JSON."
             ))
             return
         }
