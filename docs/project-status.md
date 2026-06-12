@@ -100,7 +100,7 @@ resize.
 
 ## Not implemented
 
-- User-defined crop presets, preset naming, and preset persistence
+- User-defined crop action presets and preset persistence
 - Modifier behavior for aggressive processing, original preservation, and
   saving presets
 - Wiring for the `presetsPath` and `copyResult` workflow settings
@@ -114,14 +114,36 @@ resize.
 
 ## Next recommended task
 
-Implement the reusable modifier model and user crop-preset storage:
+Implement the first bounded action-preset slice for Crop / Resize:
 
-1. Encode resolved modifier behavior in typed Alfred item requests.
-2. Add the Control-Return preset-naming flow for valid crop parameters.
-3. Store versioned presets in the default workflow data directory or configured
-   `presetsPath`.
-4. Keep workflow-authored and automatically promoted recent presets absent.
-5. Add focused persistence, modifier, and menu-ordering tests.
+1. Add a dedicated versioned preset schema that stores one normalized typed
+   crop action, with no inputs, custom name, or execution settings.
+2. Store `presets.json` atomically in the default workflow data directory or
+   configured `presetsPath`.
+3. Keep the grammar instruction fixed at the top and show saved crop presets
+   beneath it with stable Alfred item UIDs for learned relative ordering.
+4. Keep free-form typed input available when presets exist. When a typed value
+   matches a saved preset, show one combined result marked as saved.
+5. Add Control-Return behavior that immediately saves a new typed value and
+   opens a confirmation step for removing an existing preset.
+6. After confirmed removal, return to the Crop / Resize menu with the remaining
+   presets visible.
+7. Add focused schema, atomic persistence, normalization, duplicate,
+   add/remove confirmation, menu-position, and input-preservation tests.
+8. Verify manually in Alfred that the instructional row remains first while
+   stable preset UIDs allow Alfred to learn relative preset ordering.
+
+Do not add preset naming, manual ordering, execution-option overrides, or a
+Manage Presets menu. Presets always inherit the current global output, naming,
+copy-result, Clop UI, preservation, and backup settings.
+
+Recipes are a separate future concept for multiple ordered actions and delivery
+behavior. Do not implement recipe persistence, recipe management, or Clop
+pipeline composition in this task.
+
+Implement only the Control-Return behavior needed for preset add/remove in this
+slice. Keep aggressive and original-preservation modifier work separate until
+their execution policies are ready.
 
 Keep downscale, conversion, and PDF crop encoded as `ParameterStepRequest`
 until their own tasks.

@@ -67,7 +67,8 @@ feature being deferred must still have an explicit place in this plan.
 
 ### Product enhancements
 
-- User-defined workflow presets layered above Clop's saved pipelines
+- User-defined action presets for reusable values inside parameter menus
+- User-defined recipes that combine multiple typed actions and delivery steps
 - Live progress UI
 - Automatic update/release mechanism
 
@@ -481,12 +482,43 @@ Continue accepting Clop's native `128x0` and `0x720` forms. Subtitles must
 explain the interpretation before execution. Invalid input should produce one
 clear, non-executable result with concise examples.
 
-Only user-created presets may appear below the instructional or interpreted
-item. Do not automatically promote recent values into presets.
+The instructional item must always remain at the top of the parameter menu,
+even when presets exist. Users must always be able to type and run a new value
+without first choosing a preset.
 
-Control-Return on a valid parameter result should begin a small preset-saving
-flow. Presets need a user-visible name and must store typed action parameters,
-not an opaque command string.
+Only user-created presets may appear below the instructional or interpreted
+item. Do not automatically promote recent values into presets. Give each
+preset a stable Alfred item `uid` so Alfred can learn the relative order of
+the presets from usage; do not add manual preset ordering. Verify this in
+Alfred itself because its Script Filter documentation does not guarantee how a
+fixed non-learning row and learned UID rows are ordered when mixed. The
+required product behavior is that the instructional row stays first while
+Alfred learns the order among presets.
+
+An action preset is one normalized typed action choice. It stores no inputs
+and no execution settings. Output behavior, filename templates, copy-result
+behavior, Clop UI visibility, preservation, and backups always come from the
+current workflow configuration. Presets never override those global settings.
+
+Simple action presets do not have custom names. Their normalized value is
+their identity and display label: for example `1200x630`, `16:9`, `1920`,
+`w128`, or `h720`. Equivalent input forms must resolve to one preset and use
+the friendlier workflow grammar for display; for example, `w128` and `128x0`
+represent the same preset and display as `w128`.
+
+Control-Return on a valid typed result saves it immediately. If the normalized
+value is already saved, show one combined result marked as saved rather than a
+duplicate typed result and preset. Attempting to save it again must leave
+storage unchanged and provide clear feedback.
+
+Return on a preset executes it. Control-Return on an existing preset opens a
+confirmation step. Confirming removes the preset and returns to the same
+parameter menu with the remaining presets visible. Never delete a preset
+immediately from the modifier action.
+
+Presets live only in the submenu for their action. Crop presets appear in Crop
+/ Resize, downscale presets in Downscale, and conversion presets in the
+relevant Convert menu. A separate Manage Presets menu is not required.
 
 Preset storage:
 
@@ -503,6 +535,13 @@ Preset storage:
 
 The custom folder is the simple cross-Mac strategy: users may choose an iCloud
 Drive, Dropbox, or other locally available synchronized directory.
+
+Recipes are a separate future concept. A recipe may combine multiple ordered
+actions with output naming or destination behavior and may eventually have a
+custom name and management menu. Do not widen the action-preset schema into a
+recipe schema or implement recipe persistence as part of the initial preset
+work. Clop saved pipelines remain a separate native Clop feature and should
+stay opaque until their grammar is stable enough to model safely.
 
 ### Downscale
 
@@ -600,7 +639,7 @@ Recommended defaults:
 | Command-Return | Enable aggressive processing where the command supports it |
 | Option-Return | Preserve the original using the configured output policy |
 | Command-Option-Return | Enable aggressive processing and preserve the original |
-| Control-Return | Save a complete parameter choice as a named user preset |
+| Control-Return | Save a typed value as a preset, or request removal of an existing preset |
 
 Do not hard-code "Command means aggressive" at execution time. Encode the
 modifier's resolved `OperationRequest` directly in that Alfred item's `mods`
@@ -614,7 +653,8 @@ Remove the separate Aggressive Optimize action after Command-Return is
 available on Optimize. Option-Return depends on a tested output-preservation
 policy and must not be enabled before that policy exists. Control-Return is
 valid only when the selected item contains complete parameters that can be
-saved and replayed.
+saved and replayed. On an existing preset it must route to a confirmation step
+before removal.
 
 Do not reserve modifiers for width/height syntax. Use `w128` and `h720` in the
 query grammar so modifier keys remain available for consistent workflow-wide
@@ -770,6 +810,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Universal Action with multiple files
 - filenames containing spaces, quotes, commas, and Unicode
 - every modifier
+- fixed instructional-row placement alongside Alfred-learned preset ordering
 - folder recursion and type filters
 - URL input routes
 - every media-specific conversion target
@@ -801,7 +842,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Decode Clop JSON.
 - Add output and backup policies.
 - Replace built-in crop presets with a guided dynamic grammar.
-- Add user-defined preset persistence and naming.
+- Add user-defined action-preset persistence and Control-Return add/remove
+  behavior.
 - Add capability-aware modifier requests.
 
 ### 4. Typed optimization and conversion
@@ -863,6 +905,15 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Separate output preservation from true backups.
 - Keep empty parameter menus instructional rather than filling them with
   workflow-authored presets.
+- Define an action preset as one normalized typed action with no inputs, custom
+  name, or execution-setting overrides.
+- Keep action presets inside their relevant parameter submenu; use stable
+  Alfred item UIDs for learned relative ordering and keep the instructional
+  item fixed at the top.
+- Use Control-Return to save a typed value and to request confirmed removal of
+  an existing preset.
+- Keep recipes, recipe naming, recipe management, and multi-step execution as
+  a separate future product concept.
 - Store user presets in a versioned `presets.json`, using
   `alfred_workflow_data` by default or the configured custom folder.
 - Use one typed JSON automation contract for headless execution; never parse
@@ -877,7 +928,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Whether the released binary is universal or Apple Silicon only.
 - Whether Clop should be launched automatically when needed.
 - Exact default output and backup policy.
-- Exact preset naming, replacement, deletion, and location-migration flows.
+- Exact preset location-migration flow.
+- Recipe schema, naming, editing, deletion, ordering, and execution behavior.
 - Final External Trigger identifier and compatibility lifetime for `paths`.
 - Whether headless automation should optionally return structured result JSON
   to callers in addition to quiet execution.
