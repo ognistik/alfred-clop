@@ -81,8 +81,7 @@ struct CropParameterMenuTests {
         let item = try #require(response.items.first(where: { $0.valid }))
         let operation = try operationRequest(from: item)
 
-        #expect(response.items.count == 2)
-        #expect(response.items[0].title == "Type crop or resize parameters")
+        #expect(response.items.count == 1)
         #expect(item.subtitle.hasPrefix("\(subtitlePrefix):"))
         #expect(operation.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
         #expect(
@@ -123,8 +122,7 @@ struct CropParameterMenuTests {
         let item = try #require(response.items.first(where: { $0.valid }))
         let request = try operationRequest(from: item)
 
-        #expect(response.items.count == 2)
-        #expect(response.items[0].title == "Type crop or resize parameters")
+        #expect(response.items.count == 1)
         #expect(item.subtitle.contains(explanation))
         #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
         #expect(item.subtitle.hasPrefix("Passed files:"))
@@ -150,7 +148,7 @@ struct CropParameterMenuTests {
         )
 
         let item = try #require(response.items.first(where: { $0.valid }))
-        #expect(response.items.count == 2)
+        #expect(response.items.count == 1)
         #expect(item.title == expectedTitle)
         #expect(!item.title.contains("x0"))
         #expect(!item.title.contains("0x"))
@@ -199,11 +197,14 @@ struct CropParameterMenuTests {
             query: input
         )
 
-        #expect(response.items.count == 2)
-        #expect(response.items[0].title == "Type crop or resize parameters")
-        #expect(response.items[1].title == "Invalid crop or resize value")
-        #expect(response.items[1].valid == false)
-        #expect(response.items[1].arg == "")
+        #expect(response.items.count == 1)
+        #expect(response.items[0].title == "Invalid crop or resize value")
+        #expect(
+            response.items[0].subtitle
+                == "Use 1200x630, 16:9, 1920, w128, or h720."
+        )
+        #expect(response.items[0].valid == false)
+        #expect(response.items[0].arg == "")
     }
 
     @Test

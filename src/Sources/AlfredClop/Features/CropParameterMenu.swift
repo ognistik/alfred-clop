@@ -173,6 +173,18 @@ enum CropParameterMenu {
                     request: request
                 )
             case .save:
+                let migrationStatus = PresetMigrationCoordinator(
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                ).status()
+                if migrationStatus.requiresResolutionBeforeSaving {
+                    return pendingMigrationResponse(
+                        request: request,
+                        preset: action.preset,
+                        migrationStatus: migrationStatus
+                    )
+                }
                 do {
                     _ = try store.save(action.preset)
                     return menuResponse(
@@ -239,43 +251,80 @@ enum CropParameterMenu {
             )
         }
 
-        var items = [instructionItem]
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        var matchedPreset: CropActionPreset?
+        guard !trimmedQuery.isEmpty else {
+            return ScriptFilterResponse(
+                items: [instructionItem] + presets.compactMap {
+                    presetItem(for: $0, request: request)
+                },
+                variables: preservedVariables(
+                    for: request,
+                    stateJSON: stateJSON
+                ),
+                skipKnowledge: true
+            )
+        }
 
-        if !trimmedQuery.isEmpty {
-            if let size = CropSizeParser.parse(trimmedQuery) {
-                let candidate = CropActionPreset(size: size)
-                matchedPreset = presets.first { $0 == candidate }
+        let matchingPresets = presets.filter {
+            presetMatchesQuery($0, query: trimmedQuery)
+        }
+        var items = [ScriptFilterItem]()
+
+        if let size = CropSizeParser.parse(trimmedQuery) {
+            let candidate = CropActionPreset(size: size)
+            if let exactPreset = presets.first(where: { $0 == candidate }) {
                 if let item = interpretedItem(
                     for: size,
                     request: request,
-                    savedPreset: matchedPreset
+                    savedPreset: exactPreset
                 ) {
                     items.append(item)
                 }
-            } else {
-                items.append(ScriptFilterItem(
-                    title: "Invalid crop or resize value",
-                    subtitle: "Use 1200x630, 16:9, 1920, w128, h720, 128x0, or 0x720.",
-                    arg: "",
-                    valid: false
-                ))
+            } else if matchingPresets.isEmpty {
+                if let item = interpretedItem(
+                    for: size,
+                    request: request,
+                    savedPreset: nil
+                ) {
+                    items.append(item)
+                }
             }
+        } else if matchingPresets.isEmpty {
+            items.append(ScriptFilterItem(
+                title: "Invalid crop or resize value",
+                subtitle: "Use 1200x630, 16:9, 1920, w128, or h720.",
+                arg: "",
+                valid: false
+            ))
         }
 
-        items.append(contentsOf: presets.compactMap { preset in
-            guard preset != matchedPreset else {
-                return nil
-            }
-            return presetItem(for: preset, request: request)
-        })
+        if items.isEmpty {
+            items.append(contentsOf: matchingPresets.compactMap {
+                presetItem(for: $0, request: request)
+            })
+        }
 
         return ScriptFilterResponse(
             items: items,
             variables: preservedVariables(for: request, stateJSON: stateJSON),
             skipKnowledge: true
         )
+    }
+
+    private static func presetMatchesQuery(
+        _ preset: CropActionPreset,
+        query: String
+    ) -> Bool {
+        let normalizedQuery = query.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: nil
+        )
+        return [preset.displayValue, preset.size].contains { value in
+            value.folding(
+                options: [.caseInsensitive, .diacriticInsensitive],
+                locale: nil
+            ).contains(normalizedQuery)
+        }
     }
 
     private static func interpretedItem(
@@ -541,6 +590,64 @@ enum CropParameterMenu {
         )
     }
 
+    private static func pendingMigrationResponse(
+        request: ParameterStepRequest,
+        preset: ActionPreset,
+        migrationStatus: PresetMigrationStatus
+    ) -> ScriptFilterResponse {
+        guard case let .available(migration) = migrationStatus else {
+            return ScriptFilterResponse(
+                items: [
+                    ScriptFilterItem(
+                        title: "Resolve the settings location first",
+                        subtitle: "Settings exist in both locations. No new preset was saved.",
+                        arg: "",
+                        valid: false
+                    )
+                ],
+                variables: preservedVariables(
+                    for: request,
+                    stateJSON: (try? encodedState(.crop(request))) ?? ""
+                ),
+                skipKnowledge: true
+            )
+        }
+
+        let migrationRequest = PresetMigrationRequest(
+            sourcePath: migration.sourceURL.path,
+            destinationPath: migration.destinationURL.path,
+            inputs: request.inputs,
+            mediaKinds: [],
+            inputContext: request.inputContext,
+            presetSaveContinuation: PresetSaveContinuation(
+                request: request,
+                preset: preset,
+                query: presetDisplayValue(preset)
+            )
+        )
+        let state = MenuState.presetMigration(migrationRequest)
+        let stateJSON = (try? encodedState(state)) ?? ""
+        return ScriptFilterResponse(
+            items: [
+                ScriptFilterItem(
+                    title: "Move existing settings",
+                    subtitle: "Move them now, then save \(presetDisplayValue(preset)) as a preset.",
+                    arg: stateJSON,
+                    valid: true,
+                    variables: ActionMenu.migrationVariables(
+                        stateJSON: stateJSON,
+                        request: migrationRequest
+                    )
+                )
+            ],
+            variables: ActionMenu.migrationVariables(
+                stateJSON: stateJSON,
+                request: migrationRequest
+            ),
+            skipKnowledge: true
+        )
+    }
+
     private static func storageErrorDetail(_ error: Error) -> String {
         switch error {
         case PresetStoreError.missingWorkflowDataDirectory:
@@ -578,4 +685,16 @@ enum CropParameterMenu {
             )
         ])
     }
+}
+
+private extension PresetMigrationStatus {
+    var requiresResolutionBeforeSaving: Bool {
+        switch self {
+        case .available, .conflict:
+            return true
+        case .none, .sourceMissing, .sourceInvalid, .metadataInvalid:
+            return false
+        }
+    }
+
 }

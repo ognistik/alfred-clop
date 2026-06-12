@@ -21,7 +21,7 @@ struct PresetMigrationTests {
         try fixture.savePreset(at: fixture.defaultFile)
         let menu = fixture.actionMenu(context: .clipboard)
         let moveItem = try #require(menu.items.first {
-            $0.title == "Move presets"
+            $0.title == "Move existing settings"
         })
         let confirmationState = try #require(moveItem.arg)
 
@@ -34,9 +34,9 @@ struct PresetMigrationTests {
         )
         let moveState = try #require(confirmation.items.first?.arg)
 
-        #expect(confirmation.items.first?.title == "Move presets?")
-        #expect(confirmation.items.first?.subtitle.contains(fixture.defaultFile.path) == true)
-        #expect(confirmation.items.first?.subtitle.contains(fixture.customFile.path) == true)
+        #expect(confirmation.items.first?.title == "Move existing settings?")
+        #expect(confirmation.items.first?.subtitle.contains(fixture.defaultFile.path) == false)
+        #expect(confirmation.items.first?.subtitle.contains(fixture.customFile.path) == false)
         #expect(FileManager.default.fileExists(atPath: fixture.defaultFile.path))
         #expect(!FileManager.default.fileExists(atPath: fixture.customFile.path))
 
@@ -47,7 +47,9 @@ struct PresetMigrationTests {
 
         #expect(!FileManager.default.fileExists(atPath: fixture.defaultFile.path))
         #expect(try PresetStore(fileURL: fixture.customFile).load().presets.count == 1)
-        #expect(!returnedMenu.items.contains { $0.title == "Move presets" })
+        #expect(!returnedMenu.items.contains {
+            $0.title == "Move existing settings"
+        })
         #expect(returnedMenu.items.first?.subtitle.hasPrefix("Copied files:") == true)
         #expect(
             returnedMenu.variables?[ActionMenu.inputContextVariable]
@@ -62,6 +64,40 @@ struct PresetMigrationTests {
                 from: Data(inputJSON.utf8)
             ).paths == fixture.inputs
         )
+    }
+
+    @Test
+    func emptyClipboardStillOffersPendingSettingsMove() throws {
+        let fixture = try MigrationFixture(configured: true)
+        try fixture.savePreset(at: fixture.defaultFile)
+
+        let menu = ActionMenu.response(
+            clipboard: EmptyMigrationClipboard(),
+            query: "",
+            environment: fixture.environment
+        )
+        let moveItem = try #require(menu.items.first)
+
+        #expect(menu.items.map(\.title) == [
+            "Move existing settings",
+            "No supported files in clipboard"
+        ])
+        #expect(moveItem.valid)
+
+        let confirmation = PresetMigrationMenu.response(
+            stateJSON: try #require(moveItem.arg),
+            environment: fixture.environment
+        )
+        let returnedMenu = PresetMigrationMenu.response(
+            stateJSON: try #require(confirmation.items.first?.arg),
+            environment: fixture.environment
+        )
+
+        #expect(returnedMenu.items.map(\.title) == [
+            "No supported files in clipboard"
+        ])
+        #expect(try PresetStore(fileURL: fixture.customFile).load().presets.count == 1)
+        #expect(!FileManager.default.fileExists(atPath: fixture.defaultFile.path))
     }
 
     @Test
@@ -82,6 +118,53 @@ struct PresetMigrationTests {
 
         #expect(!FileManager.default.fileExists(atPath: fixture.customFile.path))
         #expect(try PresetStore(fileURL: fixture.defaultFile).load().presets.count == 1)
+    }
+
+    @Test
+    func pendingMoveCanResumeAndCompletePresetSave() throws {
+        let fixture = try MigrationFixture(configured: true)
+        try fixture.savePreset(at: fixture.defaultFile, value: "1920")
+        let request = ParameterStepRequest(
+            action: .crop,
+            inputs: fixture.inputs,
+            inputContext: .selected
+        )
+        let stateJSON = try JSONOutput.string(
+            for: MenuState.crop(request),
+            prettyPrinted: false
+        )
+        let menu = CropParameterMenu.response(
+            stateJSON: stateJSON,
+            query: "w128",
+            environment: fixture.environment
+        )
+        let saveStateJSON = try #require(
+            menu.items.first?.mods?.control?
+                .variables?[ActionMenu.menuStateVariable]
+        )
+
+        let response = CropParameterMenu.response(
+            stateJSON: saveStateJSON,
+            query: "",
+            environment: fixture.environment
+        )
+
+        #expect(response.items.first?.title == "Move existing settings")
+        #expect(response.items.first?.valid == true)
+        #expect(FileManager.default.fileExists(atPath: fixture.defaultFile.path))
+        #expect(!FileManager.default.fileExists(atPath: fixture.customFile.path))
+
+        let returnedMenu = PresetMigrationMenu.response(
+            stateJSON: try #require(response.items.first?.arg),
+            environment: fixture.environment
+        )
+
+        #expect(!FileManager.default.fileExists(atPath: fixture.defaultFile.path))
+        let presets = try PresetStore(fileURL: fixture.customFile).load().presets
+        #expect(presets.count == 2)
+        #expect(returnedMenu.items.count == 1)
+        #expect(returnedMenu.items.first?.title == "Width 128, auto height")
+        #expect(returnedMenu.items.first?.subtitle.contains("Saved preset") == true)
     }
 
     @Test
@@ -149,9 +232,11 @@ struct PresetMigrationTests {
 
         let response = fixture.actionMenu()
 
-        #expect(response.items.first?.title == "Preset location conflict")
+        #expect(response.items.first?.title == "Settings location conflict")
         #expect(response.items.first?.valid == false)
         #expect(response.items.first?.subtitle.contains("Automatic migration is unavailable") == true)
+        #expect(response.items.first?.subtitle.contains(fixture.defaultFile.path) == false)
+        #expect(response.items.first?.subtitle.contains(fixture.customFile.path) == false)
         #expect(try Data(contentsOf: fixture.defaultFile) == sourceData)
         #expect(try Data(contentsOf: fixture.customFile) == destinationData)
     }
@@ -163,13 +248,13 @@ struct PresetMigrationTests {
 
         let response = fixture.actionMenu()
 
-        #expect(response.items.first?.title == "Previous preset file is missing")
+        #expect(response.items.first?.title == "Previous settings file is missing")
         #expect(response.items.first?.valid == false)
         #expect(!FileManager.default.fileExists(atPath: fixture.customFile.path))
     }
 
     @Test(arguments: [
-        (#"not-json"#, "malformed or contains unsupported presets"),
+        (#"not-json"#, "malformed or contains unsupported data"),
         (#"{"version":99,"presets":[]}"#, "schema version 99 is unsupported")
     ])
     func malformedAndUnsupportedSourcesAreVisibleAndNonDestructive(
@@ -185,7 +270,7 @@ struct PresetMigrationTests {
 
         let response = fixture.actionMenu()
 
-        #expect(response.items.first?.title == "Previous preset file cannot be moved")
+        #expect(response.items.first?.title == "Previous settings cannot be moved")
         #expect(response.items.first?.subtitle.contains(expectedDetail) == true)
         #expect(try String(contentsOf: fixture.defaultFile, encoding: .utf8) == contents)
         #expect(!FileManager.default.fileExists(atPath: fixture.customFile.path))
@@ -222,7 +307,7 @@ struct PresetMigrationTests {
 
         let response = fixture.actionMenu()
 
-        #expect(response.items.first?.title == "Unable to read preset location metadata")
+        #expect(response.items.first?.title == "Unable to read settings location")
         #expect(response.items.first?.valid == false)
         #expect(!FileManager.default.fileExists(atPath: fixture.customFile.path))
     }
@@ -344,5 +429,15 @@ private final class ControlledAtomicWriter: AtomicDataWriting {
             }
         }
         try data.write(to: url, options: .atomic)
+    }
+}
+
+private struct EmptyMigrationClipboard: ClipboardReading {
+    func fileURLs() -> [URL] {
+        []
+    }
+
+    func string() -> String? {
+        nil
     }
 }

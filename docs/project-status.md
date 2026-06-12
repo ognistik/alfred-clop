@@ -74,8 +74,12 @@ migration.
   action
 - Empty crop queries show one non-executable instructional item instead of
   workflow-authored presets
-- Typed values produce exactly one interpreted result or one visible validation
-  error
+- Typed queries remove the instructional item immediately, filter saved
+  presets, and select matching presets before offering a free-form action
+- Partial preset queries remain useful without showing premature validation
+  errors; exact normalized preset matches produce one saved interpreted action
+- Typed values without matching presets produce exactly one interpreted result
+  or one visible validation error
 - Free-form validation for `1200x630`, `16:9`, `1920`, `w128`, `h720`,
   `128x0`, and `0x720`
 - `wNUMBER` and `hNUMBER` normalize to Clop's native `NUMBERx0` and `0xNUMBER`
@@ -115,8 +119,14 @@ migration.
   `alfred_workflow_data`
 - Changed `presetsPath` values detected without silently moving, merging,
   overwriting, or deleting preset data
-- Context-specific Move presets action in the main action menu with source and
-  destination paths shown explicitly
+- Context-specific Move existing settings action appears first in the main
+  action menu with concise, path-free wording
+- Pending settings migration remains available when there are no current files
+  to process, alongside the relevant non-executable input message
+- New preset saves are blocked while a settings move or two-location conflict
+  is unresolved, preventing accidental creation of a second settings file
+- A blocked preset save offers the move inline; Return performs it directly,
+  saves the pending preset, and restores Crop / Resize
 - Separate typed confirmation and execution states
 - Atomic destination write followed by destination reload and validation
   before source deletion
@@ -158,6 +168,8 @@ structure.
 - Smart Crop menu choices
 - Output and backup policies
 - Dynamic PDF device and paper-size menus
+- Configuration menu for preset and recipe management, explicit resets,
+  storage migration, and portable settings export or backup
 - Workflow icons, user configuration, packaging, and release automation
 - Raw bitmap clipboard data materialization
 
@@ -188,7 +200,7 @@ compatibility plan is implemented.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 100 tests.
+- `./scripts/test.sh` passes 107 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

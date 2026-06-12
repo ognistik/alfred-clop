@@ -123,9 +123,13 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.noPaths {
-            return errorItem(
+            return responseWithoutInputs(
+                context: .clipboard,
                 title: "No supported files in clipboard",
-                subtitle: "Copy one or more files or file paths and try again."
+                subtitle: "Copy one or more files or file paths and try again.",
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
             )
         } catch InputCollectionError.missingPath(let path) {
             return errorItem(
@@ -165,9 +169,13 @@ enum ActionMenu {
                 subtitle: "The input JSON is invalid."
             )
         } catch InputCollectionError.noPaths {
-            return errorItem(
+            return responseWithoutInputs(
+                context: context,
                 title: "No files selected",
-                subtitle: "Select one or more media files and try again."
+                subtitle: "Select one or more media files and try again.",
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
             )
         } catch InputCollectionError.missingPath(let path) {
             return errorItem(
@@ -204,14 +212,22 @@ enum ActionMenu {
         } catch InputCollectionError.noPaths {
             switch context {
             case .arguments:
-                return errorItem(
+                return responseWithoutInputs(
+                    context: context,
                     title: "No file paths provided",
-                    subtitle: "Pass one or more file paths to the external trigger."
+                    subtitle: "Pass one or more file paths to the external trigger.",
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
                 )
             case .selected, .clipboard:
-                return errorItem(
+                return responseWithoutInputs(
+                    context: context,
                     title: "No files selected",
-                    subtitle: "Run Clop from Universal Actions on one or more files."
+                    subtitle: "Run Clop from Universal Actions on one or more files.",
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
                 )
             }
         } catch InputCollectionError.missingPath(let path) {
@@ -321,41 +337,41 @@ enum ActionMenu {
             )) ?? ""
             return ScriptFilterItem(
                 uid: "preset.migration",
-                title: "Move presets",
-                subtitle: "Move \(migration.sourceURL.path) to \(migration.destinationURL.path)",
+                title: "Move existing settings",
+                subtitle: "Move existing settings to the newly configured location",
                 arg: stateJSON,
                 valid: true,
-                autocomplete: "Move presets",
-                match: "move migrate presets location",
+                autocomplete: "Move existing settings",
+                match: "move migrate existing settings presets recipes location",
                 variables: migrationVariables(
                     stateJSON: stateJSON,
                     request: request
                 )
             )
-        case .conflict(let migration):
+        case .conflict:
             return ScriptFilterItem(
-                title: "Preset location conflict",
-                subtitle: "Both \(migration.sourceURL.path) and \(migration.destinationURL.path) exist. Automatic migration is unavailable.",
+                title: "Settings location conflict",
+                subtitle: "Settings exist in both locations. Automatic migration is unavailable.",
                 arg: "",
                 valid: false
             )
-        case .sourceMissing(let migration):
+        case .sourceMissing:
             return ScriptFilterItem(
-                title: "Previous preset file is missing",
-                subtitle: "Expected \(migration.sourceURL.path); nothing was moved to \(migration.destinationURL.path).",
+                title: "Previous settings file is missing",
+                subtitle: "The previous settings could not be found at the last configured location.",
                 arg: "",
                 valid: false
             )
-        case .sourceInvalid(let migration, let error):
+        case .sourceInvalid(_, let error):
             return ScriptFilterItem(
-                title: "Previous preset file cannot be moved",
-                subtitle: "\(migration.sourceURL.path): \(migrationErrorDetail(error))",
+                title: "Previous settings cannot be moved",
+                subtitle: migrationErrorDetail(error),
                 arg: "",
                 valid: false
             )
         case .metadataInvalid(let error):
             return ScriptFilterItem(
-                title: "Unable to read preset location metadata",
+                title: "Unable to read settings location",
                 subtitle: migrationErrorDetail(error),
                 arg: "",
                 valid: false
@@ -378,26 +394,57 @@ enum ActionMenu {
         ]
     }
 
+    static func responseWithoutInputs(
+        context: ActionInputContext,
+        title: String,
+        subtitle: String,
+        environment: Environment,
+        fileManager: FileManager,
+        writer: any AtomicDataWriting
+    ) -> ScriptFilterResponse {
+        let selection = InputSelection(inputs: [], mediaKinds: [])
+        let migrationItem = presetMigrationItem(
+            status: PresetMigrationCoordinator(
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            ).status(),
+            selection: selection,
+            context: context
+        )
+        return ScriptFilterResponse(
+            items: [migrationItem].compactMap(\.self) + [
+                ScriptFilterItem(
+                    title: title,
+                    subtitle: subtitle,
+                    arg: "",
+                    valid: false
+                )
+            ],
+            variables: inputVariables(for: [], context: context)
+        )
+    }
+
     static func migrationErrorDetail(_ error: PresetMigrationError) -> String {
         switch error {
         case .missingWorkflowDataDirectory:
             return "Alfred did not provide a workflow data directory."
         case .invalidMetadata:
-            return "The workflow-owned preset location metadata is malformed."
+            return "The workflow-owned settings location metadata is malformed."
         case .unsupportedMetadataVersion(let version):
-            return "Preset location metadata version \(version) is unsupported."
+            return "Settings location metadata version \(version) is unsupported."
         case .sourceMissing:
-            return "The previous presets.json file is missing."
+            return "The previous settings file is missing."
         case .sourceInvalid:
-            return "presets.json is malformed or contains unsupported presets."
+            return "The settings file is malformed or contains unsupported data."
         case .sourceUnsupportedVersion(let version):
-            return "presets.json schema version \(version) is unsupported."
+            return "Settings schema version \(version) is unsupported."
         case .destinationConflict:
-            return "The destination already contains presets.json."
+            return "The new location already contains settings."
         case .destinationValidationFailed:
             return "The destination could not be reloaded and validated."
         case .locationChanged:
-            return "The configured preset location changed before the move completed."
+            return "The configured settings location changed before the move completed."
         }
     }
 

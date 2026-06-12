@@ -36,8 +36,8 @@ struct CropPresetMenuTests {
             }))
         )
 
-        #expect(response.items[0].title == "Type crop or resize parameters")
-        #expect(response.items.contains { $0.title == "w128" })
+        #expect(response.items[0].title == "Use 1200x630")
+        #expect(!response.items.contains { $0.title == "w128" })
         #expect(operation.action == .crop(
             size: "1200x630",
             smartCrop: false,
@@ -59,6 +59,82 @@ struct CropPresetMenuTests {
         #expect(matchingItems[0].title == "Width 128, auto height")
         #expect(matchingItems[0].subtitle.contains("Saved preset"))
         #expect(matchingItems[0].autocomplete == "w128")
+        #expect(response.items.count == 1)
+        #expect(!response.items.contains {
+            $0.title == "Type crop or resize parameters"
+        })
+    }
+
+    @Test
+    func typedQueryPrefersMatchingPresetOverFreeFormAction() throws {
+        let fixture = try Fixture()
+        try fixture.save("16:9")
+        try fixture.save("1920")
+        try fixture.save("w128")
+        try fixture.save("h720")
+
+        let response = fixture.response(query: "128")
+
+        #expect(
+            response.items.map(\.title)
+                == ["w128"]
+        )
+        #expect(response.items.allSatisfy {
+            $0.title != "Type crop or resize parameters"
+        })
+    }
+
+    @Test
+    func numericPresetPrefixIsImmediatelySelected() throws {
+        let fixture = try Fixture()
+        try fixture.save("2:3")
+        try fixture.save("1920")
+
+        let response = fixture.response(query: "19")
+        let item = try #require(response.items.first)
+        let operation = try operationRequest(from: item)
+
+        #expect(response.items.map(\.title) == ["1920"])
+        #expect(item.autocomplete == "1920")
+        #expect(operation.action == .crop(
+            size: "1920",
+            smartCrop: false,
+            longEdge: true
+        ))
+    }
+
+    @Test
+    func freeFormActionReturnsAfterQueryLeavesPresetPrefix() throws {
+        let fixture = try Fixture()
+        try fixture.save("1920")
+
+        let response = fixture.response(query: "193")
+
+        #expect(response.items.map(\.title) == ["Use long edge 193"])
+    }
+
+    @Test
+    func incompleteQueryShowsMatchingPresetsWithoutInvalidFeedback() throws {
+        let fixture = try Fixture()
+        try fixture.save("w128")
+        try fixture.save("w1920")
+        try fixture.save("h720")
+
+        let response = fixture.response(query: "w")
+
+        #expect(response.items.map(\.title) == ["w128", "w1920"])
+        #expect(response.items.allSatisfy { $0.valid })
+    }
+
+    @Test
+    func nonMatchingTypedQueryDoesNotReturnUnrelatedPresets() throws {
+        let fixture = try Fixture()
+        try fixture.save("w128")
+        try fixture.save("h720")
+
+        let response = fixture.response(query: "1200x630")
+
+        #expect(response.items.map(\.title) == ["Use 1200x630"])
     }
 
     @Test

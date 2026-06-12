@@ -67,6 +67,13 @@ struct PresetMigrationRequest: Codable, Equatable {
     var inputs: [String]
     var mediaKinds: [MediaKind]
     var inputContext: ActionInputContext
+    var presetSaveContinuation: PresetSaveContinuation? = nil
+}
+
+struct PresetSaveContinuation: Codable, Equatable {
+    var request: ParameterStepRequest
+    var preset: ActionPreset
+    var query: String
 }
 
 struct MenuState: Codable, Equatable {

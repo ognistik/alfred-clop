@@ -69,6 +69,8 @@ feature being deferred must still have an explicit place in this plan.
 
 - User-defined action presets for reusable values inside parameter menus
 - User-defined recipes that combine multiple typed actions and delivery steps
+- A Configuration menu for user-created settings, storage, reset, and portable
+  export or backup
 - Live progress UI
 - Automatic update/release mechanism
 
@@ -518,7 +520,8 @@ immediately from the modifier action.
 
 Presets live only in the submenu for their action. Crop presets appear in Crop
 / Resize, downscale presets in Downscale, and conversion presets in the
-relevant Convert menu. A separate Manage Presets menu is not required.
+relevant Convert menu. A separate preset-only management menu is not required;
+broader lifecycle operations belong in the future Configuration menu.
 
 Preset storage:
 
@@ -542,6 +545,39 @@ custom name and management menu. Do not widen the action-preset schema into a
 recipe schema or implement recipe persistence as part of the initial preset
 work. Clop saved pipelines remain a separate native Clop feature and should
 stay opaque until their grammar is stable enough to model safely.
+
+### Configuration menu
+
+Add a discoverable `Configuration` action to the main menu when preset and
+recipe management justify a dedicated surface. It is separate from Alfred's
+static workflow configuration and must remain available without files to
+process.
+
+Expected responsibilities:
+
+- manage the active settings location and pending migrations;
+- browse and remove saved presets and recipes;
+- reset saved presets or all user-created workflow data through explicit,
+  destructive confirmations;
+- export or back up portable user-created settings to a chosen location;
+- restore or import settings only after conflict, merge, schema-version, and
+  overwrite behavior has been designed.
+
+When a pending migration blocks an inline save, Return on the explicit
+`Move existing settings` row should perform the non-destructive move directly
+and resume the interrupted menu operation without a second confirmation. Main
+menu migrations retain their confirmation. Once Configuration exists,
+Command-Return on the inline migration prompt should open Configuration
+instead of performing a destructive shortcut.
+
+Use precise destructive labels such as `Reset saved presets` rather than the
+ambiguous `Reset settings`. A reset must state whether it affects presets,
+recipes, or both. Export and backup cover portable user-created data, not
+Alfred preferences, Clop preferences, workflow binaries, or caches.
+
+Do not implement this menu as incidental preset-migration work. Design the
+shared settings document and conflict policy first so recipes can participate
+without another incompatible storage transition.
 
 ### Downscale
 

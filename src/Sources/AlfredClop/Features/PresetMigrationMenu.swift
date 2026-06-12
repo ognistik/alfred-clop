@@ -11,12 +11,10 @@ enum PresetMigrationMenu {
             MenuState.self,
             from: Data(stateJSON.utf8)
         ),
-        let request = state.presetMigration,
-        !request.inputs.isEmpty,
-        !request.mediaKinds.isEmpty else {
+        let request = state.presetMigration else {
             return error(
-                title: "Unable to move presets",
-                subtitle: "The preset migration state is invalid or incomplete."
+                title: "Unable to move existing settings",
+                subtitle: "The settings migration state is invalid or incomplete."
             )
         }
 
@@ -32,8 +30,8 @@ enum PresetMigrationMenu {
             )
         case .actions, .crop, .cropPresetRemoval:
             return error(
-                title: "Unable to move presets",
-                subtitle: "The preset migration state is invalid."
+                title: "Unable to move existing settings",
+                subtitle: "The settings migration state is invalid."
             )
         }
     }
@@ -49,8 +47,8 @@ enum PresetMigrationMenu {
         return ScriptFilterResponse(
             items: [
                 ScriptFilterItem(
-                    title: "Move presets?",
-                    subtitle: "From \(request.sourcePath) to \(request.destinationPath). Press Return to confirm.",
+                    title: "Move existing settings?",
+                    subtitle: "Move them to the newly configured location. Press Return to confirm.",
                     arg: stateJSON,
                     valid: true,
                     variables: ActionMenu.migrationVariables(
@@ -82,6 +80,53 @@ enum PresetMigrationMenu {
                 sourceURL: URL(fileURLWithPath: request.sourcePath),
                 destinationURL: URL(fileURLWithPath: request.destinationPath)
             ))
+            if let continuation = request.presetSaveContinuation {
+                let saveState = MenuState.crop(
+                    continuation.request,
+                    action: PresetMenuAction(
+                        kind: .save,
+                        preset: continuation.preset
+                    )
+                )
+                return CropParameterMenu.response(
+                    stateJSON: (try? JSONOutput.string(
+                        for: saveState,
+                        prettyPrinted: false
+                    )) ?? "",
+                    query: continuation.query,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
+            guard !request.inputs.isEmpty else {
+                let message: (String, String)
+                switch request.inputContext {
+                case .clipboard:
+                    message = (
+                        "No supported files in clipboard",
+                        "Copy one or more files or file paths and try again."
+                    )
+                case .arguments:
+                    message = (
+                        "No file paths provided",
+                        "Pass one or more file paths to the external trigger."
+                    )
+                case .selected:
+                    message = (
+                        "No files selected",
+                        "Run Clop from Universal Actions on one or more files."
+                    )
+                }
+                return ActionMenu.responseWithoutInputs(
+                    context: request.inputContext,
+                    title: message.0,
+                    subtitle: message.1,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return ActionMenu.response(
                 for: InputSelection(
                     inputs: request.inputs,
@@ -112,7 +157,7 @@ enum PresetMigrationMenu {
         return ScriptFilterResponse(
             items: [
                 ScriptFilterItem(
-                    title: "Unable to move presets",
+                    title: "Unable to move existing settings",
                     subtitle: detail,
                     arg: "",
                     valid: false
