@@ -10,7 +10,9 @@ struct CropParameterMenuTests {
         ("w128", "128x0", false, CropSizeKind.fixedWidth(128)),
         ("h720", "0x720", false, CropSizeKind.fixedHeight(720)),
         ("128x0", "128x0", false, CropSizeKind.fixedWidth(128)),
-        ("0x720", "0x720", false, CropSizeKind.fixedHeight(720))
+        ("0x720", "0x720", false, CropSizeKind.fixedHeight(720)),
+        ("001280x000", "1280x0", false, CropSizeKind.fixedWidth(1280)),
+        ("32:18", "16:9", false, CropSizeKind.aspectRatio(width: 16, height: 9))
     ])
     func parsesAndNormalizesVerifiedSizeForms(
         input: String,
@@ -51,7 +53,7 @@ struct CropParameterMenuTests {
 
     @Test
     func emptyQueryShowsOneInstructionalItem() throws {
-        let response = CropParameterMenu.response(
+        let response = try cropResponse(
             stateJSON: try cropStateJSON(context: .selected),
             query: ""
         )
@@ -72,15 +74,17 @@ struct CropParameterMenuTests {
         subtitlePrefix: String
     ) throws {
         let stateJSON = try cropStateJSON(context: context)
-        let response = CropParameterMenu.response(
+        let response = try cropResponse(
             stateJSON: stateJSON,
             query: "w128"
         )
-        let request = try operationRequest(from: response.items[0])
+        let item = try #require(response.items.first(where: { $0.valid }))
+        let operation = try operationRequest(from: item)
 
-        #expect(response.items.count == 1)
-        #expect(response.items[0].subtitle.hasPrefix("\(subtitlePrefix):"))
-        #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
+        #expect(response.items.count == 2)
+        #expect(response.items[0].title == "Type crop or resize parameters")
+        #expect(item.subtitle.hasPrefix("\(subtitlePrefix):"))
+        #expect(operation.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
         #expect(
             response.variables?[ActionMenu.menuStateVariable]
                 == stateJSON
@@ -112,14 +116,15 @@ struct CropParameterMenuTests {
         input: String,
         explanation: String
     ) throws {
-        let response = CropParameterMenu.response(
+        let response = try cropResponse(
             stateJSON: try cropStateJSON(context: .arguments),
             query: input
         )
-        let item = try #require(response.items.first)
+        let item = try #require(response.items.first(where: { $0.valid }))
         let request = try operationRequest(from: item)
 
-        #expect(response.items.count == 1)
+        #expect(response.items.count == 2)
+        #expect(response.items[0].title == "Type crop or resize parameters")
         #expect(item.subtitle.contains(explanation))
         #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
         #expect(item.subtitle.hasPrefix("Passed files:"))
@@ -139,15 +144,16 @@ struct CropParameterMenuTests {
         input: String,
         expectedTitle: String
     ) throws {
-        let response = CropParameterMenu.response(
+        let response = try cropResponse(
             stateJSON: try cropStateJSON(context: .selected),
             query: input
         )
 
-        #expect(response.items.count == 1)
-        #expect(response.items[0].title == expectedTitle)
-        #expect(!response.items[0].title.contains("x0"))
-        #expect(!response.items[0].title.contains("0x"))
+        let item = try #require(response.items.first(where: { $0.valid }))
+        #expect(response.items.count == 2)
+        #expect(item.title == expectedTitle)
+        #expect(!item.title.contains("x0"))
+        #expect(!item.title.contains("0x"))
     }
 
     @Test(arguments: [
@@ -164,11 +170,12 @@ struct CropParameterMenuTests {
         normalizedValue: String,
         longEdge: Bool
     ) throws {
-        let response = CropParameterMenu.response(
+        let response = try cropResponse(
             stateJSON: try cropStateJSON(context: .selected),
             query: input
         )
-        let request = try operationRequest(from: response.items[0])
+        let item = try #require(response.items.first(where: { $0.valid }))
+        let request = try operationRequest(from: item)
 
         #expect(
             request.action
@@ -187,15 +194,16 @@ struct CropParameterMenuTests {
     func invalidAndIncompleteInputReturnsOneVisibleFeedbackItem(
         input: String
     ) throws {
-        let response = CropParameterMenu.response(
+        let response = try cropResponse(
             stateJSON: try cropStateJSON(context: .selected),
             query: input
         )
 
-        #expect(response.items.count == 1)
-        #expect(response.items[0].title == "Invalid crop or resize value")
-        #expect(response.items[0].valid == false)
-        #expect(response.items[0].arg == "")
+        #expect(response.items.count == 2)
+        #expect(response.items[0].title == "Type crop or resize parameters")
+        #expect(response.items[1].title == "Invalid crop or resize value")
+        #expect(response.items[1].valid == false)
+        #expect(response.items[1].arg == "")
     }
 
     @Test
@@ -219,6 +227,20 @@ struct CropParameterMenuTests {
                 inputContext: context
             )),
             prettyPrinted: false
+        )
+    }
+
+    private func cropResponse(
+        stateJSON: String,
+        query: String
+    ) throws -> ScriptFilterResponse {
+        let directory = try makeTemporaryDirectory()
+        return CropParameterMenu.response(
+            stateJSON: stateJSON,
+            query: query,
+            environment: Environment(values: [
+                PresetStore.workflowDataEnvironmentKey: directory.path
+            ])
         )
     }
 

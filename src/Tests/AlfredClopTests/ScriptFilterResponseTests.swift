@@ -53,4 +53,17 @@ struct ScriptFilterResponseTests {
         #expect(text.contains(#""match" : "compress shrink optimize""#))
         #expect(text.contains(#""cmd""#))
     }
+
+    @Test
+    func responseEncodesAlfredSkipKnowledgeKey() throws {
+        let data = try JSONOutput.data(for: ScriptFilterResponse(
+            items: [],
+            skipKnowledge: true
+        ))
+        let json = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+
+        #expect(json["skipknowledge"] as? Bool == true)
+    }
 }

@@ -9,8 +9,8 @@ file whenever a task materially changes what works or what should happen next.
 ## Current checkpoint
 
 Milestones 1 and 2 are substantially complete. Milestone 3 now includes
-parameter-free execution plus a guided dynamic parameter step for crop and
-resize.
+parameter-free execution, a guided dynamic parameter step for crop and resize,
+and user-defined Crop / Resize action presets.
 
 ## Completed
 
@@ -48,8 +48,8 @@ resize.
 - Immediate actions handed to a quiet Run Script execution action
 - Clop UI used for successful progress/results, with notifications for errors
 - Release binary built at `workflow/alfred-clop`
-- User configuration fields added for optional `presetsPath` and `copyResult`;
-  they are not wired into Swift behavior yet
+- User configuration fields added for optional `presetsPath` and `copyResult`
+- `presetsPath` is wired into preset storage; `copyResult` is not wired yet
 
 ### Parameter-free execution
 
@@ -88,6 +88,36 @@ resize.
 - Normalized inputs and selected, copied, or passed context preserved across
   inbound transitions and Script Filter query reruns
 
+### Crop and resize presets
+
+- Versioned `presets.json` schema storing normalized typed crop actions only
+- Atomic persistence in `alfred_workflow_data` by default or
+  `<presetsPath>/presets.json` when configured
+- No preset inputs, custom names, or execution-setting overrides
+- Friendly normalization for equivalent forms such as `w128` and `128x0`
+- Fixed grammar instruction followed by saved presets with stable item UIDs
+- Saved presets use deterministic natural sorting by their friendly display
+  values because Alfred learning is disabled for this submenu
+- Free-form typed values remain available alongside saved presets
+- Matching typed and saved values combine into one result marked as saved
+- Control-Return saves new typed values immediately
+- Control-Return on a saved preset opens a typed removal confirmation step
+- Confirmed removal returns to Crop / Resize with inputs and source context
+  preserved
+- Malformed and unsupported preset files are rejected visibly without being
+  overwritten
+- Configured paths and input filenames containing spaces are covered by tests
+
+Alfred was verified directly after implementation. Script Filter knowledge
+sorting is response-wide: after a UID result is learned, Alfred can promote it
+above a no-UID instructional row. Alfred does not support pinning one result
+while learning the relative order of other results in the same response.
+Crop / Resize therefore returns `skipknowledge: true` as the smallest reliable
+fallback that keeps the grammar instruction first. Stable preset UIDs remain
+in the JSON, but Alfred learning is disabled for this submenu until Alfred
+provides per-item knowledge control or the product adopts a different menu
+structure.
+
 ### CLI research
 
 - CLI reference refreshed against the official Clop 3.0.0 release
@@ -100,10 +130,8 @@ resize.
 
 ## Not implemented
 
-- User-defined crop action presets and preset persistence
-- Modifier behavior for aggressive processing, original preservation, and
-  saving presets
-- Wiring for the `presetsPath` and `copyResult` workflow settings
+- Modifier behavior for aggressive processing and original preservation
+- Wiring for the `copyResult` workflow setting
 - Typed headless automation request and External Trigger
 - Downscale, conversion, and PDF-crop parameter menus and parsing
 - Smart Crop menu choices
@@ -114,36 +142,18 @@ resize.
 
 ## Next recommended task
 
-Implement the first bounded action-preset slice for Crop / Resize:
+Implement the next bounded global execution-setting slice:
 
-1. Add a dedicated versioned preset schema that stores one normalized typed
-   crop action, with no inputs, custom name, or execution settings.
-2. Store `presets.json` atomically in the default workflow data directory or
-   configured `presetsPath`.
-3. Keep the grammar instruction fixed at the top and show saved crop presets
-   beneath it with stable Alfred item UIDs for learned relative ordering.
-4. Keep free-form typed input available when presets exist. When a typed value
-   matches a saved preset, show one combined result marked as saved.
-5. Add Control-Return behavior that immediately saves a new typed value and
-   opens a confirmation step for removing an existing preset.
-6. After confirmed removal, return to the Crop / Resize menu with the remaining
-   presets visible.
-7. Add focused schema, atomic persistence, normalization, duplicate,
-   add/remove confirmation, menu-position, and input-preservation tests.
-8. Verify manually in Alfred that the instructional row remains first while
-   stable preset UIDs allow Alfred to learn relative preset ordering.
+1. Wire the existing `copyResult` workflow checkbox into
+   `ExecutionOptions.copyResult`.
+2. Add Clop's explicit `--copy` argument only to commands that support it.
+3. Keep `--gui` and `--copy` independent.
+4. Add focused configuration, request, command-building, and filename-edge
+   tests without adding output or backup policy work early.
 
-Do not add preset naming, manual ordering, execution-option overrides, or a
-Manage Presets menu. Presets always inherit the current global output, naming,
-copy-result, Clop UI, preservation, and backup settings.
-
-Recipes are a separate future concept for multiple ordered actions and delivery
-behavior. Do not implement recipe persistence, recipe management, or Clop
-pipeline composition in this task.
-
-Implement only the Control-Return behavior needed for preset add/remove in this
-slice. Keep aggressive and original-preservation modifier work separate until
-their execution policies are ready.
+Keep aggressive and original-preservation modifier work separate until their
+execution policies are ready. Do not expand action presets into recipes,
+manual ordering, custom names, or execution-option overrides.
 
 Keep downscale, conversion, and PDF crop encoded as `ParameterStepRequest`
 until their own tasks.
@@ -157,7 +167,7 @@ compatibility plan is implemented.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 75 tests.
+- `./scripts/test.sh` passes 89 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

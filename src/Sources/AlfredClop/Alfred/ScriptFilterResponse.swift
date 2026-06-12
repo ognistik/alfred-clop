@@ -4,15 +4,25 @@ struct ScriptFilterResponse: Codable, Equatable {
     var items: [ScriptFilterItem]
     var variables: [String: String]?
     var rerun: Double?
+    var skipKnowledge: Bool?
 
     init(
         items: [ScriptFilterItem] = [],
         variables: [String: String]? = nil,
-        rerun: Double? = nil
+        rerun: Double? = nil,
+        skipKnowledge: Bool? = nil
     ) {
         self.items = items
         self.variables = variables
         self.rerun = rerun
+        self.skipKnowledge = skipKnowledge
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case items
+        case variables
+        case rerun
+        case skipKnowledge = "skipknowledge"
     }
 }
 

@@ -45,15 +45,49 @@ struct ParameterStepRequest: Codable, Equatable {
 enum MenuMode: String, Codable, Equatable {
     case actions
     case crop
+    case cropPresetRemoval
+}
+
+enum PresetMenuActionKind: String, Codable, Equatable {
+    case save
+    case confirmRemoval
+    case remove
+}
+
+struct PresetMenuAction: Codable, Equatable {
+    var kind: PresetMenuActionKind
+    var preset: ActionPreset
 }
 
 struct MenuState: Codable, Equatable {
     var mode: MenuMode
     var parameterRequest: ParameterStepRequest?
+    var presetAction: PresetMenuAction?
 
-    static let actions = MenuState(mode: .actions, parameterRequest: nil)
+    static let actions = MenuState(
+        mode: .actions,
+        parameterRequest: nil,
+        presetAction: nil
+    )
 
     static func crop(_ request: ParameterStepRequest) -> MenuState {
-        MenuState(mode: .crop, parameterRequest: request)
+        MenuState(
+            mode: .crop,
+            parameterRequest: request,
+            presetAction: nil
+        )
+    }
+
+    static func crop(
+        _ request: ParameterStepRequest,
+        action: PresetMenuAction
+    ) -> MenuState {
+        MenuState(
+            mode: action.kind == .confirmRemoval
+                ? .cropPresetRemoval
+                : .crop,
+            parameterRequest: request,
+            presetAction: action
+        )
     }
 }

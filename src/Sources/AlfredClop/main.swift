@@ -64,6 +64,11 @@ enum AlfredClopCommand {
                     stateJSON: stateJSON,
                     query: query
                 )
+            case .cropPresetRemoval:
+                return CropParameterMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
             case .actions:
                 if state.parameterRequest != nil {
                     return errorResponse(
