@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 11, 2026
+Last updated: June 12, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -60,6 +60,16 @@ boundary.
 - Visible Alfred feedback for invalid and parameter-step requests, missing
   Clop, launch failures, invalid JSON results, and nonzero exits
 - Focused fake-based tests that never launch the real Clop CLI
+
+### CLI research
+
+- CLI reference refreshed against the official Clop 3.0.0 release
+- Media-specific optimization subcommands documented
+- Image, video, and audio conversion formats documented
+- Native pipeline commands and PDF `--extend` behavior documented
+- Product plan now targets complete supported CLI coverage across typed
+  optimization, conversion, PDF controls, folders, URLs, shared switches, and
+  pipeline management
 
 ## Not implemented
 

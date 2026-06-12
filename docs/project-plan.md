@@ -13,9 +13,13 @@ The workflow should feel like one coherent tool:
 - optional parameters appear as another searchable step;
 - one Swift executable executes the final operation and reports the result.
 
-## Recommended scope
+The finished workflow should provide discoverable access to the complete
+supported Clop 3.0 CLI surface. Release milestones may stage that work, but a
+feature being deferred must still have an explicit place in this plan.
 
-### Version 1
+## Scope and release strategy
+
+### First usable release
 
 - Finder selection entry point
 - Alfred Universal Action for files
@@ -26,7 +30,7 @@ The workflow should feel like one coherent tool:
 - Crop to dimensions or aspect ratio
 - Resize to long edge
 - Downscale by factor
-- Convert images to AVIF, HEIC, or WebP
+- Convert images, videos, and audio to media-specific target formats
 - Reversible PDF crop and uncrop
 - Strip image/video metadata
 - Context-aware menus
@@ -35,20 +39,72 @@ The workflow should feel like one coherent tool:
 - Modifier-based overrides
 - Actionable success and error feedback
 
-### Later
+### Complete CLI coverage
 
-- Chained conversion and processing pipelines
-- Saved user presets
-- Folder-recursive workflows
-- URL inputs
-- Video playback-speed actions
-- Video audio removal
-- Copy-result-to-clipboard actions
+- Media-specific image, video, PDF, and audio optimization controls
+- Image compression and adaptive format selection
+- Video compression, encoder selection, playback speed, and audio removal
+- PDF DPI and destructive crop controls
+- Audio compression and explicit bitrate controls
+- Every documented image, video, and audio conversion target
+- App-backed conversion with JSON results
+- Legacy offline image conversion as an advanced compatibility action
+- Reversible PDF crop by device, paper, ratio, or resolution
+- PDF page layout and extend-with-empty-paper controls
+- Saved pipeline discovery, inspection, execution, creation, replacement, and
+  deletion
+- Inline pipeline execution
+- Folder and recursive processing
+- URL inputs where supported by the selected command
+- Include/exclude type filters where supported
+- Copy-result-to-clipboard, skip-errors, Clop UI, and output controls
+- Command-specific aggressive, adaptive, PDF-DPI, and remove-audio switches
+  on the broad processing commands that expose them
+- Explicit background submission for users who choose fire-and-forget behavior
+- Raw bitmap clipboard data materialization
+- Diagnostics that report the detected Clop app version and available command
+  families
+
+### Product enhancements
+
+- Workflow-owned presets layered above Clop's saved pipelines
 - Live progress UI
 - Automatic update/release mechanism
 
-The CLI supports several later features already. Delaying them keeps the first
-release understandable and gives the core input/action model time to settle.
+The first release stays focused, but the architecture must not encode its
+smaller action set as the permanent capability model.
+
+## CLI coverage contract
+
+The project tracks CLI coverage by command family:
+
+| CLI family | Required workflow coverage |
+| --- | --- |
+| `optimise` | Mixed-type defaults plus typed image, video, PDF, and audio controls |
+| `crop` | Size, ratio, single edge, long edge, smart crop, and every documented shared processing option |
+| `downscale` | Factor presets and custom factors plus every documented shared processing option |
+| `convert image` | WebP, AVIF, HEIC, JXL, JPEG/JPG, and PNG |
+| `convert video` | MP4/H.264, GIF, WebM/VP9, HEVC, x265, and AV1/MKV |
+| `convert audio` | MP3, AAC, M4A, Opus, Ogg, FLAC, WAV, and AIFF |
+| `convert legacy` | Offline AVIF, HEIC, and WebP conversion with quality and collision controls |
+| `crop-pdf` | Device, paper, ratio/resolution, layout, extend, recursive, and output |
+| `uncrop-pdf` | Single/batch input, recursive folders, and output |
+| `strip-exif` | Image/video batches, folders, recursion, and type filters |
+| `pipeline` | List, show, run, add, replace, and delete saved pipelines; run inline pipelines |
+
+Whenever a future Clop release changes `--help`, update
+`docs/clop-cli-reference.md` first and then reconcile this table, capability
+definitions, tests, and status.
+
+CLI coverage is complete only when each row has:
+
+1. a discoverable Alfred route or menu;
+2. typed request validation;
+3. argument-array command construction;
+4. success and error handling appropriate to JSON or text output;
+5. focused tests for valid, invalid, batch, and filename-edge cases.
+
+Unsupported combinations must be hidden or rejected before process launch.
 
 ## Repository structure
 
@@ -134,16 +190,27 @@ enum MediaKind {
 
 enum ClopAction {
     case optimise
+    case optimiseImage
+    case optimiseVideo
+    case optimisePDF
+    case optimiseAudio
     case crop
     case downscale
     case convert
     case cropPDF
     case uncropPDF
     case stripMetadata
+    case runPipeline
+}
+
+enum InputItem {
+    case localFile(URL)
+    case folder(URL)
+    case remoteURL(URL)
 }
 
 struct InputSelection {
-    let urls: [URL]
+    let items: [InputItem]
     let mediaKinds: Set<MediaKind>
 }
 
@@ -154,6 +221,26 @@ struct OperationRequest: Codable {
 }
 ```
 
+`ActionRequest` should model typed parameters rather than passing through an
+unvalidated flag bag. Expected request families include:
+
+- mixed and media-specific optimization;
+- crop and downscale;
+- media-specific conversion;
+- reversible PDF crop and uncrop;
+- metadata stripping;
+- saved and inline pipeline execution.
+
+Pipeline administration should use separate request types because list/show
+are read operations while add/delete mutate Clop's pipeline library.
+
+`ExecutionOptions` should represent only options valid across the selected
+command, such as UI visibility, output, copy result, recursion, skip errors,
+background submission, and type filters. Media-specific compression, bitrate,
+encoder, DPI, and crop choices belong in `ActionRequest`. Broad-command
+modifiers such as aggressive mode, adaptive optimization, PDF DPI, and remove
+audio must be capability-checked because they are not accepted everywhere.
+
 ### `Clop`
 
 - CLI discovery
@@ -163,6 +250,8 @@ struct OperationRequest: Codable {
 - JSON result decoder
 - text result/error parser for commands without JSON
 - dynamic PDF device and paper-size provider
+- pipeline list/show provider and pipeline mutation commands
+- app-version reader for cache invalidation and diagnostics
 
 Keep capability rules in data rather than scattered menu conditionals:
 
@@ -180,6 +269,9 @@ struct ActionDefinition {
 - input collection
 - action menu
 - parameter menu
+- media-specific optimization menus
+- media-specific conversion menus
+- pipeline browser, runner, and administration menus
 - execution
 - result presentation
 - workflow diagnostics
@@ -194,7 +286,10 @@ struct ActionDefinition {
 
 ## Input handling
 
-Normalize every entry point into `[URL]` as early as possible.
+Normalize every entry point into `[InputItem]` as early as possible. Remote
+URLs are not file URLs and must remain distinct from local paths until command
+validation. Do not pass remote URLs through local existence checks or
+`FileManager` normalization.
 
 ### Alfred Universal Action
 
@@ -224,6 +319,18 @@ class.
 Use Alfred's File Filter or Browse in Alfred object to collect files, then feed
 the selected paths into the same normalization route.
 
+### URLs
+
+Provide a dedicated keyword or External Trigger for one or more `http`/`https`
+URLs. Show only commands whose help documents URL support. Preserve each URL
+as one argument and reject unsupported schemes visibly.
+
+### Folders
+
+Treat a folder as an explicit input mode. Before execution, let the user choose
+top-level-only or recursive processing and, where supported, include/exclude
+type filters. Do not enumerate a large folder merely to build the action menu.
+
 ### Validation
 
 - standardize and resolve file URLs;
@@ -232,6 +339,7 @@ the selected paths into the same normalization route.
 - identify directories separately;
 - determine media type with `UTType`, then extension fallback;
 - deduplicate paths without changing user order;
+- validate remote URLs without requiring local existence;
 - handle mixed selections deliberately.
 
 ## Context-aware action menu
@@ -246,9 +354,13 @@ example:
 - video + audio: optimize, downscale;
 - image + video + PDF: optimize, crop;
 - PDF only: optimize, crop, reversible crop, uncrop;
-- audio only: optimize, downscale.
+- audio only: optimize, downscale, convert.
 
-Conversion should only appear when every selected item is an image.
+Conversion should appear for homogeneous image, video, or audio selections.
+Each media kind needs its own target-format menu. For a mixed selection,
+conversion may appear only if the workflow first offers an explicit
+media-specific split; do not send mixed media to one ambiguous conversion
+request.
 
 If a folder is selected, either:
 
@@ -273,21 +385,27 @@ Input
 Suggested top-level actions:
 
 1. Optimize
-2. Aggressive Optimize
-3. Crop / Resize
-4. Downscale
-5. Convert
-6. PDF Crop
-7. PDF Uncrop
-8. Strip Metadata
-9. More Video Actions
+2. Optimize with Controls
+3. Aggressive Optimize
+4. Crop / Resize
+5. Downscale
+6. Convert
+7. PDF Crop
+8. PDF Uncrop
+9. Strip Metadata
+10. Run Pipeline
+11. Manage Pipelines
+
+Keep fast defaults near the top. Advanced controls should remain discoverable
+through searchable actions rather than turning every operation into a long
+mandatory wizard.
 
 The query should fuzzy-match title, synonyms, and keywords. Examples:
 
 - `compress`, `shrink`, `small` -> Optimize
 - `resize`, `dimensions`, `edge` -> Crop / Resize
 - `half`, `75`, `scale` -> Downscale
-- `webp`, `avif`, `heic`, `format` -> Convert
+- `webp`, `avif`, `heic`, `gif`, `mp3`, `format`, `codec` -> Convert
 - `metadata`, `privacy`, `exif` -> Strip Metadata
 
 ## Parameter menus
@@ -309,20 +427,80 @@ Offer `0.9` through `0.1`, with `0.5` prominent. Accept percentages such as
 
 ### Convert
 
-First choose AVIF, HEIC, or WebP, then choose quality. A user-configured default
-quality can make this a one-step action.
+First choose a target valid for the selected media kind:
+
+- images: WebP, AVIF, HEIC, JXL, JPEG, or PNG;
+- videos: MP4/H.264, GIF, WebM/VP9, HEVC, x265, or AV1/MKV;
+- audio: MP3, AAC, M4A, Opus, Ogg, FLAC, WAV, or AIFF.
+
+Then offer compression or bitrate controls supported by that target. A
+user-configured media-specific default can make conversion a one-step action.
+
+Offer legacy local conversion as a clearly labeled image-only alternative for
+AVIF, HEIC, and WebP. Its 0-100 quality scale and overwrite behavior are
+different from app-backed conversion and must not share the same request model.
+
+### Media-specific optimize
+
+- image: compression `5...100` or adaptive, optional downscale and crop;
+- video: compression `5...100` or auto, encoder, remove audio, speed,
+  downscale, and crop;
+- PDF: adaptive or enumerated DPI, optional destructive crop;
+- audio: compression `5...100` or an explicit supported bitrate.
+
+The simple Optimize action should continue to use Clop's mixed-type defaults.
+The controlled variants require homogeneous media input.
 
 ### PDF crop
 
-Offer four categories:
+Offer:
 
 - device;
 - paper size;
 - aspect ratio;
-- custom resolution.
+- custom resolution;
+- page layout: auto, portrait, or landscape;
+- crop content or extend pages with empty paper.
 
 Read device and paper values from the installed CLI and cache them in Alfred's
 workflow cache directory. Refresh when the Clop app version changes.
+
+### Pipelines
+
+For selected inputs, list compatible saved pipelines from
+`clop pipeline list --json`, then execute the chosen name. Also provide an
+advanced inline pipeline action that accepts the pipeline expression as one
+opaque argument.
+
+Pipeline management should support:
+
+- listing saved pipelines and folder automations;
+- showing a saved pipeline's steps;
+- adding or replacing a named pipeline;
+- choosing an optional image, video, PDF, or audio restriction;
+- toggling implicit optimization and floating results;
+- deleting with an explicit confirmation step.
+
+Do not attempt to parse or visually compose every pipeline step until Clop
+publishes a stable complete grammar. Preserve inline step text exactly.
+
+### Advanced execution options
+
+Show an optional final options menu for commands that support it:
+
+- output path or template;
+- recurse into folders;
+- include or exclude file types;
+- copy result;
+- skip invalid/unreachable inputs;
+- show Clop UI;
+- submit asynchronously.
+
+Also expose aggressive mode, adaptive image optimization, PDF DPI, and video
+audio removal on each broad processing command whose help includes them.
+
+Hide unsupported options per command. Async execution is fire-and-forget and
+must not promise final output paths or completion status.
 
 ## Modifier proposal
 
@@ -359,10 +537,21 @@ Suggested Alfred user configuration:
 | Backup folder | Same folder / Specific folder |
 | Show Clop UI | On / Off |
 | Copy result | On / Off |
-| Default conversion format | WebP / AVIF / HEIC |
-| Default conversion quality | 0-100 |
+| Default image conversion | WebP / AVIF / HEIC / JXL / JPEG / PNG |
+| Default video conversion | MP4 / GIF / WebM / HEVC / x265 / AV1 |
+| Default audio conversion | MP3 / AAC / M4A / Opus / Ogg / FLAC / WAV / AIFF |
+| Default conversion compression | 5-100 / Auto where supported |
+| Default audio bitrate | App default / supported kbps value |
+| Default image compression | App default / Adaptive / 5-100 |
+| Default video compression | App default / Auto / 5-100 |
+| Default video encoder | App default / Hardware / Software / Lossless / Adaptive |
+| Default PDF DPI | App default / Adaptive / enumerated DPI |
+| Default audio compression | App default / 5-100 |
 | Adaptive optimization | App default / On / Off |
 | PDF aggressive DPI | App default / Adaptive / fixed DPI |
+| Folder recursion | Ask / Top level / Recursive |
+| Skip errors | On / Off |
+| Conversion engine | App-backed / Legacy local when available |
 
 There is an important distinction between output and backup:
 
@@ -432,10 +621,13 @@ micro-optimization.
 - mixed-selection capability intersection
 - fuzzy ranking
 - size, ratio, percentage, and quality parsing
+- compression, bitrate, DPI, encoder, layout, and format validation
 - modifier resolution
 - output-template construction
 - CLI path discovery
 - command argument construction
+- per-command option compatibility
+- pipeline list/show decoding and mutation request construction
 - Codable Alfred JSON
 
 ### Integration tests
@@ -446,6 +638,7 @@ Use small fixture files for each supported media kind:
 - MP4
 - M4A or MP3
 - PDF
+- a folder containing mixed nested fixtures
 
 Run tests against a temporary copy, never the original fixture. Capture:
 
@@ -456,7 +649,15 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - mixed batch success/failure;
 - output templates;
 - Clop-not-running behavior;
-- conversion collision behavior.
+- conversion replacement, backup, and collision behavior for each media kind;
+- app-backed conversion JSON results;
+- typed optimization controls for each media kind;
+- crop-PDF layout and extend behavior;
+- recursive and type-filter behavior;
+- saved and inline pipeline execution;
+- pipeline list/show JSON and add/delete lifecycle;
+- legacy conversion with Clop stopped;
+- async submission semantics.
 
 ### Manual Alfred checks
 
@@ -465,6 +666,10 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Universal Action with multiple files
 - filenames containing spaces, quotes, commas, and Unicode
 - every modifier
+- folder recursion and type filters
+- URL input routes
+- every media-specific conversion target
+- saved pipeline browsing and destructive pipeline confirmation
 - missing Clop installation
 - workflow configuration migration
 
@@ -487,27 +692,53 @@ Run tests against a temporary copy, never the original fixture. Capture:
 
 ### 3. Core execution
 
-- Implement optimize, crop, downscale, and conversion.
+- Implement mixed optimize, crop, and downscale.
 - Add typed command builder.
 - Decode Clop JSON.
 - Add output and backup policies.
 
-### 4. PDF and metadata
+### 4. Typed optimization and conversion
+
+- Add image, video, PDF, and audio optimization controls.
+- Add app-backed image, video, and audio conversion.
+- Add every documented target format and target-specific control.
+- Add legacy local image conversion as an advanced compatibility action.
+
+### 5. PDF and metadata
 
 - Add dynamic PDF device/paper menus.
-- Add crop/uncrop PDF.
-- Add metadata stripping.
+- Add crop/extend layout controls and uncrop PDF.
+- Add recursive and output behavior.
+- Add metadata stripping with folder and type-filter support.
 
-### 5. Alfred packaging
+### 6. Folders, URLs, and shared options
+
+- Add explicit folder and recursive routes.
+- Add URL input collection for documented commands.
+- Add raw bitmap clipboard materialization into temporary image inputs.
+- Add include/exclude type filters, copy result, skip errors, and async mode.
+- Make option availability command-aware.
+
+### 7. Pipelines
+
+- Add saved pipeline list and detail views.
+- Run saved and inline pipelines.
+- Add, replace, and delete saved pipelines with confirmation.
+- Preserve Clop's file-type, implicit-optimization, and result-visibility
+  settings.
+
+### 8. Alfred packaging
 
 - Build workflow objects and user configuration.
 - Add icons and modifier subtitles.
 - Package a universal or architecture-appropriate binary.
 - Generate `.alfredworkflow`.
 
-### 6. Reliability and release
+### 9. Reliability and release
 
 - Complete integration fixtures.
+- Add a CLI coverage checklist derived from `clop --help`.
+- Report the detected Clop app version and command families in diagnostics.
 - Test on clean Alfred/Clop configuration.
 - Add versioning, changelog, and release automation.
 - Publish installation and troubleshooting documentation.
@@ -522,6 +753,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Dynamically read Clop's PDF presets.
 - Treat the installed Clop CLI as the capability authority.
 - Separate output preservation from true backups.
+- Target complete supported CLI coverage, staged across releases.
+- Keep pipeline expressions opaque until Clop exposes a stable full grammar.
 
 ## Open decisions
 
@@ -529,6 +762,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Whether the released binary is universal or Apple Silicon only.
 - Whether Clop should be launched automatically when needed.
 - Exact default output and backup policy.
-- Whether version 1 includes folders and URLs.
+- Which complete-coverage features ship in the first public release versus
+  follow-up releases.
 - Whether recent-action ranking is desirable.
-- Whether chained convert/process pipelines belong in version 1.1 or later.
+- Whether pipeline creation should remain a text-based advanced feature or gain
+  a visual builder after the grammar stabilizes.
