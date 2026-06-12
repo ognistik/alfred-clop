@@ -35,6 +35,53 @@ struct ExecuteModeTests {
     }
 
     @Test
+    func cropRequiresJSONAndStaysQuietOnSuccess() throws {
+        let json = try requestJSON(action: .crop(
+            size: "1920",
+            smartCrop: false,
+            longEdge: true
+        ))
+        let runner = StubProcessRunner(result: ClopProcessResult(
+            terminationStatus: 0,
+            standardOutput: Data(#"{"results":[]}"#.utf8),
+            standardError: Data()
+        ))
+
+        let response = ExecuteMode.response(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+        let quiet = ExecuteMode.quietFeedback(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+
+        #expect(response.items[0].title == "Crop / resize complete")
+        #expect(quiet == nil)
+    }
+
+    @Test
+    func cropRejectsInvalidJSONResult() throws {
+        let response = ExecuteMode.response(
+            requestJSON: try requestJSON(action: .crop(
+                size: "16:9",
+                smartCrop: false,
+                longEdge: false
+            )),
+            builder: builder(),
+            runner: StubProcessRunner(result: ClopProcessResult(
+                terminationStatus: 0,
+                standardOutput: Data("not json".utf8),
+                standardError: Data()
+            ))
+        )
+
+        #expect(response.items[0].title == "Unable to read Clop result")
+    }
+
+    @Test
     func invalidRequestReturnsVisibleFeedback() {
         let response = ExecuteMode.response(
             requestJSON: "{not-json}",

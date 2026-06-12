@@ -1,22 +1,5 @@
 import Foundation
 
-enum ActionInputContext: String {
-    case selected
-    case clipboard
-    case arguments
-
-    var subtitlePrefix: String {
-        switch self {
-        case .selected:
-            return "Selected files"
-        case .clipboard:
-            return "Copied files"
-        case .arguments:
-            return "Passed files"
-        }
-    }
-}
-
 struct ActionDefinition: Equatable {
     var action: ClopAction
     var title: String
@@ -109,6 +92,8 @@ enum ActionCatalog {
 enum ActionMenu {
     static let inputJSONVariable = "alfred_clop_input_json"
     static let inputContextVariable = "alfred_clop_input_context"
+    static let menuStateVariable = "alfred_clop_menu_state"
+    static let requestKindVariable = "alfred_clop_request_kind"
 
     static func response(
         clipboard: ClipboardReading,
@@ -256,14 +241,24 @@ enum ActionMenu {
 
         return ScriptFilterResponse(
             items: filteredActions.map { definition in
-                ScriptFilterItem(
+                let argument = encodedArgument(
+                    for: definition,
+                    inputs: selection.inputs,
+                    context: context
+                )
+                return ScriptFilterItem(
                     uid: "action.\(definition.action.rawValue)",
                     title: definition.title,
                     subtitle: "\(context.subtitlePrefix): \(definition.subtitle)",
-                    arg: encodedArgument(for: definition, inputs: selection.inputs),
+                    arg: argument,
                     valid: true,
                     autocomplete: definition.title,
-                    match: definition.searchTerms.joined(separator: " ")
+                    match: definition.searchTerms.joined(separator: " "),
+                    variables: requestVariables(
+                        for: definition,
+                        inputs: selection.inputs,
+                        context: context
+                    )
                 )
             },
             variables: inputVariables(
@@ -275,14 +270,16 @@ enum ActionMenu {
 
     private static func encodedArgument(
         for definition: ActionDefinition,
-        inputs: [String]
+        inputs: [String],
+        context: ActionInputContext
     ) -> String {
         do {
             if definition.requiresParameters {
                 return try JSONOutput.string(
                     for: ParameterStepRequest(
                         action: definition.action,
-                        inputs: inputs
+                        inputs: inputs,
+                        inputContext: context
                     ),
                     prettyPrinted: false
                 )
@@ -315,6 +312,46 @@ enum ActionMenu {
         }
     }
 
+    private static func requestVariables(
+        for definition: ActionDefinition,
+        inputs: [String],
+        context: ActionInputContext
+    ) -> [String: String] {
+        guard definition.requiresParameters else {
+            return [
+                requestKindVariable: WorkflowRequestKind.operation.rawValue
+            ]
+        }
+
+        let request = ParameterStepRequest(
+            action: definition.action,
+            inputs: inputs,
+            inputContext: context
+        )
+        let state: MenuState
+        switch definition.action {
+        case .crop:
+            state = .crop(request)
+        case .downscale, .convert, .cropPDF:
+            state = MenuState(mode: .actions, parameterRequest: request)
+        case .optimise, .aggressiveOptimise, .uncropPDF, .stripMetadata:
+            preconditionFailure("Immediate actions do not have parameter state")
+        }
+
+        return [
+            requestKindVariable: WorkflowRequestKind.parameterStep.rawValue,
+            menuStateVariable: (try? JSONOutput.string(
+                for: state,
+                prettyPrinted: false
+            )) ?? "",
+            inputJSONVariable: (try? JSONOutput.string(
+                for: MenuInput(paths: inputs),
+                prettyPrinted: false
+            )) ?? "",
+            inputContextVariable: context.rawValue
+        ]
+    }
+
     private static var defaultExecutionOptions: ExecutionOptions {
         ExecutionOptions(
             showClopUI: true,
@@ -338,7 +375,11 @@ enum ActionMenu {
         }
         return [
             inputJSONVariable: json,
-            inputContextVariable: context.rawValue
+            inputContextVariable: context.rawValue,
+            menuStateVariable: (try? JSONOutput.string(
+                for: MenuState.actions,
+                prettyPrinted: false
+            )) ?? ""
         ]
     }
 

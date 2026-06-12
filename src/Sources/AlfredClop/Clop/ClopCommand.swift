@@ -15,6 +15,7 @@ extension ClopCLIDiscovery: ClopCLIDiscovering {}
 enum ClopCommandBuilderError: Error, Equatable {
     case missingCLI([String])
     case missingInputs
+    case invalidCropSize
     case unsupportedAction
     case unsupportedBackupBehavior
 }
@@ -50,6 +51,18 @@ struct ClopCommandBuilder {
                 aggressive: aggressive
             )
             expectsJSON = true
+        case let .crop(size, smartCrop, longEdge):
+            guard let parsedSize = CropSizeParser.parse(size),
+                  parsedSize.longEdge == longEdge else {
+                throw ClopCommandBuilderError.invalidCropSize
+            }
+            arguments = cropArguments(
+                for: request,
+                size: size,
+                smartCrop: smartCrop,
+                longEdge: longEdge
+            )
+            expectsJSON = true
         case .uncropPDF:
             arguments = ["uncrop-pdf"]
                 + outputArguments(for: request.execution.output)
@@ -58,7 +71,7 @@ struct ClopCommandBuilder {
         case .stripMetadata:
             arguments = ["strip-exif"] + request.inputs
             expectsJSON = false
-        case .crop, .downscale, .convert, .cropPDF:
+        case .downscale, .convert, .cropPDF:
             throw ClopCommandBuilderError.unsupportedAction
         }
 
@@ -67,6 +80,32 @@ struct ClopCommandBuilder {
             arguments: arguments,
             expectsJSON: expectsJSON
         )
+    }
+
+    private func cropArguments(
+        for request: OperationRequest,
+        size: String,
+        smartCrop: Bool,
+        longEdge: Bool
+    ) -> [String] {
+        var arguments = ["crop", "--size", size, "--json", "--no-progress"]
+
+        if longEdge {
+            arguments.append("--long-edge")
+        }
+        if smartCrop {
+            arguments.append("--smart-crop")
+        }
+        if request.execution.showClopUI {
+            arguments.append("--gui")
+        }
+        if request.execution.copyResult {
+            arguments.append("--copy")
+        }
+
+        return arguments
+            + outputArguments(for: request.execution.output)
+            + request.inputs
     }
 
     private func optimiseArguments(

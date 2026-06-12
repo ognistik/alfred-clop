@@ -92,6 +92,89 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
+    func cropBuildsJSONCommandWithSeparatePaths() throws {
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/first image.png", "/tmp/second.pdf"],
+            action: .crop(
+                size: "1200x630",
+                smartCrop: false,
+                longEdge: false
+            ),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(command.arguments == [
+            "crop",
+            "--size",
+            "1200x630",
+            "--json",
+            "--no-progress",
+            "--gui",
+            "/tmp/first image.png",
+            "/tmp/second.pdf"
+        ])
+        #expect(command.expectsJSON)
+    }
+
+    @Test
+    func cropAddsOnlyExplicitOptionalFlags() throws {
+        var execution = makeExecutionOptions(
+            output: .sameFolder(template: "%P/%f-cropped.%e")
+        )
+        execution.copyResult = true
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/movie.mp4"],
+            action: .crop(
+                size: "1920",
+                smartCrop: true,
+                longEdge: true
+            ),
+            execution: execution
+        ))
+
+        #expect(command.arguments == [
+            "crop",
+            "--size",
+            "1920",
+            "--json",
+            "--no-progress",
+            "--long-edge",
+            "--smart-crop",
+            "--gui",
+            "--copy",
+            "--output",
+            "%P/%f-cropped.%e",
+            "/tmp/movie.mp4"
+        ])
+    }
+
+    @Test
+    func cropRejectsInvalidOrInconsistentTypedSize() {
+        #expect(throws: ClopCommandBuilderError.invalidCropSize) {
+            try makeBuilder().command(for: OperationRequest(
+                inputs: ["/tmp/photo.jpg"],
+                action: .crop(
+                    size: "0x0",
+                    smartCrop: false,
+                    longEdge: false
+                ),
+                execution: makeExecutionOptions()
+            ))
+        }
+        #expect(throws: ClopCommandBuilderError.invalidCropSize) {
+            try makeBuilder().command(for: OperationRequest(
+                inputs: ["/tmp/photo.jpg"],
+                action: .crop(
+                    size: "1920",
+                    smartCrop: false,
+                    longEdge: false
+                ),
+                execution: makeExecutionOptions()
+            ))
+        }
+    }
+
+    @Test
     func missingCLIReturnsDiscoveryErrors() {
         let builder = ClopCommandBuilder(discovery: StubDiscovery(
             diagnostics: ClopDiagnostics(

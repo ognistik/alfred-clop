@@ -47,6 +47,32 @@ enum AlfredClopCommand {
     private static func menuResponse(arguments: [String]) -> ScriptFilterResponse {
         let query = value(after: "--query", in: arguments) ?? ""
 
+        if let stateJSON = value(after: "--menu-state", in: arguments) {
+            guard let state = try? JSONDecoder().decode(
+                MenuState.self,
+                from: Data(stateJSON.utf8)
+            ) else {
+                return errorResponse(
+                    title: "Unable to open Clop menu",
+                    subtitle: "The typed menu state is invalid."
+                )
+            }
+
+            switch state.mode {
+            case .crop:
+                return CropParameterMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
+            case .actions:
+                if state.parameterRequest != nil {
+                    return errorResponse(
+                        title: "This action needs more information",
+                        subtitle: "Its parameter menu is not available yet."
+                    )
+                }
+            }
+        }
         if value(after: "--input-source", in: arguments) == "clipboard" {
             return ActionMenu.response(
                 clipboard: SystemClipboardReader(),

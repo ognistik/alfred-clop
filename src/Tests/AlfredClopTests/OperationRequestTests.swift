@@ -38,6 +38,19 @@ struct OperationRequestTests {
     }
 
     @Test
+    func parameterStepAndMenuStateRoundTrip() throws {
+        let request = ParameterStepRequest(
+            action: .crop,
+            inputs: ["/tmp/image.png", "/tmp/movie.mp4"],
+            inputContext: .arguments
+        )
+
+        #expect(try roundTrip(request) == request)
+        #expect(try roundTrip(MenuState.crop(request)) == .crop(request))
+        #expect(try roundTrip(MenuState.actions) == .actions)
+    }
+
+    @Test
     func outputAndBackupBehaviorsRemainSeparate() throws {
         let execution = makeExecutionOptions(
             output: .specificFolder(folder: "/tmp/output", template: "%f.%e"),

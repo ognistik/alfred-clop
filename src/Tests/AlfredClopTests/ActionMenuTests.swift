@@ -213,6 +213,60 @@ struct ActionMenuTests {
 
         #expect(request.inputs == ["/tmp/image.png"])
         #expect(request.action == .optimise(aggressive: false))
+        #expect(
+            response.items.first?.variables?[ActionMenu.requestKindVariable]
+                == "operation"
+        )
+    }
+
+    @Test
+    func cropRoutesToTypedCropMenuState() throws {
+        let response = ActionMenu.response(
+            for: InputSelection(inputs: ["/tmp/image.png"], mediaKinds: [.image]),
+            query: "crop",
+            context: .clipboard
+        )
+        let item = try #require(response.items.first)
+        let argument = try #require(item.arg)
+        let request = try JSONDecoder().decode(
+            ParameterStepRequest.self,
+            from: Data(argument.utf8)
+        )
+        let stateJSON = try #require(
+            item.variables?[ActionMenu.menuStateVariable]
+        )
+        let state = try JSONDecoder().decode(
+            MenuState.self,
+            from: Data(stateJSON.utf8)
+        )
+
+        #expect(request.action == .crop)
+        #expect(request.inputContext == .clipboard)
+        #expect(state.mode == .crop)
+        #expect(state.parameterRequest == request)
+        #expect(
+            item.variables?[ActionMenu.requestKindVariable]
+                == "parameterStep"
+        )
+    }
+
+    @Test
+    func unimplementedParameterActionRemainsParameterStep() throws {
+        let response = ActionMenu.response(
+            for: InputSelection(inputs: ["/tmp/image.png"], mediaKinds: [.image]),
+            query: "downscale"
+        )
+        let item = try #require(response.items.first)
+        let request = try JSONDecoder().decode(
+            ParameterStepRequest.self,
+            from: Data(try #require(item.arg).utf8)
+        )
+
+        #expect(request.action == .downscale)
+        #expect(
+            item.variables?[ActionMenu.requestKindVariable]
+                == "parameterStep"
+        )
     }
 
     @Test

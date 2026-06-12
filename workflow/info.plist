@@ -23,7 +23,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
+				<string>C81E575B-0A6B-45AE-B968-6A2313FB84A7</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -63,6 +63,31 @@
 			<dict>
 				<key>destinationuid</key>
 				<string>086222E0-0634-41BB-8795-059C6B8AF42C</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>C81E575B-0A6B-45AE-B968-6A2313FB84A7</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>F32D25CA-0BC0-4196-B7EB-CBAA6EECF33A</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -124,6 +149,25 @@
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>externaltriggerid</key>
+				<string>mainMenu</string>
+				<key>passinputasargument</key>
+				<false/>
+				<key>passvariables</key>
+				<true/>
+				<key>workflowbundleid</key>
+				<string>com.aft.clop</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.callexternaltrigger</string>
+			<key>uid</key>
+			<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>acceptsfiles</key>
 				<true/>
 				<key>acceptsmulti</key>
@@ -170,7 +214,9 @@
 				<key>runningsubtext</key>
 				<string>Reading files...</string>
 				<key>script</key>
-				<string>if [[ -n "${alfred_clop_input_json:-}" ]]; then
+				<string>if [[ -n "${alfred_clop_menu_state:-}" ]]; then
+  ./alfred-clop menu --menu-state "$alfred_clop_menu_state" --input-json "${alfred_clop_input_json:-}" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
+elif [[ -n "${alfred_clop_input_json:-}" ]]; then
   ./alfred-clop menu --input-json "$alfred_clop_input_json" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
 elif [[ -n "${alfred_clop_paths:-}" ]]; then
   ./alfred-clop menu --input-paths "$alfred_clop_paths" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
@@ -191,6 +237,11 @@ fi</string>
 				<integer>11</integer>
 				<key>withspace</key>
 				<true/>
+			</dict>
+			<key>inboundconfig</key>
+			<dict>
+				<key>externalid</key>
+				<string>mainMenu</string>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.input.scriptfilter</string>
@@ -232,6 +283,38 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>conditions</key>
+				<array>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_request_kind}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>parameterStep</string>
+						<key>outputlabel</key>
+						<string>Parameter step</string>
+						<key>uid</key>
+						<string>F32D25CA-0BC0-4196-B7EB-CBAA6EECF33A</string>
+					</dict>
+				</array>
+				<key>elselabel</key>
+				<string>Execute operation</string>
+				<key>hideelse</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.conditional</string>
+			<key>uid</key>
+			<string>C81E575B-0A6B-45AE-B968-6A2313FB84A7</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>argument</key>
 				<string></string>
 				<key>passthroughargument</key>
@@ -268,7 +351,7 @@ fi</string>
 		<key>086222E0-0634-41BB-8795-059C6B8AF42C</key>
 		<dict>
 			<key>xpos</key>
-			<real>630</real>
+			<real>670</real>
 			<key>ypos</key>
 			<real>225</real>
 		</dict>
@@ -296,9 +379,23 @@ fi</string>
 		<key>B30C287D-7137-4B63-8FA2-95B849C440FA</key>
 		<dict>
 			<key>xpos</key>
+			<real>1075</real>
+			<key>ypos</key>
+			<real>240</real>
+		</dict>
+		<key>C81E575B-0A6B-45AE-B968-6A2313FB84A7</key>
+		<dict>
+			<key>xpos</key>
 			<real>865</real>
 			<key>ypos</key>
-			<real>225</real>
+			<real>245</real>
+		</dict>
+		<key>D922B7A2-2433-441D-B70D-4556591E487D</key>
+		<dict>
+			<key>xpos</key>
+			<real>1075</real>
+			<key>ypos</key>
+			<real>115</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
