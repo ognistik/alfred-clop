@@ -219,27 +219,9 @@ enum ConfigurationMenu {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return ScriptFilterResponse(items: [
-                ScriptFilterItem(
-                    title: "Current template",
-                    subtitle: templateExample(document.outputTemplate),
-                    arg: "",
-                    valid: false
-                ),
-                ScriptFilterItem(
-                    title: "Template token reference",
-                    subtitle: "Press Command-L to view available tokens",
-                    arg: "",
-                    valid: false,
-                    text: ScriptFilterText(
-                        copy: tokenReference,
-                        largetype: tokenReference
-                    )
-                ),
-                ScriptFilterItem(
+                templateReferenceItem(
                     title: "Type a suffix, prefix, or advanced template",
-                    subtitle: "Examples: optimized or %P/Processed/%f",
-                    arg: "",
-                    valid: false
+                    subtitle: "Current: \(document.outputTemplate) · ⌘L token reference"
                 )
             ])
         }
@@ -252,7 +234,7 @@ enum ConfigurationMenu {
             in: CharacterSet(charactersIn: "- ")
         )
         guard !name.isEmpty else {
-            return error(
+            return templateError(
                 "Enter a name",
                 "Type a suffix such as optimized or an advanced template."
             )
@@ -260,7 +242,10 @@ enum ConfigurationMenu {
         let suffix = "%P/%f-\(name)"
         let prefix = "%P/\(name)-%f"
         if let validation = OutputTemplateValidator.validate(suffix) {
-            return error("Invalid output name", validation.localizedDescription)
+            return templateError(
+                "Invalid output name",
+                validation.localizedDescription
+            )
         }
         return ScriptFilterResponse(items: [
             saveTemplateItem(
@@ -278,7 +263,10 @@ enum ConfigurationMenu {
         _ template: String
     ) -> ScriptFilterResponse {
         if let validation = OutputTemplateValidator.validate(template) {
-            return error("Invalid output template", validation.localizedDescription)
+            return templateError(
+                "Invalid output template",
+                validation.localizedDescription
+            )
         }
         return ScriptFilterResponse(items: [
             saveTemplateItem(
@@ -296,13 +284,45 @@ enum ConfigurationMenu {
             mode: .configurationSaveOutput,
             value: template
         ))
-        return ScriptFilterItem(
+        return templateReferenceItem(
             title: title,
-            subtitle: templateExample(template),
+            subtitle: "\(templateExample(template)) · ⌘L reference",
             arg: stateJSON,
             valid: true,
             variables: transitionVariables(stateJSON)
         )
+    }
+
+    private static func templateReferenceItem(
+        title: String,
+        subtitle: String,
+        arg: String? = "",
+        valid: Bool = false,
+        variables: [String: String]? = nil
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: title,
+            subtitle: subtitle,
+            arg: arg,
+            valid: valid,
+            variables: variables,
+            text: ScriptFilterText(
+                copy: tokenReference,
+                largetype: tokenReference
+            )
+        )
+    }
+
+    private static func templateError(
+        _ title: String,
+        _ subtitle: String
+    ) -> ScriptFilterResponse {
+        ScriptFilterResponse(items: [
+            templateReferenceItem(
+                title: title,
+                subtitle: "\(subtitle) · ⌘L reference"
+            )
+        ])
     }
 
     private static func resetOutputItem() -> ScriptFilterItem {

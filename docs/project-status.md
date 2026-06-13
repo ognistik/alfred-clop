@@ -268,8 +268,11 @@ clipboard-image cache cleanup.
 - The Output Template editor offers complete prefix and suffix choices for
   plain text, advanced entry for template syntax, immediate validation, and
   raw-template plus example-path subtitles
-- Alfred Large Type provides a concise common-token reference without
-  advertising `%e` or operation-specific advanced tokens
+- The empty Output Template editor contains one instructional row showing the
+  current template; every editor result and error exposes the concise token
+  reference through `⌘L`
+- The Large Type reference does not advertise `%e` or operation-specific
+  advanced tokens
 - `%z`, `%s`, `%x`, and `%q` remain accepted for advanced users
 - Pending migration appears in Configuration and inline blocked preset saves
   still move directly before resuming

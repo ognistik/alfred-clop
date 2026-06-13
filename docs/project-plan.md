@@ -741,9 +741,11 @@ Expected responsibilities:
   prefix and suffix choices for plain text, accepts advanced templates
   directly, validates while typing, and shows the raw template beside an
   example output path;
-- keep a concise token reference on the editor screen through Alfred Large
-  Type. Advertise source path, filename, date, time, random, and incrementing
-  tokens there. Do not advertise `%e` or operation-specific advanced tokens;
+- attach a concise Alfred Large Type token reference to the single empty-state
+  prompt and every typed result or validation error, so `⌘L` remains available
+  without adding a dedicated non-actionable menu row. Advertise source path,
+  filename, date, time, random, and incrementing tokens there. Do not advertise
+  `%e` or operation-specific advanced tokens;
 - show a pending settings migration only when one requires action; remove the
   migration action from the main action menu once Configuration owns it;
 - reset the workflow-owned output template to `%P/%f-clop` through explicit

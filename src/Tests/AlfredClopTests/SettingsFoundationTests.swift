@@ -291,11 +291,11 @@ struct SettingsFoundationTests {
             environment: environment
         )
         #expect(empty.items.map(\.title) == [
-            "Current template",
-            "Template token reference",
             "Type a suffix, prefix, or advanced template"
         ])
-        let reference = try #require(empty.items[1].text?.largetype)
+        #expect(empty.items[0].subtitle.contains("Current: %P/%f-clop"))
+        #expect(empty.items[0].subtitle.contains("⌘L"))
+        let reference = try #require(empty.items[0].text?.largetype)
         #expect(reference.contains("%P  Source folder"))
         #expect(reference.contains("%i  Incrementing number"))
         #expect(!reference.contains("%e"))
@@ -312,6 +312,10 @@ struct SettingsFoundationTests {
         ])
         #expect(friendly.items[0].subtitle.contains("Photo-optimized.png"))
         #expect(friendly.items[1].subtitle.contains("optimized-Photo.png"))
+        #expect(friendly.items.allSatisfy {
+            $0.subtitle.contains("⌘L")
+                && $0.text?.largetype == reference
+        })
 
         let advanced = ConfigurationMenu.response(
             stateJSON: stateJSON,
@@ -350,6 +354,11 @@ struct SettingsFoundationTests {
             #expect(response.items.count == 1)
             #expect(!response.items[0].valid)
             #expect(response.items[0].subtitle.contains(message))
+            #expect(response.items[0].subtitle.contains("⌘L"))
+            #expect(
+                response.items[0].text?.largetype?
+                    .contains("%P  Source folder") == true
+            )
         }
 
         let advancedTokens = ConfigurationMenu.response(
