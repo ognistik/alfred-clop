@@ -234,6 +234,7 @@ enum AlfredClopCommand {
             case .presetMigrationConfirmation, .presetMigration:
                 return PresetMigrationMenu.response(stateJSON: stateJSON)
             case .configuration,
+                 .configurationOutputTemplate,
                  .configurationSaveOutput,
                  .configurationResetOutputConfirmation,
                  .configurationResetOutput,

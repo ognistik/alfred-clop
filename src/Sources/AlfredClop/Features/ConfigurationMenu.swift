@@ -25,7 +25,6 @@ enum ConfigurationMenu {
             switch state.mode {
             case .configuration:
                 return menu(
-                    query: query,
                     store: store,
                     environment: environment,
                     fileManager: fileManager,
@@ -35,10 +34,14 @@ enum ConfigurationMenu {
                         fileManager: fileManager
                     )
                 )
+            case .configurationOutputTemplate:
+                return outputTemplateMenu(
+                    query: query,
+                    store: store
+                )
             case .configurationSaveOutput:
                 try store.updateOutputTemplate(state.configurationValue ?? "")
                 return menu(
-                    query: "",
                     store: store,
                     environment: environment,
                     fileManager: fileManager,
@@ -57,7 +60,6 @@ enum ConfigurationMenu {
             case .configurationResetOutput:
                 try store.updateOutputTemplate(SettingsDocument.builtInOutputTemplate)
                 return menu(
-                    query: "",
                     store: store,
                     environment: environment,
                     fileManager: fileManager,
@@ -133,7 +135,6 @@ enum ConfigurationMenu {
     }
 
     private static func menu(
-        query: String,
         store: PresetStore,
         environment: Environment,
         fileManager: FileManager,
@@ -150,37 +151,26 @@ enum ConfigurationMenu {
             )
         }
 
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            if let validation = OutputTemplateValidator.validate(trimmed) {
-                return error("Invalid output template", validation.localizedDescription)
-            }
-            let stateJSON = encoded(.configuration(
-                mode: .configurationSaveOutput,
-                value: trimmed
-            ))
-            return ScriptFilterResponse(items: [
-                ScriptFilterItem(
-                    title: "Use output template \(trimmed)",
-                    subtitle: "Example: \(OutputTemplateValidator.preview(template: trimmed) ?? trimmed)",
-                    arg: stateJSON,
-                    valid: true,
-                    variables: transitionVariables(stateJSON)
-                )
-            ])
-        }
-
+        let outputState = encoded(.configuration(
+            mode: .configurationOutputTemplate
+        ))
         var items = [
             ScriptFilterItem(
-                title: "Set output template",
-                subtitle: "Current: \(document.outputTemplate) · Tokens: %P folder, %f name, %e extension",
-                arg: "",
-                valid: false,
-                autocomplete: document.outputTemplate,
-                match: "set output template preserve original tokens folder filename"
-            ),
-            resetItem(presetCount: document.presets.count)
+                title: "Output Template",
+                subtitle: templateExample(document.outputTemplate),
+                arg: outputState,
+                valid: true,
+                match: "output template preserve original path filename",
+                variables: transitionVariables(outputState)
+            )
         ]
+
+        if document.outputTemplate != SettingsDocument.builtInOutputTemplate {
+            items.append(resetOutputItem())
+        }
+        if !document.presets.isEmpty {
+            items.append(removePresetsItem(count: document.presets.count))
+        }
 
         let migrationStatus = PresetMigrationCoordinator(
             environment: environment,
@@ -212,27 +202,181 @@ enum ConfigurationMenu {
         return ScriptFilterResponse(items: items)
     }
 
-    private static func resetItem(presetCount: Int) -> ScriptFilterItem {
+    private static func outputTemplateMenu(
+        query: String,
+        store: PresetStore
+    ) -> ScriptFilterResponse {
+        let document: SettingsDocument
+        do {
+            document = try store.load()
+        } catch let caughtError {
+            return error(
+                "Unable to read settings",
+                caughtError.localizedDescription
+            )
+        }
+
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ScriptFilterResponse(items: [
+                ScriptFilterItem(
+                    title: "Current template",
+                    subtitle: templateExample(document.outputTemplate),
+                    arg: "",
+                    valid: false
+                ),
+                ScriptFilterItem(
+                    title: "Template token reference",
+                    subtitle: "Press Command-L to view available tokens",
+                    arg: "",
+                    valid: false,
+                    text: ScriptFilterText(
+                        copy: tokenReference,
+                        largetype: tokenReference
+                    )
+                ),
+                ScriptFilterItem(
+                    title: "Type a suffix, prefix, or advanced template",
+                    subtitle: "Examples: optimized or %P/Processed/%f",
+                    arg: "",
+                    valid: false
+                )
+            ])
+        }
+
+        if isAdvancedInput(trimmed) {
+            return advancedTemplateResponse(trimmed)
+        }
+
+        let name = trimmed.trimmingCharacters(
+            in: CharacterSet(charactersIn: "- ")
+        )
+        guard !name.isEmpty else {
+            return error(
+                "Enter a name",
+                "Type a suffix such as optimized or an advanced template."
+            )
+        }
+        let suffix = "%P/%f-\(name)"
+        let prefix = "%P/\(name)-%f"
+        if let validation = OutputTemplateValidator.validate(suffix) {
+            return error("Invalid output name", validation.localizedDescription)
+        }
+        return ScriptFilterResponse(items: [
+            saveTemplateItem(
+                title: "Add “-\(name)”",
+                template: suffix
+            ),
+            saveTemplateItem(
+                title: "Add “\(name)-”",
+                template: prefix
+            )
+        ])
+    }
+
+    private static func advancedTemplateResponse(
+        _ template: String
+    ) -> ScriptFilterResponse {
+        if let validation = OutputTemplateValidator.validate(template) {
+            return error("Invalid output template", validation.localizedDescription)
+        }
+        return ScriptFilterResponse(items: [
+            saveTemplateItem(
+                title: "Use template \(template)",
+                template: template
+            )
+        ])
+    }
+
+    private static func saveTemplateItem(
+        title: String,
+        template: String
+    ) -> ScriptFilterItem {
+        let stateJSON = encoded(.configuration(
+            mode: .configurationSaveOutput,
+            value: template
+        ))
+        return ScriptFilterItem(
+            title: title,
+            subtitle: templateExample(template),
+            arg: stateJSON,
+            valid: true,
+            variables: transitionVariables(stateJSON)
+        )
+    }
+
+    private static func resetOutputItem() -> ScriptFilterItem {
         let resetState = encoded(.configuration(
             mode: .configurationResetOutputConfirmation
-        ))
-        let presetsState = encoded(.configuration(
-            mode: .configurationResetPresetsConfirmation
         ))
         return ScriptFilterItem(
             title: "Reset output template",
             subtitle: "Restore \(SettingsDocument.builtInOutputTemplate)",
             arg: resetState,
             valid: true,
-            variables: transitionVariables(resetState),
-            mods: ScriptFilterMods(command: ScriptFilterModifier(
-                arg: presetsState,
-                subtitle: "Reset all action presets (\(presetCount))",
-                valid: true,
-                variables: transitionVariables(presetsState)
-            ))
+            variables: transitionVariables(resetState)
         )
     }
+
+    private static func removePresetsItem(count: Int) -> ScriptFilterItem {
+        let stateJSON = encoded(.configuration(
+            mode: .configurationResetPresetsConfirmation
+        ))
+        return ScriptFilterItem(
+            title: "Remove all action presets",
+            subtitle: "\(count) saved \(count == 1 ? "preset" : "presets") across all action menus",
+            arg: stateJSON,
+            valid: true,
+            variables: transitionVariables(stateJSON)
+        )
+    }
+
+    private static func isAdvancedInput(_ value: String) -> Bool {
+        value.contains("%") || value.contains("/") || value.hasPrefix("~")
+    }
+
+    private static func templateExample(_ template: String) -> String {
+        let preview = OutputTemplateValidator.preview(
+            template: template,
+            homeDirectory: "/Users/me"
+        ) ?? template
+        let friendly = preview.replacingOccurrences(
+            of: "/Users/me",
+            with: "~"
+        )
+        return "\(template) · Photo.png → \(friendly)"
+    }
+
+    private static let tokenReference = """
+    OUTPUT TEMPLATE TOKENS
+
+    %P  Source folder
+    %f  Filename without extension
+
+    DATE
+    %y  Year
+    %m  Month number
+    %n  Month name
+    %d  Day
+    %w  Weekday
+
+    TIME
+    %H  Hour
+    %M  Minute
+    %S  Second
+    %p  AM or PM
+
+    UNIQUE NAMES
+    %r  Random characters
+    %i  Incrementing number
+
+    EXAMPLES
+    %P/%f-clop
+    ~/Desktop/Clop/%f
+    %P/Processed/%y-%m-%d-%f
+
+    Clop adds the output extension automatically.
+    """
 
     private static func confirmation(
         title: String,

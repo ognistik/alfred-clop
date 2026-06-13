@@ -245,7 +245,10 @@ clipboard-image cache cleanup.
 - Explicit, non-destructive migration from `presets.json`, `presetsPath`,
   changed `settingsPath` locations, and legacy location metadata
 - Built-in preservation template `%P/%f-clop`
-- Template validation rejects empty values and unsupported tokens
+- Template validation rejects empty values, unsupported tokens, `%e`, literal
+  terminal extensions, folder-only values, and unpredictable relative paths
+- Leading `~/` stays portable in `settings.json` and expands for preview,
+  preflight, and execution
 - Preflight rejects duplicate planned outputs, source-path collisions, and
   inputs that cannot be safely planned
 - Existing output collisions resolve to the next available numeric suffix,
@@ -262,13 +265,18 @@ clipboard-image cache cleanup.
 - Raw clipboard-image expiry follows the configured retention period
 - Discoverable Configuration action remains available without processable
   input
-- Guided output-template entry includes validation and an example preview
+- The Output Template editor offers complete prefix and suffix choices for
+  plain text, advanced entry for template syntax, immediate validation, and
+  raw-template plus example-path subtitles
+- Alfred Large Type provides a concise common-token reference without
+  advertising `%e` or operation-specific advanced tokens
+- `%z`, `%s`, `%x`, and `%q` remain accepted for advanced users
 - Pending migration appears in Configuration and inline blocked preset saves
   still move directly before resuming
-- `Reset output template` restores `%P/%f-clop` without changing presets or
-  Alfred preferences
-- Command-Return on reset opens a separate global preset-removal confirmation
-  with the preset count
+- `Reset output template` appears only for a customized template and restores
+  `%P/%f-clop` without changing presets or Alfred preferences
+- Separate global preset removal appears only when presets exist and requires
+  confirmation with the preset count
 - Conditional clipboard-image cleanup reports file count and space usage,
   requires confirmation, and removes only workflow-owned cache files
 - Return uses configured aggressive and preservation defaults
@@ -371,7 +379,7 @@ Implement the Downscale parameter menu and action presets:
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 173 tests.
+- `./scripts/test.sh` passes 176 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

@@ -31,7 +31,7 @@ struct ClopCommandBuilderTests {
     func aggressiveOptimiseAddsSupportedExecutionOptions() throws {
         let builder = makeBuilder()
         var execution = makeExecutionOptions(
-            output: .sameFolder(template: "%P/%f-small.%e")
+            output: .sameFolder(template: "%P/%f-small")
         )
         execution.copyResult = true
         execution.adaptiveOptimisation = "disabled"
@@ -56,7 +56,7 @@ struct ClopCommandBuilderTests {
             "150",
             "--no-adaptive-optimisation",
             "--output",
-            "%P/%f-small.%e",
+            "%P/%f-small",
             "/tmp/document.pdf"
         ])
     }
@@ -89,6 +89,27 @@ struct ClopCommandBuilderTests {
             "%P/%f-clop-2",
             source.path
         ])
+    }
+
+    @Test
+    func homeRelativeOutputExpandsBeforeLaunchingClop() throws {
+        let directory = try makeTemporaryDirectory()
+        let source = directory.appendingPathComponent("photo.png")
+        try Data().write(to: source)
+        var execution = makeExecutionOptions(
+            output: .sameFolder(template: "~/Clop Output/%f")
+        )
+        execution.showClopUI = false
+
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: [source.path],
+            action: .optimise(aggressive: false),
+            execution: execution
+        ))
+
+        #expect(command.arguments.contains(
+            "\(NSHomeDirectory())/Clop Output/%f"
+        ))
     }
 
     @Test
@@ -152,7 +173,7 @@ struct ClopCommandBuilderTests {
     @Test
     func cropAddsOnlyExplicitOptionalFlags() throws {
         var execution = makeExecutionOptions(
-            output: .sameFolder(template: "%P/%f-cropped.%e")
+            output: .sameFolder(template: "%P/%f-cropped")
         )
         execution.copyResult = true
         let command = try makeBuilder().command(for: OperationRequest(
@@ -177,7 +198,7 @@ struct ClopCommandBuilderTests {
             "--gui",
             "--copy",
             "--output",
-            "%P/%f-cropped.%e",
+            "%P/%f-cropped",
             "/tmp/movie.mp4"
         ])
     }

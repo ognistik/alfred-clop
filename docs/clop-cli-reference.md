@@ -523,6 +523,14 @@ The workflow must validate templates itself and preflight batch collisions
 before launching Clop. The built-in preservation template is
 `%P/%f-clop`.
 
+Alfred Clop deliberately rejects `%e` and literal terminal extensions in its
+global template because Clop appends the resulting extension. It accepts a
+leading `~/` and expands it only for preview, preflight, and execution so the
+stored setting remains portable. Its concise in-workflow reference advertises
+the common path, filename, date, time, random, and incrementing tokens.
+Operation-specific `%z`, `%s`, `%x`, and `%q` remain accepted for advanced
+users but are not advertised in that reference.
+
 ## Integration behavior
 
 ### Locate the CLI

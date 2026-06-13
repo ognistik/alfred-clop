@@ -11,6 +11,29 @@ struct SettingsFoundationTests {
                 == .unsupportedToken("%Q")
         )
         #expect(OutputTemplateValidator.validate("%P/%f-clop") == nil)
+        #expect(OutputTemplateValidator.validate("%P/%f.%e") == .automaticExtension)
+        #expect(
+            OutputTemplateValidator.validate("%P/%f-clop.png")
+                == .explicitExtension(".png")
+        )
+        #expect(
+            OutputTemplateValidator.validate("%P")
+                == .missingFilename
+        )
+        #expect(
+            OutputTemplateValidator.validate("%P/")
+                == .missingFilename
+        )
+        #expect(
+            OutputTemplateValidator.validate("%P/processed")
+                == .missingVariableFilename
+        )
+        #expect(
+            OutputTemplateValidator.validate("%f-clop")
+                == .unpredictableLocation
+        )
+        #expect(OutputTemplateValidator.validate("%P/%f-%z-%s-%x-%q") == nil)
+        #expect(OutputTemplateValidator.validate("%P/%z") == nil)
     }
 
     @Test
@@ -35,7 +58,7 @@ struct SettingsFoundationTests {
         try Data().write(to: existing)
         #expect(throws: OutputTemplateError.sourceCollision(first.path)) {
             try OutputTemplateValidator.plan(
-                template: "%P/%f.%e",
+                template: "%P/%f",
                 inputs: [first.path]
             )
         }
@@ -65,20 +88,26 @@ struct SettingsFoundationTests {
     }
 
     @Test
-    func numericSuffixPrecedesExplicitExtensionToken() throws {
+    func tildeExpandsForPreviewAndPlanning() throws {
         let directory = try makeTemporaryDirectory()
         let source = directory.appendingPathComponent("photo.png")
         try Data().write(to: source)
-        try Data().write(
-            to: directory.appendingPathComponent("photo-small.png")
-        )
 
         let plan = try OutputTemplateValidator.plan(
-            template: "%P/%f-small.%e",
+            template: "~/Clop Test/%f-small",
             inputs: [source.path]
         )
 
-        #expect(plan.template == "%P/%f-small-2.%e")
+        #expect(plan.template == "\(NSHomeDirectory())/Clop Test/%f-small")
+        #expect(plan.outputPaths == [
+            "\(NSHomeDirectory())/Clop Test/photo-small.png"
+        ])
+        #expect(
+            OutputTemplateValidator.preview(
+                template: "~/Clop Test/%f",
+                homeDirectory: "/Users/example"
+            ) == "/Users/example/Clop Test/Photo.png"
+        )
     }
 
     @Test
@@ -157,7 +186,7 @@ struct SettingsFoundationTests {
     }
 
     @Test
-    func configurationResetKeepsPresetsAndCommandResetCountsThem() throws {
+    func configurationShowsIndependentConditionalResetActions() throws {
         let directory = try makeTemporaryDirectory()
         let environment = Environment(values: [
             PresetStore.workflowDataEnvironmentKey: directory.path
@@ -178,8 +207,11 @@ struct SettingsFoundationTests {
         let reset = try #require(menu.items.first {
             $0.title == "Reset output template"
         })
-
-        #expect(reset.mods?.command?.subtitle == "Reset all action presets (1)")
+        let presets = try #require(menu.items.first {
+            $0.title == "Remove all action presets"
+        })
+        #expect(reset.mods == nil)
+        #expect(presets.subtitle.contains("1 saved preset"))
 
         let confirmation = ConfigurationMenu.response(
             stateJSON: try #require(
@@ -197,6 +229,143 @@ struct SettingsFoundationTests {
         let document = try store.load()
         #expect(document.outputTemplate == "%P/%f-clop")
         #expect(document.presets.count == 1)
+
+        let afterReset = ConfigurationMenu.response(
+            stateJSON: try JSONOutput.string(
+                for: MenuState.configuration(),
+                prettyPrinted: false
+            ),
+            query: "",
+            environment: environment
+        )
+        #expect(!afterReset.items.contains {
+            $0.title == "Reset output template"
+        })
+        #expect(afterReset.items.contains {
+            $0.title == "Remove all action presets"
+        })
+
+        let presetConfirmation = ConfigurationMenu.response(
+            stateJSON: try #require(
+                presets.variables?[ActionMenu.menuStateVariable]
+            ),
+            query: "",
+            environment: environment
+        )
+        _ = ConfigurationMenu.response(
+            stateJSON: try #require(presetConfirmation.items.first?.arg),
+            query: "",
+            environment: environment
+        )
+        let afterPresetRemoval = try store.load()
+        #expect(afterPresetRemoval.outputTemplate == "%P/%f-clop")
+        #expect(afterPresetRemoval.presets.isEmpty)
+    }
+
+    @Test
+    func outputTemplateMenuOffersFriendlyChoicesAndLargeTypeReference() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let stateJSON = try JSONOutput.string(
+            for: MenuState.configuration(mode: .configurationOutputTemplate),
+            prettyPrinted: false
+        )
+        let configuration = ConfigurationMenu.response(
+            stateJSON: try JSONOutput.string(
+                for: MenuState.configuration(),
+                prettyPrinted: false
+            ),
+            query: "",
+            environment: environment
+        )
+        #expect(!configuration.items.contains {
+            $0.title == "Reset output template"
+                || $0.title == "Remove all action presets"
+        })
+
+        let empty = ConfigurationMenu.response(
+            stateJSON: stateJSON,
+            query: "",
+            environment: environment
+        )
+        #expect(empty.items.map(\.title) == [
+            "Current template",
+            "Template token reference",
+            "Type a suffix, prefix, or advanced template"
+        ])
+        let reference = try #require(empty.items[1].text?.largetype)
+        #expect(reference.contains("%P  Source folder"))
+        #expect(reference.contains("%i  Incrementing number"))
+        #expect(!reference.contains("%e"))
+        #expect(!reference.contains("%z"))
+
+        let friendly = ConfigurationMenu.response(
+            stateJSON: stateJSON,
+            query: "optimized",
+            environment: environment
+        )
+        #expect(friendly.items.map(\.title) == [
+            "Add “-optimized”",
+            "Add “optimized-”"
+        ])
+        #expect(friendly.items[0].subtitle.contains("Photo-optimized.png"))
+        #expect(friendly.items[1].subtitle.contains("optimized-Photo.png"))
+
+        let advanced = ConfigurationMenu.response(
+            stateJSON: stateJSON,
+            query: "%P/Processed/%y-%m-%d-%f",
+            environment: environment
+        )
+        #expect(advanced.items.count == 1)
+        #expect(advanced.items[0].valid)
+        #expect(advanced.items[0].subtitle.contains("%P/Processed"))
+    }
+
+    @Test
+    func outputTemplateMenuValidatesAdvancedInputImmediately() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let stateJSON = try JSONOutput.string(
+            for: MenuState.configuration(mode: .configurationOutputTemplate),
+            prettyPrinted: false
+        )
+
+        for (input, message) in [
+            ("%P", "filename"),
+            ("%P/", "ends with a folder"),
+            ("%f-clop", "predictable"),
+            ("%P/%f.%e", "automatically"),
+            ("%P/%f-clop.png", "automatically"),
+            ("~someone/%f", "not supported")
+        ] {
+            let response = ConfigurationMenu.response(
+                stateJSON: stateJSON,
+                query: input,
+                environment: environment
+            )
+            #expect(response.items.count == 1)
+            #expect(!response.items[0].valid)
+            #expect(response.items[0].subtitle.contains(message))
+        }
+
+        let advancedTokens = ConfigurationMenu.response(
+            stateJSON: stateJSON,
+            query: "%P/%f-%z-%s-%x-%q",
+            environment: environment
+        )
+        #expect(advancedTokens.items.first?.valid == true)
+
+        let literalExtension = ConfigurationMenu.response(
+            stateJSON: stateJSON,
+            query: "optimized.png",
+            environment: environment
+        )
+        #expect(literalExtension.items.first?.valid == false)
+        #expect(literalExtension.items.first?.subtitle.contains("automatically") == true)
     }
 
     @Test

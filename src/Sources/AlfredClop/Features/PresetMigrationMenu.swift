@@ -29,7 +29,8 @@ enum PresetMigrationMenu {
                 writer: writer
             )
         case .actions, .crop, .cropPresetRemoval,
-             .configuration, .configurationSaveOutput,
+             .configuration, .configurationOutputTemplate,
+             .configurationSaveOutput,
              .configurationResetOutputConfirmation, .configurationResetOutput,
              .configurationResetPresetsConfirmation, .configurationResetPresets,
              .configurationCacheCleanupConfirmation, .configurationCacheCleanup:

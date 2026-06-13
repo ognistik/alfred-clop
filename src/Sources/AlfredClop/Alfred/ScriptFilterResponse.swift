@@ -37,6 +37,7 @@ struct ScriptFilterItem: Codable, Equatable {
     var icon: ScriptFilterIcon?
     var variables: [String: String]?
     var mods: ScriptFilterMods?
+    var text: ScriptFilterText?
 
     init(
         uid: String? = nil,
@@ -48,7 +49,8 @@ struct ScriptFilterItem: Codable, Equatable {
         match: String? = nil,
         icon: ScriptFilterIcon? = nil,
         variables: [String: String]? = nil,
-        mods: ScriptFilterMods? = nil
+        mods: ScriptFilterMods? = nil,
+        text: ScriptFilterText? = nil
     ) {
         self.uid = uid
         self.title = title
@@ -60,7 +62,13 @@ struct ScriptFilterItem: Codable, Equatable {
         self.icon = icon
         self.variables = variables
         self.mods = mods
+        self.text = text
     }
+}
+
+struct ScriptFilterText: Codable, Equatable {
+    var copy: String?
+    var largetype: String?
 }
 
 struct ScriptFilterIcon: Codable, Equatable {

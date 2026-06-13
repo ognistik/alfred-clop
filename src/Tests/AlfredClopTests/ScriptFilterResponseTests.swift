@@ -41,6 +41,10 @@ struct ScriptFilterResponseTests {
                         subtitle: "Aggressive optimize",
                         valid: true
                     )
+                ),
+                text: ScriptFilterText(
+                    copy: "Copy reference",
+                    largetype: "Large reference"
                 )
             )
         ])
@@ -52,6 +56,7 @@ struct ScriptFilterResponseTests {
         #expect(text.contains(#""autocomplete" : "Optimize""#))
         #expect(text.contains(#""match" : "compress shrink optimize""#))
         #expect(text.contains(#""cmd""#))
+        #expect(text.contains(#""largetype" : "Large reference""#))
     }
 
     @Test

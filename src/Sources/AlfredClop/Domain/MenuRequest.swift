@@ -201,6 +201,7 @@ enum MenuMode: String, Codable, Equatable {
     case presetMigrationConfirmation
     case presetMigration
     case configuration
+    case configurationOutputTemplate
     case configurationSaveOutput
     case configurationResetOutputConfirmation
     case configurationResetOutput

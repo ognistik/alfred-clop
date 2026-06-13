@@ -737,16 +737,22 @@ files to process.
 
 Expected responsibilities:
 
-- configure the active output template through friendly starting points,
-  guided token insertion, validation, and an example output preview;
+- configure the active output template through one live editor that offers
+  prefix and suffix choices for plain text, accepts advanced templates
+  directly, validates while typing, and shows the raw template beside an
+  example output path;
+- keep a concise token reference on the editor screen through Alfred Large
+  Type. Advertise source path, filename, date, time, random, and incrementing
+  tokens there. Do not advertise `%e` or operation-specific advanced tokens;
 - show a pending settings migration only when one requires action; remove the
   migration action from the main action menu once Configuration owns it;
 - reset the workflow-owned output template to `%P/%f-clop` through explicit
   confirmation while preserving action presets and Alfred's static
   preferences;
-- offer Command-Return on that reset item as a clearly labeled shortcut to a
-  separate confirmation for removing all saved action presets across every
-  action menu; never remove presets directly from the modifier;
+- show `Reset output template` only when the active template differs from the
+  built-in value;
+- offer a separate confirmed `Remove all action presets` action only when at
+  least one preset exists. Never couple global preset removal to output reset;
 - export or back up portable user-created settings to a chosen location;
 - restore or import settings only after conflict, merge, schema-version, and
   overwrite behavior has been designed;
@@ -764,13 +770,29 @@ Otherwise, pending migration is managed from Configuration and omitted when
 there is nothing to migrate.
 
 Use the precise label `Reset output template` and state the built-in template
-that will be restored. Its Command-Return subtitle must explicitly say
-`Reset all action presets` and route to a destructive confirmation stating the
+that will be restored. The separate preset-removal confirmation must state the
 number of presets that will be removed. Individual preset removal remains in
 each action menu. Export and backup cover portable user-created data, not
 Alfred preferences, Clop preferences, workflow binaries, or caches. Cache
 cleanup is a separate maintenance operation and must delete only files created
 by this workflow's clipboard image materializer.
+
+The output-template editor follows these rules:
+
+- plain text produces two complete safe choices: a suffix beside the original
+  and a prefix beside the original;
+- input containing `%`, `/`, or beginning with `~` is treated only as an
+  advanced template;
+- templates must identify a predictable destination with `%P/`, `~/`, or an
+  absolute path and must end in a filename containing a filename-producing
+  token;
+- leading `~/` is stored without expansion for portable settings, then
+  expanded for preview, preflight, and execution;
+- `%e` and literal terminal file extensions are rejected because Clop appends
+  the resulting extension;
+- `%z`, `%s`, `%x`, and `%q` remain accepted for advanced users but are omitted
+  from the workflow's concise Large Type reference because they are meaningful
+  only for particular operations.
 
 Design the shared settings document and conflict policy before implementing
 the menu so output settings and presets do not require another incompatible
@@ -957,9 +979,9 @@ Suggested Alfred user configuration:
 For output behavior, the static Alfred panel exposes only the Preserve Original
 toggle. The interactive Configuration menu owns how preservation works. Its
 built-in default template is `%P/%f-clop`, so enabling preservation works
-immediately without prior setup. Friendly choices such as Beside Original and
-Choose Folder generate a complete template; users may then edit it through
-guided token insertion and preview. Do not expose permanently visible
+immediately without prior setup. Plain typed text offers complete prefix and
+suffix templates beside the original; advanced templates may select another
+absolute or home-relative destination. Do not expose permanently visible
 dependent folder, suffix, and template fields in Alfred's non-dynamic panel.
 
 An output template preserves the original by writing elsewhere. Alfred Clop
