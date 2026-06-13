@@ -234,7 +234,38 @@ struct ClopRequestDispatcherTests {
             finder: DispatcherFinder()
         )
 
-        #expect(response.items.first?.title == "No Finder selection")
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "No Finder selection"
+        ])
+    }
+
+    @Test
+    func clipboardFolderWithoutSupportedContentStillShowsConfiguration() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("notes".utf8).write(
+            to: directory.appendingPathComponent("notes.txt")
+        )
+        let request = ClopRequest(
+            input: .clipboard,
+            route: .menu(action: nil)
+        )
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(urls: [directory]),
+            finder: DispatcherFinder()
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "No supported clipboard content"
+        ])
+        #expect(response.items[1].subtitle == "Copy a supported file, folder, URL, or image and try again.")
     }
 
     @Test

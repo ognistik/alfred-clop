@@ -169,10 +169,7 @@ enum ActionMenu {
             ]
             guard selection.mediaKinds.contains(where: supportedKinds.contains)
                 || !selection.ambiguousKinds.isEmpty else {
-                return errorItem(
-                    title: "No supported files in clipboard",
-                    subtitle: "Copy one or more images, videos, audio files, or PDFs."
-                )
+                return noSupportedInputResponse(context: .clipboard)
             }
             return response(
                 for: selection,
@@ -183,16 +180,10 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.noInputs {
-            return responseWithoutInputs(
-                context: .clipboard,
-                title: "No supported files in clipboard",
-                subtitle: "Copy one or more files or file paths and try again.",
-                environment: environment,
-                fileManager: fileManager,
-                writer: writer
-            )
+            return noSupportedInputResponse(context: .clipboard)
         } catch InputCollectionError.missingPath(let path) {
-            return errorItem(
+            return responseWithConfiguration(
+                context: .clipboard,
                 title: "Clipboard file was not found",
                 subtitle: path
             )
@@ -236,52 +227,60 @@ enum ActionMenu {
         _ error: Error,
         context: ActionInputContext
     ) -> ScriptFilterResponse {
+        func feedback(title: String, subtitle: String) -> ScriptFilterResponse {
+            responseWithConfiguration(
+                context: context,
+                title: title,
+                subtitle: subtitle
+            )
+        }
+
         switch error {
         case InputCollectionError.noInputs:
-            return errorItem(
-                title: context == .clipboard
-                    ? "No supported input in clipboard"
-                    : "No supported input provided",
-                subtitle: "Use files, folders, or HTTP/HTTPS URLs."
-            )
+            return noSupportedInputResponse(context: context)
         case InputCollectionError.emptyFinderSelection:
-            return errorItem(
+            return feedback(
                 title: "No Finder selection",
                 subtitle: "Select one or more Finder items and try again."
             )
         case InputCollectionError.finderSelectionUnavailable:
-            return errorItem(
+            return feedback(
                 title: "Unable to read Finder selection",
                 subtitle: "Allow Alfred to control Finder, then try again."
             )
         case InputCollectionError.missingPath(let path):
-            return errorItem(title: "Input was not found", subtitle: path)
+            return feedback(title: "Input was not found", subtitle: path)
         case InputCollectionError.unsupportedURL(let value):
-            return errorItem(
+            return feedback(
                 title: "Unsupported URL",
                 subtitle: "Only HTTP and HTTPS URLs are accepted: \(value)"
             )
         case InputCollectionError.credentialedURL:
-            return errorItem(
+            return feedback(
                 title: "URL credentials are not allowed",
                 subtitle: "Remove the username or password from the URL."
             )
-        case InputCollectionError.emptyFolder(let path):
-            return errorItem(title: "Folder is empty", subtitle: path)
-        case InputCollectionError.unsupportedFolder(let path):
-            return errorItem(
-                title: "No supported content in folder",
-                subtitle: path
-            )
+        case InputCollectionError.emptyFolder,
+             InputCollectionError.unsupportedFolder:
+            return noSupportedInputResponse(context: context)
         case InputCollectionError.recursionDisabledFolder:
-            return workflowSettingsItem(
-                title: "Supported media is in subfolders",
-                subtitle: "Press Return to open workflow configuration."
+            return ScriptFilterResponse(
+                items: [
+                    ConfigurationMenu.actionItem,
+                    workflowSettingsItem(
+                        title: "Supported media is in subfolders",
+                        subtitle: "Press Return to open workflow configuration."
+                    ).items[0]
+                ],
+                variables: inputVariables(
+                    for: InputSelection(inputs: [], mediaKinds: []),
+                    context: context
+                )
             )
         case InputCollectionError.unreadableFolder(let path):
-            return errorItem(title: "Unable to read folder", subtitle: path)
+            return feedback(title: "Unable to read folder", subtitle: path)
         default:
-            return errorItem(
+            return feedback(
                 title: "Unable to inspect input",
                 subtitle: error.localizedDescription
             )
@@ -308,7 +307,8 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.invalidJSON {
-            return errorItem(
+            return responseWithConfiguration(
+                context: context,
                 title: "Unable to read selected files",
                 subtitle: "The input JSON is invalid."
             )
@@ -322,15 +322,13 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.missingPath(let path) {
-            return errorItem(
+            return responseWithConfiguration(
+                context: context,
                 title: "Selected file was not found",
                 subtitle: path
             )
         } catch {
-            return errorItem(
-                title: "Unable to inspect selected files",
-                subtitle: error.localizedDescription
-            )
+            return collectionErrorResponse(error, context: context)
         }
     }
 
@@ -375,17 +373,15 @@ enum ActionMenu {
                 )
             }
         } catch InputCollectionError.missingPath(let path) {
-            return errorItem(
+            return responseWithConfiguration(
+                context: context,
                 title: context == .arguments
                     ? "Passed file was not found"
                     : "Selected file was not found",
                 subtitle: path
             )
         } catch {
-            return errorItem(
-                title: "Unable to inspect selected files",
-                subtitle: error.localizedDescription
-            )
+            return collectionErrorResponse(error, context: context)
         }
     }
 
@@ -398,10 +394,7 @@ enum ActionMenu {
         writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
         if selection.mediaKinds.contains(.unknown) {
-            return errorItem(
-                title: "Unsupported file type",
-                subtitle: "Clop cannot process one or more \(context.subtitlePrefix.lowercased())."
-            )
+            return noSupportedInputResponse(context: context)
         }
 
         let validActions = ActionCatalog.validActions(for: selection)
@@ -547,6 +540,18 @@ enum ActionMenu {
         fileManager: FileManager,
         writer: any AtomicDataWriting
     ) -> ScriptFilterResponse {
+        responseWithConfiguration(
+            context: context,
+            title: title,
+            subtitle: subtitle
+        )
+    }
+
+    private static func responseWithConfiguration(
+        context: ActionInputContext,
+        title: String,
+        subtitle: String
+    ) -> ScriptFilterResponse {
         return ScriptFilterResponse(
             items: [
                 ConfigurationMenu.actionItem,
@@ -561,6 +566,29 @@ enum ActionMenu {
                 for: InputSelection(inputs: [], mediaKinds: []),
                 context: context
             )
+        )
+    }
+
+    private static func noSupportedInputResponse(
+        context: ActionInputContext
+    ) -> ScriptFilterResponse {
+        let title: String
+        let subtitle: String
+        switch context {
+        case .clipboard:
+            title = "No supported clipboard content"
+            subtitle = "Copy a supported file, folder, URL, or image and try again."
+        case .selected:
+            title = "No supported input"
+            subtitle = "Select a supported file, folder, or URL and try again."
+        case .arguments:
+            title = "No supported input"
+            subtitle = "Pass a supported file, folder, or HTTP/HTTPS URL."
+        }
+        return responseWithConfiguration(
+            context: context,
+            title: title,
+            subtitle: subtitle
         )
     }
 

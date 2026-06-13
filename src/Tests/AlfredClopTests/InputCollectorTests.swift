@@ -188,9 +188,11 @@ struct InputCollectorTests {
     func invalidJSONProducesAlfredErrorResponse() {
         let response = ActionMenu.response(inputJSON: "{bad json", query: "")
 
-        #expect(response.items.count == 1)
-        #expect(response.items[0].title == "Unable to read selected files")
-        #expect(response.items[0].valid == false)
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "Unable to read selected files"
+        ])
+        #expect(response.items[1].valid == false)
     }
 
     @Test

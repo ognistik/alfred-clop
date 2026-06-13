@@ -109,8 +109,8 @@ enum PresetMigrationMenu {
                 switch request.inputContext {
                 case .clipboard:
                     message = (
-                        "No supported files in clipboard",
-                        "Copy one or more files or file paths and try again."
+                        "No supported clipboard content",
+                        "Copy a supported file, folder, URL, or image and try again."
                     )
                 case .arguments:
                     message = (

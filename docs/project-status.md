@@ -56,6 +56,10 @@ clipboard-image cache cleanup.
 - Path normalization, symlink resolution, validation, and deduplication
 - Media detection for images, video, audio, and PDFs
 - Context-aware action capability intersection for mixed inputs
+- Configuration remains available when selected, copied, or passed input has
+  no processable media, including unsupported-only folders
+- Unsupported clipboard content uses generic, path-free feedback because the
+  clipboard contents may be incidental or unexpected
 - One Optimize result in the main menu; aggressive optimization remains
   available to typed execution and Hotkeys pending the planned Command-Return
   modifier

@@ -56,9 +56,11 @@ struct ActionMenuTests {
             query: ""
         )
 
-        #expect(response.items.count == 1)
-        #expect(response.items[0].title == "Unsupported file type")
-        #expect(response.items[0].valid == false)
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "No supported input"
+        ])
+        #expect(response.items[1].valid == false)
     }
 
     @Test
@@ -236,7 +238,7 @@ struct ActionMenuTests {
 
         #expect(response.items.map(\.title) == [
             "Configuration",
-            "No supported files in clipboard"
+            "No supported clipboard content"
         ])
         #expect(response.items[1].valid == false)
     }
@@ -251,8 +253,33 @@ struct ActionMenuTests {
             query: ""
         )
 
-        #expect(response.items[0].title == "No supported files in clipboard")
-        #expect(response.items[0].valid == false)
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "No supported clipboard content"
+        ])
+        #expect(response.items[1].valid == false)
+    }
+
+    @Test
+    func unsupportedClipboardFolderStillShowsConfiguration() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("notes".utf8).write(
+            to: directory.appendingPathComponent("notes.txt")
+        )
+
+        let response = ActionMenu.response(
+            clipboard: ActionMenuClipboard(urls: [directory]),
+            query: ""
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "No supported clipboard content"
+        ])
+        #expect(response.items[1].subtitle == "Copy a supported file, folder, URL, or image and try again.")
+        #expect(response.items[0].valid)
+        #expect(response.items[1].valid == false)
     }
 
     @Test
@@ -410,16 +437,39 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[0].title == "Supported media is in subfolders")
+        #expect(response.items[0].title == "Configuration")
+        #expect(response.items[1].title == "Supported media is in subfolders")
         #expect(
-            response.items[0].subtitle
+            response.items[1].subtitle
                 == "Press Return to open workflow configuration."
         )
-        #expect(response.items[0].valid)
+        #expect(response.items[1].valid)
         #expect(
-            response.items[0].variables?[ActionMenu.requestKindVariable]
+            response.items[1].variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.workflowSettings.rawValue
         )
+    }
+
+    @Test
+    func unsupportedPassedFolderStillShowsConfiguration() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("notes".utf8).write(
+            to: directory.appendingPathComponent("notes.txt")
+        )
+
+        let response = ActionMenu.response(
+            paths: [directory.path],
+            query: "",
+            context: .arguments
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "No supported input"
+        ])
+        #expect(response.items[1].subtitle == "Pass a supported file, folder, or HTTP/HTTPS URL.")
+        #expect(response.items[1].valid == false)
     }
 
     @Test
