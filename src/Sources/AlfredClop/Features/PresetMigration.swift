@@ -27,7 +27,8 @@ enum PresetMigrationStatus: Equatable {
 }
 
 struct PresetMigrationCoordinator {
-    static let metadataFileName = "preset-location.json"
+    static let metadataFileName = "settings-location.json"
+    static let legacyMetadataFileName = "preset-location.json"
 
     var environment: Environment
     var fileManager: FileManager
@@ -48,18 +49,27 @@ struct PresetMigrationCoordinator {
             let destinationURL = try PresetStore.fileURL(environment: environment)
             let metadataURL = try metadataFileURL()
 
-            guard fileManager.fileExists(atPath: metadataURL.path) else {
+            let existingMetadataURL = existingMetadataFileURL() ?? metadataURL
+            guard fileManager.fileExists(atPath: existingMetadataURL.path) else {
                 return try initialStatus(
                     destinationURL: destinationURL,
                     metadataURL: metadataURL
                 )
             }
 
-            let metadata = try loadMetadata(at: metadataURL)
-            let sourceURL = presetFileURL(
-                directoryPath: metadata.lastActiveDirectoryPath
+            let metadata = try loadMetadata(at: existingMetadataURL)
+            let sourceURL = sourceFileURL(
+                directoryPath: metadata.lastActiveDirectoryPath,
+                destinationURL: destinationURL
             )
             guard sourceURL.standardizedFileURL != destinationURL.standardizedFileURL else {
+                if existingMetadataURL != metadataURL {
+                    try persistMetadata(
+                        directoryURL: destinationURL.deletingLastPathComponent(),
+                        at: metadataURL
+                    )
+                    try? fileManager.removeItem(at: existingMetadataURL)
+                }
                 return .none
             }
 
@@ -86,14 +96,9 @@ struct PresetMigrationCoordinator {
             throw PresetMigrationError.locationChanged
         }
 
-        let sourceStore = PresetStore(
-            fileURL: migration.sourceURL,
-            fileManager: fileManager,
-            writer: writer
-        )
-        let sourceDocument: PresetDocument
+        let sourceDocument: SettingsDocument
         do {
-            sourceDocument = try sourceStore.load()
+            sourceDocument = try loadMigrationSource(at: migration.sourceURL)
         } catch PresetStoreError.unsupportedVersion(let version) {
             throw PresetMigrationError.sourceUnsupportedVersion(version)
         } catch {
@@ -109,10 +114,12 @@ struct PresetMigrationCoordinator {
             at: destinationDirectory,
             withIntermediateDirectories: true
         )
-        let sourceData = try Data(contentsOf: migration.sourceURL)
-        try writer.writeAtomically(sourceData, to: migration.destinationURL)
+        try writer.writeAtomically(
+            try JSONEncoder().encode(sourceDocument),
+            to: migration.destinationURL
+        )
 
-        let destinationDocument: PresetDocument
+        let destinationDocument: SettingsDocument
         do {
             destinationDocument = try PresetStore(
                 fileURL: migration.destinationURL,
@@ -131,6 +138,11 @@ struct PresetMigrationCoordinator {
             directoryURL: destinationDirectory,
             at: metadataFileURL()
         )
+        let currentMetadataURL = try metadataFileURL()
+        if let legacyMetadataURL = legacyMetadataFileURL(),
+           legacyMetadataURL != currentMetadataURL {
+            try? fileManager.removeItem(at: legacyMetadataURL)
+        }
     }
 
     func metadataFileURL() throws -> URL {
@@ -148,7 +160,35 @@ struct PresetMigrationCoordinator {
         destinationURL: URL,
         metadataURL: URL
     ) throws -> PresetMigrationStatus {
-        let defaultURL = try defaultPresetFileURL()
+        let destinationDirectory = destinationURL.deletingLastPathComponent()
+        let legacyAtDestination = PresetStore.legacyFileURL(
+            directoryPath: destinationDirectory.path
+        )
+        if fileManager.fileExists(atPath: legacyAtDestination.path) {
+            return migrationStatus(PresetMigration(
+                sourceURL: legacyAtDestination,
+                destinationURL: destinationURL
+            ))
+        }
+
+        if let legacyConfiguredPath = environment[
+            PresetStore.legacyConfiguredPathEnvironmentKey
+        ]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !legacyConfiguredPath.isEmpty {
+            let legacyConfiguredURL = PresetStore.legacyFileURL(
+                directoryPath: legacyConfiguredPath
+            )
+            if legacyConfiguredURL.standardizedFileURL
+                != destinationURL.standardizedFileURL,
+               fileManager.fileExists(atPath: legacyConfiguredURL.path) {
+                return migrationStatus(PresetMigration(
+                    sourceURL: legacyConfiguredURL,
+                    destinationURL: destinationURL
+                ))
+            }
+        }
+
+        let defaultURL = try defaultSettingsFileURL()
         if destinationURL.standardizedFileURL != defaultURL.standardizedFileURL,
            fileManager.fileExists(atPath: defaultURL.path) {
             return migrationStatus(PresetMigration(
@@ -157,8 +197,19 @@ struct PresetMigrationCoordinator {
             ))
         }
 
+        let defaultLegacyURL = PresetStore.legacyFileURL(
+            directoryPath: defaultURL.deletingLastPathComponent().path
+        )
+        if destinationURL.standardizedFileURL != defaultLegacyURL.standardizedFileURL,
+           fileManager.fileExists(atPath: defaultLegacyURL.path) {
+            return migrationStatus(PresetMigration(
+                sourceURL: defaultLegacyURL,
+                destinationURL: destinationURL
+            ))
+        }
+
         try persistMetadata(
-            directoryURL: destinationURL.deletingLastPathComponent(),
+            directoryURL: destinationDirectory,
             at: metadataURL
         )
         return .none
@@ -180,11 +231,7 @@ struct PresetMigrationCoordinator {
         }
 
         do {
-            _ = try PresetStore(
-                fileURL: migration.sourceURL,
-                fileManager: fileManager,
-                writer: writer
-            ).load()
+            _ = try loadMigrationSource(at: migration.sourceURL)
             return .available(migration)
         } catch PresetStoreError.unsupportedVersion(let version) {
             return .sourceInvalid(
@@ -232,15 +279,83 @@ struct PresetMigrationCoordinator {
         )
     }
 
-    private func defaultPresetFileURL() throws -> URL {
+    private func defaultSettingsFileURL() throws -> URL {
         var values = environment.values
         values[PresetStore.configuredPathEnvironmentKey] = nil
+        values[PresetStore.legacyConfiguredPathEnvironmentKey] = nil
         return try PresetStore.fileURL(environment: Environment(values: values))
     }
 
-    private func presetFileURL(directoryPath: String) -> URL {
+    private func sourceFileURL(
+        directoryPath: String,
+        destinationURL: URL
+    ) -> URL {
         let expandedPath = NSString(string: directoryPath).expandingTildeInPath
-        return URL(fileURLWithPath: expandedPath, isDirectory: true)
-            .appendingPathComponent("presets.json", isDirectory: false)
+        let directory = URL(fileURLWithPath: expandedPath, isDirectory: true)
+        let settingsURL = directory.appendingPathComponent(
+            "settings.json",
+            isDirectory: false
+        )
+        let legacyURL = directory.appendingPathComponent(
+            "presets.json",
+            isDirectory: false
+        )
+        if fileManager.fileExists(atPath: settingsURL.path) {
+            return settingsURL
+        }
+        if fileManager.fileExists(atPath: legacyURL.path) {
+            return legacyURL
+        }
+        return settingsURL.standardizedFileURL == destinationURL.standardizedFileURL
+            ? settingsURL
+            : legacyURL
+    }
+
+    private func loadMigrationSource(at url: URL) throws -> SettingsDocument {
+        if url.lastPathComponent == "presets.json" {
+            do {
+                let document = try JSONDecoder().decode(
+                    PresetDocument.self,
+                    from: Data(contentsOf: url)
+                )
+                guard document.version == PresetDocument.currentVersion else {
+                    throw PresetStoreError.unsupportedVersion(document.version)
+                }
+                return SettingsDocument(presets: document.presets)
+            } catch let error as PresetStoreError {
+                throw error
+            } catch {
+                throw PresetStoreError.invalidFile
+            }
+        }
+        return try PresetStore(
+            fileURL: url,
+            fileManager: fileManager,
+            writer: writer
+        ).load()
+    }
+
+    private func existingMetadataFileURL() -> URL? {
+        if let current = try? metadataFileURL(),
+           fileManager.fileExists(atPath: current.path) {
+            return current
+        }
+        if let legacy = legacyMetadataFileURL(),
+           fileManager.fileExists(atPath: legacy.path) {
+            return legacy
+        }
+        return nil
+    }
+
+    private func legacyMetadataFileURL() -> URL? {
+        guard let workflowData = environment[PresetStore.workflowDataEnvironmentKey]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !workflowData.isEmpty else {
+            return nil
+        }
+        return URL(
+            fileURLWithPath: NSString(string: workflowData).expandingTildeInPath,
+            isDirectory: true
+        ).appendingPathComponent(Self.legacyMetadataFileName)
     }
 }

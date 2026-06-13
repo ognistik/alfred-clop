@@ -18,13 +18,19 @@ enum ClopCommandBuilderError: Error, Equatable {
     case invalidCropSize
     case unsupportedAction
     case unsupportedBackupBehavior
+    case invalidOutputTemplate(OutputTemplateError)
 }
 
 struct ClopCommandBuilder {
     private let discovery: any ClopCLIDiscovering
+    private let fileManager: FileManager
 
-    init(discovery: any ClopCLIDiscovering = ClopCLIDiscovery()) {
+    init(
+        discovery: any ClopCLIDiscovering = ClopCLIDiscovery(),
+        fileManager: FileManager = .default
+    ) {
         self.discovery = discovery
+        self.fileManager = fileManager
     }
 
     func command(for request: OperationRequest) throws -> ClopCommand {
@@ -34,6 +40,14 @@ struct ClopCommandBuilder {
 
         guard request.execution.backup == .trustClop else {
             throw ClopCommandBuilderError.unsupportedBackupBehavior
+        }
+        if let template = request.execution.output.template,
+           let error = OutputTemplateValidator.preflight(
+               template: template,
+               inputs: request.inputs,
+               fileManager: fileManager
+           ) {
+            throw ClopCommandBuilderError.invalidOutputTemplate(error)
         }
 
         let diagnostics = discovery.discover()
@@ -92,12 +106,16 @@ struct ClopCommandBuilder {
         longEdge: Bool
     ) -> [String] {
         var arguments = ["crop", "--size", size, "--json", "--no-progress"]
+        arguments.append("--skip-errors")
 
         if longEdge {
             arguments.append("--long-edge")
         }
         if smartCrop {
             arguments.append("--smart-crop")
+        }
+        if request.execution.aggressiveProcessing == true {
+            arguments.append("--aggressive")
         }
         if request.execution.showClopUI {
             arguments.append("--gui")
@@ -119,6 +137,7 @@ struct ClopCommandBuilder {
         aggressive: Bool
     ) -> [String] {
         var arguments = ["optimise", "--json", "--no-progress"]
+        arguments.append("--skip-errors")
 
         if request.execution.showClopUI {
             arguments.append("--gui")

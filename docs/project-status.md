@@ -20,11 +20,18 @@ normalize through `InputCollector`.
 
 The routing and feedback hardening checkpoint is complete: public execute
 requests bypass Alfred's interactive Script Filter, normalized menu reruns
-clear stale public-request state, and quiet errors honor the `dnd` setting.
+clear stale public-request state, and quiet feedback honors the independent
+completion and error notification settings.
 
 Raw image clipboard materialization is also complete. Clipboard PNG or TIFF
 data now becomes a private cached image input when no native files or usable
 path/URL text are available.
+
+The shared settings and global execution-policy foundation is complete.
+Portable workflow-owned settings and action presets now share `settings.json`,
+original preservation uses validated Clop output templates, and Configuration
+owns migration, output-template reset, global preset reset confirmation, and
+clipboard-image cache cleanup.
 
 ## Completed
 
@@ -124,11 +131,11 @@ path/URL text are available.
 - Shared normalized input state stored in `alfred_clop_input_json`
 - Immediate actions handed to a quiet Run Script execution action
 - Clop UI used for successful progress/results, with notifications for errors
-- `dnd` suppresses quiet/headless error notifications without hiding
-  interactive Script Filter errors
+- Completion and error notification settings independently control quiet and
+  headless feedback without hiding interactive Script Filter errors
 - Release binary built at `workflow/alfred-clop`
-- User configuration fields for optional `presetsPath`, `copyResult`,
-  `recursiveFolders`, and `dnd`
+- User configuration fields for `settingsPath`, preservation, optimization
+  default, Clop UI, notifications, copying, recursion, and cache retention
 - `copyResult` is applied to supported app-backed commands
 - `recursiveFolders` controls both folder inspection and supported Clop
   command arguments
@@ -185,9 +192,9 @@ path/URL text are available.
 
 ### Crop and resize presets
 
-- Versioned `presets.json` schema storing normalized typed crop actions only
+- Normalized typed crop presets retained inside versioned `settings.json`
 - Atomic persistence in `alfred_workflow_data` by default or
-  `<presetsPath>/presets.json` when configured
+  `<settingsPath>/settings.json` when configured
 - No preset inputs, custom names, or execution-setting overrides
 - Friendly normalization for equivalent forms such as `w128` and `128x0`
 - Fixed grammar instruction followed by saved presets with stable item UIDs
@@ -207,8 +214,8 @@ path/URL text are available.
 
 - Versioned workflow-owned location metadata stored under
   `alfred_workflow_data`
-- Changed `presetsPath` values detected without silently moving, merging,
-  overwriting, or deleting preset data
+- Changed settings locations detected without silently moving, merging,
+  overwriting, or deleting portable data
 - Context-specific Move existing settings action appears first in the main
   action menu with concise, path-free wording
 - Pending settings migration remains available when there are no current files
@@ -228,6 +235,47 @@ path/URL text are available.
 - No accumulating migration backup copies
 - Paths containing spaces and injected write/validation failures covered by
   focused tests
+
+### Shared settings and execution policy
+
+- Versioned `settings.json` stores action presets and the active output
+  template together
+- Default storage under `alfred_workflow_data`; optional `settingsPath`
+  selects a custom folder
+- Explicit, non-destructive migration from `presets.json`, `presetsPath`,
+  changed `settingsPath` locations, and legacy location metadata
+- Built-in preservation template `%P/%f-clop`
+- Template validation rejects empty values and unsupported tokens
+- Preflight rejects duplicate planned outputs, existing-file collisions,
+  source-path collisions, and inputs that cannot be safely planned
+- Preservation uses Clop's validated `--output` template only; no
+  workflow-managed backups
+- Static settings for Preserve Original, Standard or Aggressive default,
+  Clop UI, completion notifications, error notifications, copy result,
+  recursion, and 1-15 day clipboard-image retention
+- Automatic `--skip-errors` for implemented app-backed batch commands that
+  support it, while structured partial failures remain visible
+- Independent completion and error notification policy for interactive,
+  Hotkey, and headless execution
+- Raw clipboard-image expiry follows the configured retention period
+- Discoverable Configuration action remains available without processable
+  input
+- Guided output-template entry includes validation and an example preview
+- Pending migration appears in Configuration and inline blocked preset saves
+  still move directly before resuming
+- `Reset output template` restores `%P/%f-clop` without changing presets or
+  Alfred preferences
+- Command-Return on reset opens a separate global preset-removal confirmation
+  with the preset count
+- Conditional clipboard-image cleanup reports file count and space usage,
+  requires confirmation, and removes only workflow-owned cache files
+- Return uses configured aggressive and preservation defaults
+- Command-Return and Shift-Return invert those defaults in fully resolved
+  operation requests
+- Crop-capable values expose Smart Crop through Option combinations; resize-only
+  forms omit Smart Crop modifiers
+- Pipeline delivery remains owned by Clop; no workflow recipe system or
+  pipeline output override was added
 
 Alfred was verified directly after implementation. Script Filter knowledge
 sorting is response-wide: after a UID result is learned, Alfred can promote it
@@ -258,15 +306,10 @@ structure.
 
 ## Not implemented
 
-- Modifier behavior for aggressive processing and original preservation
 - Downscale, conversion, and PDF-crop parameter menus and parsing
-- Smart Crop modifier behavior
-- Original preservation through validated output templates
 - Dynamic PDF device and paper-size menus
-- Shared `settings.json` migration and Configuration menu for output-template
-  editing, conditional settings migration, workflow-setting reset, portable
-  settings export or backup, and conditional cached-image cleanup
-- Workflow icons, user configuration, packaging, and release automation
+- Portable settings export, backup, restore, and import
+- Workflow icons, packaging, and release automation
 
 ### Implemented unified input design
 
@@ -311,39 +354,22 @@ structure.
 
 ## Next recommended task
 
-Implement the shared settings and global execution-policy foundation:
+Implement the Downscale parameter menu and action presets:
 
-1. Replace the preset-only document with a versioned `settings.json` that
-   retains existing presets and adds the output template, including explicit
-   migration from `presets.json` and `presetsPath` to `settingsPath`.
-2. Add the static workflow settings agreed for Preserve Original, Standard or
-   Aggressive default, Clop UI, completion notifications, error notifications,
-   copy result, recursion, and 1-15 day clipboard-image retention.
-3. Use `%P/%f-clop` as the valid built-in preservation template and add
-   preflight validation for empty templates, unsupported tokens, duplicate
-   planned outputs, existing-file collisions, and source-path collisions.
-4. Pass `--skip-errors` automatically wherever the selected command supports
-   it, while continuing to report per-input failures from structured results.
-5. Add the Configuration menu foundation for guided output-template setup,
-   conditional pending migration, reset of the output template without
-   removing action presets or changing Alfred preferences, and conditional
-   cached-image cleanup with file count and space usage. Command-Return on the
-   reset item opens a separate confirmation to remove all saved action presets
-   globally, including the number that will be deleted.
-6. Add Command-Return and Shift-Return as inversions of the configured
-   aggressive and preservation defaults, plus the already planned Smart Crop
-   modifier combinations.
-7. Keep pipeline delivery behavior owned by Clop; `pipeline run` has no
-   workflow output-template override.
-
-Do not create a workflow-owned recipe system or duplicate action-preset
-management in Configuration.
+1. Add guided parsing for factors and percentages such as `0.5` and `75%`.
+2. Normalize percentages to typed factors and validate the supported range
+   without permitting enlargement.
+3. Add per-action preset save and confirmed removal using the shared
+   `settings.json`.
+4. Apply the shared aggressive, preservation, Clop UI, copy, recursion,
+   notification, output preflight, and `--skip-errors` policies.
+5. Preserve every existing input route, normalized state, and modifier meaning.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 159 tests.
+- `./scripts/test.sh` passes 170 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

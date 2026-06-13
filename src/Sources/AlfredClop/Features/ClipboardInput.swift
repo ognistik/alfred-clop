@@ -67,11 +67,11 @@ struct SystemClipboardReader: ClipboardReading {
 
 struct FoundationClipboardImageMaterializer: ClipboardImageMaterializing {
     static let workflowCacheEnvironmentKey = "alfred_workflow_cache"
-    static let retentionInterval: TimeInterval = 7 * 24 * 60 * 60
 
     var directoryURL: URL
     var fileManager: FileManager
     var now: () -> Date
+    var retentionInterval: TimeInterval
 
     init(
         environment: Environment = Environment(),
@@ -91,16 +91,23 @@ struct FoundationClipboardImageMaterializer: ClipboardImageMaterializing {
             .appendingPathComponent("clipboard-images", isDirectory: true)
         self.fileManager = fileManager
         self.now = now
+        self.retentionInterval = TimeInterval(
+            environment.clipboardImageRetentionDays * 24 * 60 * 60
+        )
     }
 
     init(
         directoryURL: URL,
         fileManager: FileManager = .default,
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        retentionDays: Int = 7
     ) {
         self.directoryURL = directoryURL
         self.fileManager = fileManager
         self.now = now
+        self.retentionInterval = TimeInterval(
+            min(15, max(1, retentionDays)) * 24 * 60 * 60
+        )
     }
 
     func materialize(_ image: ClipboardImage) throws -> URL {
@@ -146,7 +153,7 @@ struct FoundationClipboardImageMaterializer: ClipboardImageMaterializing {
         ) else {
             return
         }
-        let cutoff = now().addingTimeInterval(-Self.retentionInterval)
+        let cutoff = now().addingTimeInterval(-retentionInterval)
         for file in files {
             guard file.lastPathComponent.hasPrefix("clipboard-"),
                   let values = try? file.resourceValues(

@@ -8,12 +8,13 @@ struct PresetStoreTests {
         let preset = ActionPreset.crop(CropActionPreset(
             size: try #require(CropSizeParser.parse("w128"))
         ))
-        let document = PresetDocument(presets: [preset])
+        let document = SettingsDocument(presets: [preset])
 
         let decoded = try roundTrip(document)
 
         #expect(decoded.version == 1)
         #expect(decoded.presets == [preset])
+        #expect(decoded.outputTemplate == "%P/%f-clop")
     }
 
     @Test
@@ -24,7 +25,7 @@ struct PresetStoreTests {
             PresetStore.workflowDataEnvironmentKey: directory.path
         ]))
 
-        #expect(url == directory.appendingPathComponent("presets.json"))
+        #expect(url == directory.appendingPathComponent("settings.json"))
     }
 
     @Test
@@ -33,7 +34,7 @@ struct PresetStoreTests {
             .appendingPathComponent("Default Data")
         let configuredDirectory = try makeTemporaryDirectory()
             .appendingPathComponent("Synced Presets With Spaces")
-        let defaultFile = defaultDirectory.appendingPathComponent("presets.json")
+        let defaultFile = defaultDirectory.appendingPathComponent("settings.json")
         try FileManager.default.createDirectory(
             at: defaultDirectory,
             withIntermediateDirectories: true
@@ -45,7 +46,7 @@ struct PresetStoreTests {
             PresetStore.configuredPathEnvironmentKey: configuredDirectory.path
         ]))
 
-        #expect(url == configuredDirectory.appendingPathComponent("presets.json"))
+        #expect(url == configuredDirectory.appendingPathComponent("settings.json"))
         #expect(try String(contentsOf: defaultFile, encoding: .utf8) == "default")
         #expect(!FileManager.default.fileExists(atPath: url.path))
     }
@@ -54,7 +55,7 @@ struct PresetStoreTests {
     func persistenceUsesAtomicWriterAtFinalLocation() throws {
         let directory = try makeTemporaryDirectory()
             .appendingPathComponent("Preset Folder With Spaces")
-        let fileURL = directory.appendingPathComponent("presets.json")
+        let fileURL = directory.appendingPathComponent("settings.json")
         let writer = RecordingAtomicWriter()
         let store = PresetStore(fileURL: fileURL, writer: writer)
 
@@ -64,14 +65,14 @@ struct PresetStoreTests {
 
         #expect(writer.urls == [fileURL])
         let data = try #require(writer.data)
-        let document = try JSONDecoder().decode(PresetDocument.self, from: data)
+        let document = try JSONDecoder().decode(SettingsDocument.self, from: data)
         #expect(document.presets.count == 1)
     }
 
     @Test
     func equivalentValuesDoNotCreateDuplicatePresets() throws {
         let fileURL = try makeTemporaryDirectory()
-            .appendingPathComponent("presets.json")
+            .appendingPathComponent("settings.json")
         let store = PresetStore(fileURL: fileURL)
         let friendly = ActionPreset.crop(CropActionPreset(
             size: try #require(CropSizeParser.parse("w128"))
@@ -88,8 +89,8 @@ struct PresetStoreTests {
     @Test
     func unsupportedVersionIsRejectedWithoutChangingTheFile() throws {
         let fileURL = try makeTemporaryDirectory()
-            .appendingPathComponent("presets.json")
-        let original = #"{"version":2,"presets":[]}"#
+            .appendingPathComponent("settings.json")
+        let original = #"{"version":2,"presets":[],"outputTemplate":"%P/%f-clop"}"#
         try Data(original.utf8).write(to: fileURL)
         let store = PresetStore(fileURL: fileURL)
 
@@ -105,14 +106,14 @@ struct PresetStoreTests {
     }
 
     @Test(arguments: [
-        #"{"version":1,"presets":[{"type":"rotate","degrees":90}]}"#,
-        #"{"version":1,"presets":[{"type":"crop","size":"w128","longEdge":false}]}"#,
-        #"{"version":1,"presets":"not-an-array"}"#,
+        #"{"version":1,"presets":[{"type":"rotate","degrees":90}],"outputTemplate":"%P/%f-clop"}"#,
+        #"{"version":1,"presets":[{"type":"crop","size":"w128","longEdge":false}],"outputTemplate":"%P/%f-clop"}"#,
+        #"{"version":1,"presets":"not-an-array","outputTemplate":"%P/%f-clop"}"#,
         #"not-json"#
     ])
     func malformedOrUnsupportedFilesAreRejected(contents: String) throws {
         let fileURL = try makeTemporaryDirectory()
-            .appendingPathComponent("presets.json")
+            .appendingPathComponent("settings.json")
         try Data(contents.utf8).write(to: fileURL)
 
         #expect(throws: PresetStoreError.invalidFile) {

@@ -41,7 +41,7 @@ struct WorkflowRoutingTests {
     }
 
     @Test
-    func everyQuietNotificationScriptHonorsDnd() throws {
+    func quietNotificationScriptsUseResolvedCLIFeedback() throws {
         let plist = try workflowPlist()
         let objects = try #require(plist["objects"] as? [[String: Any]])
         let notificationScripts = objects.compactMap { object -> String? in
@@ -56,8 +56,30 @@ struct WorkflowRoutingTests {
 
         #expect(notificationScripts.count == 6)
         #expect(notificationScripts.allSatisfy {
-            $0.contains("${dnd:-0}") && $0.contains("${dnd:-false}")
+            $0.contains("if [[ -n \"$feedback\" ]]")
+                && !$0.contains("${dnd")
         })
+    }
+
+    @Test
+    func workflowExposesSharedExecutionSettings() throws {
+        let plist = try workflowPlist()
+        let settings = try #require(
+            plist["userconfigurationconfig"] as? [[String: Any]]
+        )
+        let variables = Set(settings.compactMap { $0["variable"] as? String })
+
+        #expect(variables == Set([
+            "settingsPath",
+            "preserveOriginal",
+            "defaultOptimisation",
+            "showClopUI",
+            "completionNotifications",
+            "errorNotifications",
+            "copyResult",
+            "recursiveFolders",
+            "cacheRetention"
+        ]))
     }
 
     @Test

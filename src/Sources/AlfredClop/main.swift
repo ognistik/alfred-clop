@@ -70,12 +70,20 @@ enum AlfredClopCommand {
             ClopRequest.self,
             from: Data(requestJSON.utf8)
         ), case .execute = request.route {
-            if let feedback = response.items.first,
-               !ClopRequestDispatcher.isSuccessfulExecution(feedback.title) {
-                notify(feedback.subtitle.isEmpty
-                    ? feedback.title
-                    : "\(feedback.title): \(feedback.subtitle)"
+            if let feedback = response.items.first {
+                let successful = ClopRequestDispatcher.isSuccessfulExecution(
+                    feedback.title
                 )
+                let environment = Environment()
+                let shouldNotify = successful
+                    ? environment.completionNotifications
+                    : environment.errorNotifications
+                if shouldNotify {
+                    notify(feedback.subtitle.isEmpty
+                        ? feedback.title
+                        : "\(feedback.title): \(feedback.subtitle)"
+                    )
+                }
             }
             JSONOutput.print(ScriptFilterResponse())
             return
@@ -192,7 +200,10 @@ enum AlfredClopCommand {
         }
 
         if arguments.contains("--quiet") {
-            if let feedback = ExecuteMode.quietFeedback(requestJSON: requestJSON) {
+            if let feedback = ExecuteMode.quietFeedback(
+                requestJSON: requestJSON,
+                environment: Environment()
+            ) {
                 printText(feedback)
             }
         } else {
@@ -222,6 +233,18 @@ enum AlfredClopCommand {
                 )
             case .presetMigrationConfirmation, .presetMigration:
                 return PresetMigrationMenu.response(stateJSON: stateJSON)
+            case .configuration,
+                 .configurationSaveOutput,
+                 .configurationResetOutputConfirmation,
+                 .configurationResetOutput,
+                 .configurationResetPresetsConfirmation,
+                 .configurationResetPresets,
+                 .configurationCacheCleanupConfirmation,
+                 .configurationCacheCleanup:
+                return ConfigurationMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
             case .actions:
                 if state.parameterRequest != nil {
                     return errorResponse(

@@ -83,10 +83,19 @@ enum ClopRequestDispatcher {
                     subtitle: "Choose an action compatible with every supplied item."
                 )
             }
+            let execution: ExecutionOptions
+            do {
+                execution = try environment.resolvedExecutionOptions()
+            } catch {
+                return feedback(
+                    title: "Unable to read settings",
+                    subtitle: error.localizedDescription
+                )
+            }
             let operation = OperationRequest(
                 inputs: selection.inputs,
                 action: action,
-                execution: environment.executionOptions
+                execution: execution
             )
             guard let operationJSON = try? JSONOutput.string(
                 for: operation,
@@ -123,13 +132,12 @@ enum ClopRequestDispatcher {
             builder: builder,
             runner: runner
         )
-        if environment.checkbox("dnd") {
-            return nil
-        }
         guard let item = response.items.first else {
             return nil
         }
-        guard !isSuccessfulExecution(item.title) else {
+        let isSuccess = isSuccessfulExecution(item.title)
+        guard isSuccess ? environment.completionNotifications
+            : environment.errorNotifications else {
             return nil
         }
         return item.subtitle.isEmpty

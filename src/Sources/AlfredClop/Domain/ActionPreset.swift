@@ -92,3 +92,22 @@ struct PresetDocument: Codable, Equatable {
         self.presets = presets
     }
 }
+
+struct SettingsDocument: Codable, Equatable {
+    static let currentVersion = 1
+    static let builtInOutputTemplate = "%P/%f-clop"
+
+    var version: Int
+    var presets: [ActionPreset]
+    var outputTemplate: String
+
+    init(
+        version: Int = currentVersion,
+        presets: [ActionPreset] = [],
+        outputTemplate: String = builtInOutputTemplate
+    ) {
+        self.version = version
+        self.presets = presets
+        self.outputTemplate = outputTemplate
+    }
+}

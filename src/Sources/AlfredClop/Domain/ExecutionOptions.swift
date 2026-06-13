@@ -6,6 +6,7 @@ struct ExecutionOptions: Codable, Equatable {
     var adaptiveOptimisation: String?
     var pdfDPI: String?
     var recursiveFolders: Bool
+    var aggressiveProcessing: Bool?
 
     init(
         showClopUI: Bool,
@@ -14,7 +15,8 @@ struct ExecutionOptions: Codable, Equatable {
         backup: BackupBehavior,
         adaptiveOptimisation: String?,
         pdfDPI: String?,
-        recursiveFolders: Bool = false
+        recursiveFolders: Bool = false,
+        aggressiveProcessing: Bool? = nil
     ) {
         self.showClopUI = showClopUI
         self.copyResult = copyResult
@@ -23,5 +25,6 @@ struct ExecutionOptions: Codable, Equatable {
         self.adaptiveOptimisation = adaptiveOptimisation
         self.pdfDPI = pdfDPI
         self.recursiveFolders = recursiveFolders
+        self.aggressiveProcessing = aggressiveProcessing
     }
 }

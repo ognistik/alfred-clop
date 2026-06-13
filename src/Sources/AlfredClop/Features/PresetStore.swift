@@ -18,7 +18,8 @@ struct FoundationAtomicDataWriter: AtomicDataWriting {
 
 struct PresetStore {
     static let workflowDataEnvironmentKey = "alfred_workflow_data"
-    static let configuredPathEnvironmentKey = "presetsPath"
+    static let configuredPathEnvironmentKey = "settingsPath"
+    static let legacyConfiguredPathEnvironmentKey = "presetsPath"
 
     var fileURL: URL
     var fileManager: FileManager
@@ -45,38 +46,56 @@ struct PresetStore {
     }
 
     static func fileURL(environment: Environment) throws -> URL {
-        let configuredPath = environment[configuredPathEnvironmentKey]?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let directoryPath: String
-
-        if let configuredPath, !configuredPath.isEmpty {
-            directoryPath = configuredPath
-        } else if let workflowData = environment[workflowDataEnvironmentKey]?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-            !workflowData.isEmpty {
-            directoryPath = workflowData
-        } else {
-            throw PresetStoreError.missingWorkflowDataDirectory
-        }
-
-        let expandedPath = NSString(string: directoryPath).expandingTildeInPath
-        return URL(fileURLWithPath: expandedPath, isDirectory: true)
-            .appendingPathComponent("presets.json", isDirectory: false)
+        URL(
+            fileURLWithPath: try configuredDirectoryPath(environment: environment),
+            isDirectory: true
+        )
+            .appendingPathComponent("settings.json", isDirectory: false)
     }
 
-    func load() throws -> PresetDocument {
+    static func configuredDirectoryPath(environment: Environment) throws -> String {
+        let settingsPath = environment[configuredPathEnvironmentKey]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let settingsPath, !settingsPath.isEmpty {
+            return NSString(string: settingsPath).expandingTildeInPath
+        }
+        let legacyPath = environment[legacyConfiguredPathEnvironmentKey]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let legacyPath, !legacyPath.isEmpty {
+            return NSString(string: legacyPath).expandingTildeInPath
+        }
+        guard let workflowData = environment[workflowDataEnvironmentKey]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !workflowData.isEmpty else {
+            throw PresetStoreError.missingWorkflowDataDirectory
+        }
+        return NSString(string: workflowData).expandingTildeInPath
+    }
+
+    static func legacyFileURL(directoryPath: String) -> URL {
+        URL(
+            fileURLWithPath: NSString(string: directoryPath).expandingTildeInPath,
+            isDirectory: true
+        ).appendingPathComponent("presets.json", isDirectory: false)
+    }
+
+    func load() throws -> SettingsDocument {
         guard fileManager.fileExists(atPath: fileURL.path) else {
-            return PresetDocument()
+            return SettingsDocument()
         }
 
         do {
             let data = try Data(contentsOf: fileURL)
-            let document = try JSONDecoder().decode(PresetDocument.self, from: data)
-            guard document.version == PresetDocument.currentVersion else {
+            let document = try JSONDecoder().decode(SettingsDocument.self, from: data)
+            guard document.version == SettingsDocument.currentVersion else {
                 throw PresetStoreError.unsupportedVersion(document.version)
             }
-            return PresetDocument(
-                presets: uniquePresets(document.presets)
+            guard OutputTemplateValidator.validate(document.outputTemplate) == nil else {
+                throw PresetStoreError.invalidFile
+            }
+            return SettingsDocument(
+                presets: uniquePresets(document.presets),
+                outputTemplate: document.outputTemplate
             )
         } catch let error as PresetStoreError {
             throw error
@@ -108,7 +127,28 @@ struct PresetStore {
         return true
     }
 
-    private func persist(_ document: PresetDocument) throws {
+    func updateOutputTemplate(_ template: String) throws {
+        if let error = OutputTemplateValidator.validate(template) {
+            throw error
+        }
+        var document = try load()
+        document.outputTemplate = template
+        try persist(document)
+    }
+
+    @discardableResult
+    func removeAllPresets() throws -> Int {
+        var document = try load()
+        let count = document.presets.count
+        guard count > 0 else {
+            return 0
+        }
+        document.presets = []
+        try persist(document)
+        return count
+    }
+
+    func persist(_ document: SettingsDocument) throws {
         let directory = fileURL.deletingLastPathComponent()
         try fileManager.createDirectory(
             at: directory,

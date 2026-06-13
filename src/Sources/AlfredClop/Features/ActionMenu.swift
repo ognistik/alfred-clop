@@ -406,17 +406,9 @@ enum ActionMenu {
 
         let validActions = ActionCatalog.validActions(for: selection)
         let filteredActions = ActionMenuSearch.filter(validActions, query: query)
-        let migrationItem = presetMigrationItem(
-            status: PresetMigrationCoordinator(
-                environment: environment,
-                fileManager: fileManager,
-                writer: writer
-            ).status(),
-            selection: selection,
-            context: context
-        )
+        let configurationItem = configurationItem(query: query)
 
-        guard !filteredActions.isEmpty || migrationItem != nil else {
+        guard !filteredActions.isEmpty || configurationItem != nil else {
             return errorItem(
                 title: "No matching actions",
                 subtitle: "Try another search term."
@@ -424,7 +416,7 @@ enum ActionMenu {
         }
 
         return ScriptFilterResponse(
-            items: [migrationItem].compactMap(\.self) + filteredActions.map { definition in
+            items: filteredActions.map { definition in
                 let argument = encodedArgument(
                     for: definition,
                     inputs: selection.inputs,
@@ -447,9 +439,16 @@ enum ActionMenu {
                         for: definition,
                         selection: selection,
                         context: context
+                    ),
+                    mods: operationModifiers(
+                        for: definition,
+                        inputs: selection.inputs,
+                        context: context,
+                        environment: environment,
+                        fileManager: fileManager
                     )
                 )
-            },
+            } + [configurationItem].compactMap(\.self),
             variables: inputVariables(
                 for: selection,
                 context: context
@@ -457,10 +456,11 @@ enum ActionMenu {
         )
     }
 
-    private static func presetMigrationItem(
+    static func presetMigrationItem(
         status: PresetMigrationStatus,
         selection: InputSelection,
-        context: ActionInputContext
+        context: ActionInputContext,
+        requiresConfirmation: Bool = true
     ) -> ScriptFilterItem? {
         switch status {
         case .none:
@@ -473,7 +473,9 @@ enum ActionMenu {
                 mediaKinds: selection.mediaKinds,
                 inputContext: context
             )
-            let state = MenuState.presetMigrationConfirmation(request)
+            let state = requiresConfirmation
+                ? MenuState.presetMigrationConfirmation(request)
+                : MenuState.presetMigration(request)
             let stateJSON = (try? JSONOutput.string(
                 for: state,
                 prettyPrinted: false
@@ -545,18 +547,9 @@ enum ActionMenu {
         fileManager: FileManager,
         writer: any AtomicDataWriting
     ) -> ScriptFilterResponse {
-        let selection = InputSelection(inputs: [], mediaKinds: [])
-        let migrationItem = presetMigrationItem(
-            status: PresetMigrationCoordinator(
-                environment: environment,
-                fileManager: fileManager,
-                writer: writer
-            ).status(),
-            selection: selection,
-            context: context
-        )
         return ScriptFilterResponse(
-            items: [migrationItem].compactMap(\.self) + [
+            items: [
+                ConfigurationMenu.actionItem,
                 ScriptFilterItem(
                     title: title,
                     subtitle: subtitle,
@@ -615,7 +608,7 @@ enum ActionMenu {
             let action: ActionRequest
             switch definition.action {
             case .optimise:
-                action = .optimise(aggressive: false)
+                action = .optimise(aggressive: environment.aggressiveByDefault)
             case .uncropPDF:
                 action = .uncropPDF
             case .stripMetadata:
@@ -625,17 +618,123 @@ enum ActionMenu {
                 preconditionFailure("Parameter actions must use ParameterStepRequest")
             }
 
+            var execution = try environment.resolvedExecutionOptions()
+            if definition.action == .stripMetadata {
+                execution.output = .inPlace
+            }
             return try JSONOutput.string(
                 for: OperationRequest(
                     inputs: inputs,
                     action: action,
-                    execution: environment.executionOptions
+                    execution: execution
                 ),
                 prettyPrinted: false
             )
         } catch {
             return ""
         }
+    }
+
+    private static func configurationItem(query: String) -> ScriptFilterItem? {
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard normalized.isEmpty
+            || "configuration settings output template cache cleanup migration"
+                .contains(normalized) else {
+            return nil
+        }
+        return ConfigurationMenu.actionItem
+    }
+
+    private static func operationModifiers(
+        for definition: ActionDefinition,
+        inputs: [String],
+        context: ActionInputContext,
+        environment: Environment,
+        fileManager: FileManager
+    ) -> ScriptFilterMods? {
+        guard !definition.requiresParameters else {
+            return nil
+        }
+
+        let configuredAggressive = environment.aggressiveByDefault
+        let configuredPreserve = environment.preserveOriginal
+        let template = (try? PresetStore(
+            environment: environment,
+            fileManager: fileManager
+        ).load().outputTemplate) ?? SettingsDocument.builtInOutputTemplate
+
+        func modifier(
+            aggressive: Bool,
+            preserve: Bool,
+            subtitle: String
+        ) -> ScriptFilterModifier? {
+            let action: ActionRequest
+            switch definition.action {
+            case .optimise:
+                action = .optimise(aggressive: aggressive)
+            case .uncropPDF:
+                action = .uncropPDF
+            case .stripMetadata:
+                action = .stripMetadata
+            default:
+                return nil
+            }
+            guard let arg = try? JSONOutput.string(
+                for: OperationRequest(
+                    inputs: inputs,
+                    action: action,
+                    execution: environment.executionOptions(
+                        outputTemplate: template,
+                        preserveOriginal: preserve
+                    )
+                ),
+                prettyPrinted: false
+            ) else {
+                return nil
+            }
+            return ScriptFilterModifier(
+                arg: arg,
+                subtitle: "\(context.subtitlePrefix): \(subtitle)",
+                valid: true,
+                variables: [
+                    requestKindVariable: WorkflowRequestKind.operation.rawValue
+                ]
+            )
+        }
+
+        let preservationText = configuredPreserve
+            ? "replace originals for this run"
+            : "preserve originals for this run"
+        let invertedPreserve = !configuredPreserve
+        let shift = modifier(
+            aggressive: configuredAggressive,
+            preserve: invertedPreserve,
+            subtitle: preservationText
+        )
+
+        if definition.action == .stripMetadata {
+            return nil
+        }
+        guard definition.action == .optimise else {
+            return ScriptFilterMods(shift: shift)
+        }
+        let commandText = configuredAggressive
+            ? "use standard optimization"
+            : "use aggressive optimization"
+        return ScriptFilterMods(
+            command: modifier(
+                aggressive: !configuredAggressive,
+                preserve: configuredPreserve,
+                subtitle: commandText
+            ),
+            shift: shift,
+            commandShift: modifier(
+                aggressive: !configuredAggressive,
+                preserve: invertedPreserve,
+                subtitle: "\(commandText) and \(preservationText)"
+            )
+        )
     }
 
     private static func requestVariables(

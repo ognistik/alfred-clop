@@ -85,6 +85,9 @@ struct ScriptFilterMods: Codable, Equatable {
     var shift: ScriptFilterModifier?
     var function: ScriptFilterModifier?
     var commandOption: ScriptFilterModifier?
+    var commandShift: ScriptFilterModifier?
+    var optionShift: ScriptFilterModifier?
+    var commandOptionShift: ScriptFilterModifier?
 
     enum CodingKeys: String, CodingKey {
         case command = "cmd"
@@ -93,6 +96,9 @@ struct ScriptFilterMods: Codable, Equatable {
         case shift
         case function = "fn"
         case commandOption = "cmd+alt"
+        case commandShift = "cmd+shift"
+        case optionShift = "alt+shift"
+        case commandOptionShift = "cmd+alt+shift"
     }
 }
 

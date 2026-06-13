@@ -258,7 +258,7 @@
 route="$(./alfred-clop route --public-request "$request")"
 if [[ "$route" == "execute" ]]; then
   feedback="$(./alfred-clop request --public-request "$request" --quiet)"
-  if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+  if [[ -n "$feedback" ]]; then
     /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -489,7 +489,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
-if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+if [[ -n "$feedback" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -632,7 +632,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard)"
-if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+if [[ -n "$feedback" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -693,7 +693,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard --aggressive)"
-if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+if [[ -n "$feedback" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -754,7 +754,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}")"
-if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+if [[ -n "$feedback" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -815,7 +815,7 @@ fi</string>
 				<integer>102</integer>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --aggressive)"
-if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
+if [[ -n "$feedback" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 1 of argv) with title "Alfred Clop"
@@ -1011,13 +1011,13 @@ fi</string>
 				<false/>
 			</dict>
 			<key>description</key>
-			<string></string>
+			<string>Store portable settings.json in this folder.</string>
 			<key>label</key>
-			<string>Path for presets</string>
+			<string>Settings folder</string>
 			<key>type</key>
 			<string>filepicker</string>
 			<key>variable</key>
-			<string>presetsPath</string>
+			<string>settingsPath</string>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -1027,12 +1027,114 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string></string>
+				<string>Write processed files using the configured output template.</string>
 			</dict>
 			<key>description</key>
-			<string></string>
+			<string>Shift-Return inverts this for one run.</string>
 			<key>label</key>
-			<string>Ensure the result is copied</string>
+			<string>Preserve original files</string>
+			<key>type</key>
+			<string>checkbox</string>
+			<key>variable</key>
+			<string>preserveOriginal</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>standard</string>
+				<key>pairs</key>
+				<array>
+					<array>
+						<string>Standard</string>
+						<string>standard</string>
+					</array>
+					<array>
+						<string>Aggressive</string>
+						<string>aggressive</string>
+					</array>
+				</array>
+			</dict>
+			<key>description</key>
+			<string>Command-Return inverts this for one run.</string>
+			<key>label</key>
+			<string>Default optimization</string>
+			<key>type</key>
+			<string>popupbutton</string>
+			<key>variable</key>
+			<string>defaultOptimisation</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<true/>
+				<key>required</key>
+				<false/>
+				<key>text</key>
+				<string>Show Clop's floating result interface.</string>
+			</dict>
+			<key>description</key>
+			<string>Independent from clipboard copying and notifications.</string>
+			<key>label</key>
+			<string>Show Clop UI</string>
+			<key>type</key>
+			<string>checkbox</string>
+			<key>variable</key>
+			<string>showClopUI</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>required</key>
+				<false/>
+				<key>text</key>
+				<string>Notify after successful processing.</string>
+			</dict>
+			<key>description</key>
+			<string>Clop UI and completion notifications are independent.</string>
+			<key>label</key>
+			<string>Completion notifications</string>
+			<key>type</key>
+			<string>checkbox</string>
+			<key>variable</key>
+			<string>completionNotifications</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<true/>
+				<key>required</key>
+				<false/>
+				<key>text</key>
+				<string>Notify when an operation fails or is incomplete.</string>
+			</dict>
+			<key>description</key>
+			<string>Interactive Alfred errors remain visible.</string>
+			<key>label</key>
+			<string>Error notifications</string>
+			<key>type</key>
+			<string>checkbox</string>
+			<key>variable</key>
+			<string>errorNotifications</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>required</key>
+				<false/>
+				<key>text</key>
+				<string>Pass Clop's explicit --copy option.</string>
+			</dict>
+			<key>description</key>
+			<string>Independent from showing Clop's UI.</string>
+			<key>label</key>
+			<string>Ensure result is copied</string>
 			<key>type</key>
 			<string>checkbox</string>
 			<key>variable</key>
@@ -1046,12 +1148,12 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Process Files in subfolders.</string>
+				<string>Process supported files in subfolders.</string>
 			</dict>
 			<key>description</key>
-			<string></string>
+			<string>Controls both menu inspection and Clop execution.</string>
 			<key>label</key>
-			<string>Process folders recursively</string>
+			<string>Recurse into folders</string>
 			<key>type</key>
 			<string>checkbox</string>
 			<key>variable</key>
@@ -1060,21 +1162,27 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>default</key>
+				<key>defaultvalue</key>
+				<integer>7</integer>
+				<key>markercount</key>
+				<integer>5</integer>
+				<key>maxvalue</key>
+				<integer>15</integer>
+				<key>minvalue</key>
+				<integer>1</integer>
+				<key>onlystoponmarkers</key>
 				<false/>
-				<key>required</key>
-				<false/>
-				<key>text</key>
-				<string>Do not Disturb</string>
+				<key>showmarkers</key>
+				<true/>
 			</dict>
 			<key>description</key>
-			<string>no error notifications</string>
+			<string>Applies only to workflow-owned raw clipboard images.</string>
 			<key>label</key>
-			<string>No notifications</string>
+			<string>Clipboard image retention</string>
 			<key>type</key>
-			<string>checkbox</string>
+			<string>slider</string>
 			<key>variable</key>
-			<string>dnd</string>
+			<string>cacheRetention</string>
 		</dict>
 	</array>
 	<key>version</key>

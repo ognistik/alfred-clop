@@ -200,6 +200,14 @@ enum MenuMode: String, Codable, Equatable {
     case cropPresetRemoval
     case presetMigrationConfirmation
     case presetMigration
+    case configuration
+    case configurationSaveOutput
+    case configurationResetOutputConfirmation
+    case configurationResetOutput
+    case configurationResetPresetsConfirmation
+    case configurationResetPresets
+    case configurationCacheCleanupConfirmation
+    case configurationCacheCleanup
 }
 
 enum PresetMenuActionKind: String, Codable, Equatable {
@@ -233,17 +241,20 @@ struct MenuState: Codable, Equatable {
     var parameterRequest: ParameterStepRequest?
     var presetAction: PresetMenuAction?
     var presetMigration: PresetMigrationRequest?
+    var configurationValue: String?
 
     init(
         mode: MenuMode,
         parameterRequest: ParameterStepRequest? = nil,
         presetAction: PresetMenuAction? = nil,
-        presetMigration: PresetMigrationRequest? = nil
+        presetMigration: PresetMigrationRequest? = nil,
+        configurationValue: String? = nil
     ) {
         self.mode = mode
         self.parameterRequest = parameterRequest
         self.presetAction = presetAction
         self.presetMigration = presetMigration
+        self.configurationValue = configurationValue
     }
 
     static let actions = MenuState(
@@ -284,5 +295,12 @@ struct MenuState: Codable, Equatable {
             mode: .presetMigration,
             presetMigration: request
         )
+    }
+
+    static func configuration(
+        mode: MenuMode = .configuration,
+        value: String? = nil
+    ) -> MenuState {
+        MenuState(mode: mode, configurationValue: value)
     }
 }

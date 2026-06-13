@@ -28,7 +28,11 @@ enum PresetMigrationMenu {
                 fileManager: fileManager,
                 writer: writer
             )
-        case .actions, .crop, .cropPresetRemoval:
+        case .actions, .crop, .cropPresetRemoval,
+             .configuration, .configurationSaveOutput,
+             .configurationResetOutputConfirmation, .configurationResetOutput,
+             .configurationResetPresetsConfirmation, .configurationResetPresets,
+             .configurationCacheCleanupConfirmation, .configurationCacheCleanup:
             return error(
                 title: "Unable to move existing settings",
                 subtitle: "The settings migration state is invalid."

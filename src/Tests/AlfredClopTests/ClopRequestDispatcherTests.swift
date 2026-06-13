@@ -346,7 +346,8 @@ struct ClopRequestDispatcherTests {
             "Downscale",
             "Convert Image",
             "Convert Video",
-            "Convert Audio"
+            "Convert Audio",
+            "Configuration"
         ])
         #expect(response.items[1].subtitle.contains("Image, video, or PDF only"))
     }

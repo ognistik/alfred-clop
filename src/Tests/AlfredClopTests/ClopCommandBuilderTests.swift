@@ -19,6 +19,7 @@ struct ClopCommandBuilderTests {
             "optimise",
             "--json",
             "--no-progress",
+            "--skip-errors",
             "--gui",
             "/tmp/first image.png",
             "/tmp/second.png"
@@ -47,6 +48,7 @@ struct ClopCommandBuilderTests {
             "optimise",
             "--json",
             "--no-progress",
+            "--skip-errors",
             "--gui",
             "--copy",
             "--aggressive",
@@ -109,6 +111,7 @@ struct ClopCommandBuilderTests {
             "1200x630",
             "--json",
             "--no-progress",
+            "--skip-errors",
             "--gui",
             "/tmp/first image.png",
             "/tmp/second.pdf"
@@ -138,6 +141,7 @@ struct ClopCommandBuilderTests {
             "1920",
             "--json",
             "--no-progress",
+            "--skip-errors",
             "--long-edge",
             "--smart-crop",
             "--gui",

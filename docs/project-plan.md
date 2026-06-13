@@ -1004,7 +1004,7 @@ Execution steps:
 
 1. Resolve and validate the Clop CLI.
 2. Optionally launch Clop if it is not running.
-3. Perform workflow-managed backups if requested.
+3. Validate and preflight any configured output template.
 4. Build a typed command.
 5. Run synchronously unless fire-and-forget was explicitly chosen.
 6. Decode JSON or parse command text.
@@ -1249,8 +1249,6 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Minimum macOS version.
 - Whether the released binary is universal or Apple Silicon only.
 - Whether Clop should be launched automatically when needed.
-- Exact `presets.json` to `settings.json` migration mechanics and compatibility
-  lifetime for `presetsPath`.
 - Whether headless automation should optionally return structured result JSON
   to callers in addition to quiet execution.
 - Which complete-coverage features ship in the first public release versus

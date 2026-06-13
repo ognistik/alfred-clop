@@ -82,7 +82,8 @@ struct ActionMenuTests {
             "Convert Audio",
             "Crop PDF (Reversible)",
             "Uncrop PDF",
-            "Strip Metadata"
+            "Strip Metadata",
+            "Configuration"
         ])
         #expect(response.items[1].subtitle.contains("Image, video, or PDF only"))
     }
@@ -233,9 +234,11 @@ struct ActionMenuTests {
             query: ""
         )
 
-        #expect(response.items.count == 1)
-        #expect(response.items[0].title == "No supported files in clipboard")
-        #expect(response.items[0].valid == false)
+        #expect(response.items.map(\.title) == [
+            "Configuration",
+            "No supported files in clipboard"
+        ])
+        #expect(response.items[1].valid == false)
     }
 
     @Test
@@ -267,7 +270,8 @@ struct ActionMenuTests {
             "Downscale",
             "Convert Image",
             "Convert Video",
-            "Convert Audio"
+            "Convert Audio",
+            "Configuration"
         ])
     }
 

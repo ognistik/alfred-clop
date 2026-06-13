@@ -72,6 +72,12 @@ enum ExecuteMode {
                 subtitle: "Use Clop's existing backup behavior for now.",
                 valid: false
             )
+        } catch ClopCommandBuilderError.invalidOutputTemplate(let error) {
+            return feedback(
+                title: "Unsafe output template",
+                subtitle: error.localizedDescription,
+                valid: false
+            )
         } catch {
             return feedback(
                 title: "Unable to prepare Clop",
@@ -126,6 +132,7 @@ enum ExecuteMode {
 
     static func quietFeedback(
         requestJSON: String,
+        environment: Environment = Environment(),
         builder: ClopCommandBuilder = ClopCommandBuilder(),
         runner: any ClopProcessRunning = FoundationClopProcessRunner()
     ) -> String? {
@@ -134,8 +141,12 @@ enum ExecuteMode {
             builder: builder,
             runner: runner
         )
-        guard let item = result.items.first,
-              !successTitles.contains(item.title) else {
+        guard let item = result.items.first else {
+            return nil
+        }
+        let isSuccess = successTitles.contains(item.title)
+        guard isSuccess ? environment.completionNotifications
+            : environment.errorNotifications else {
             return nil
         }
 

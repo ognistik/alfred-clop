@@ -191,7 +191,8 @@ enum CropParameterMenu {
                         request: request,
                         stateJSON: try encodedState(.crop(request)),
                         query: presetDisplayValue(action.preset),
-                        store: store
+                        store: store,
+                        environment: environment
                     )
                 } catch {
                     return storageErrorResponse(
@@ -207,7 +208,8 @@ enum CropParameterMenu {
                         request: request,
                         stateJSON: try encodedState(.crop(request)),
                         query: "",
-                        store: store
+                        store: store,
+                        environment: environment
                     )
                 } catch {
                     return storageErrorResponse(
@@ -223,7 +225,8 @@ enum CropParameterMenu {
             request: request,
             stateJSON: stateJSON,
             query: query,
-            store: store
+            store: store,
+            environment: environment
         )
     }
 
@@ -231,7 +234,8 @@ enum CropParameterMenu {
         request: ParameterStepRequest,
         stateJSON: String,
         query: String,
-        store: PresetStore
+        store: PresetStore,
+        environment: Environment
     ) -> ScriptFilterResponse {
         let presets: [CropActionPreset]
         do {
@@ -255,7 +259,7 @@ enum CropParameterMenu {
         guard !trimmedQuery.isEmpty else {
             return ScriptFilterResponse(
                 items: [instructionItem] + presets.compactMap {
-                    presetItem(for: $0, request: request)
+                    presetItem(for: $0, request: request, environment: environment)
                 },
                 variables: preservedVariables(
                     for: request,
@@ -276,7 +280,8 @@ enum CropParameterMenu {
                 if let item = interpretedItem(
                     for: size,
                     request: request,
-                    savedPreset: exactPreset
+                    savedPreset: exactPreset,
+                    environment: environment
                 ) {
                     items.append(item)
                 }
@@ -284,7 +289,8 @@ enum CropParameterMenu {
                 if let item = interpretedItem(
                     for: size,
                     request: request,
-                    savedPreset: nil
+                    savedPreset: nil,
+                    environment: environment
                 ) {
                     items.append(item)
                 }
@@ -300,7 +306,7 @@ enum CropParameterMenu {
 
         if items.isEmpty {
             items.append(contentsOf: matchingPresets.compactMap {
-                presetItem(for: $0, request: request)
+                presetItem(for: $0, request: request, environment: environment)
             })
         }
 
@@ -330,10 +336,15 @@ enum CropParameterMenu {
     private static func interpretedItem(
         for size: CropSize,
         request: ParameterStepRequest,
-        savedPreset: CropActionPreset?
+        savedPreset: CropActionPreset?,
+        environment: Environment
     ) -> ScriptFilterItem? {
         let preset = CropActionPreset(size: size)
-        guard let argument = operationArgument(for: preset, request: request) else {
+        guard let argument = operationArgument(
+            for: preset,
+            request: request,
+            environment: environment
+        ) else {
             return nil
         }
 
@@ -372,7 +383,10 @@ enum CropParameterMenu {
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
             ],
-            mods: ScriptFilterMods(
+            mods: operationModifiers(
+                for: preset,
+                request: request,
+                environment: environment,
                 control: presetModifier(
                     kind: savedPreset == nil ? .save : .confirmRemoval,
                     preset: preset,
@@ -384,9 +398,14 @@ enum CropParameterMenu {
 
     private static func presetItem(
         for preset: CropActionPreset,
-        request: ParameterStepRequest
+        request: ParameterStepRequest,
+        environment: Environment
     ) -> ScriptFilterItem? {
-        guard let argument = operationArgument(for: preset, request: request) else {
+        guard let argument = operationArgument(
+            for: preset,
+            request: request,
+            environment: environment
+        ) else {
             return nil
         }
 
@@ -402,7 +421,10 @@ enum CropParameterMenu {
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
             ],
-            mods: ScriptFilterMods(
+            mods: operationModifiers(
+                for: preset,
+                request: request,
+                environment: environment,
                 control: presetModifier(
                     kind: .confirmRemoval,
                     preset: preset,
@@ -448,19 +470,137 @@ enum CropParameterMenu {
 
     private static func operationArgument(
         for preset: CropActionPreset,
-        request: ParameterStepRequest
+        request: ParameterStepRequest,
+        environment: Environment,
+        aggressive: Bool? = nil,
+        preserveOriginal: Bool? = nil,
+        smartCrop: Bool = false
     ) -> String? {
-        try? JSONOutput.string(
+        let template = (try? PresetStore(environment: environment).load().outputTemplate)
+            ?? SettingsDocument.builtInOutputTemplate
+        var execution = environment.executionOptions(
+            outputTemplate: template,
+            preserveOriginal: preserveOriginal
+        )
+        execution.aggressiveProcessing = aggressive ?? environment.aggressiveByDefault
+        return try? JSONOutput.string(
             for: OperationRequest(
                 inputs: request.inputs,
                 action: .crop(
                     size: preset.size,
-                    smartCrop: false,
+                    smartCrop: smartCrop,
                     longEdge: preset.longEdge
                 ),
-                execution: defaultExecutionOptions
+                execution: execution
             ),
             prettyPrinted: false
+        )
+    }
+
+    private static func operationModifiers(
+        for preset: CropActionPreset,
+        request: ParameterStepRequest,
+        environment: Environment,
+        control: ScriptFilterModifier
+    ) -> ScriptFilterMods {
+        let aggressive = environment.aggressiveByDefault
+        let preserve = environment.preserveOriginal
+        let commandText = aggressive
+            ? "use standard optimization"
+            : "use aggressive optimization"
+        let preserveText = preserve
+            ? "replace originals for this run"
+            : "preserve originals for this run"
+        let supportsSmartCrop: Bool
+        switch preset.cropSize.kind {
+        case .exactDimensions, .aspectRatio:
+            supportsSmartCrop = true
+        case .longEdge, .fixedWidth, .fixedHeight:
+            supportsSmartCrop = false
+        }
+
+        func modifier(
+            aggressive: Bool,
+            preserve: Bool,
+            smartCrop: Bool,
+            subtitle: String
+        ) -> ScriptFilterModifier? {
+            guard let arg = operationArgument(
+                for: preset,
+                request: request,
+                environment: environment,
+                aggressive: aggressive,
+                preserveOriginal: preserve,
+                smartCrop: smartCrop
+            ) else {
+                return nil
+            }
+            var operation = try? JSONDecoder().decode(
+                OperationRequest.self,
+                from: Data(arg.utf8)
+            )
+            operation?.execution.aggressiveProcessing = aggressive
+            let resolvedArg = operation.flatMap {
+                try? JSONOutput.string(for: $0, prettyPrinted: false)
+            } ?? arg
+            return ScriptFilterModifier(
+                arg: resolvedArg,
+                subtitle: "\(request.inputContext.subtitlePrefix): \(subtitle)",
+                valid: true,
+                variables: [
+                    ActionMenu.requestKindVariable:
+                        WorkflowRequestKind.operation.rawValue
+                ]
+            )
+        }
+
+        let command = modifier(
+            aggressive: !aggressive,
+            preserve: preserve,
+            smartCrop: false,
+            subtitle: commandText
+        )
+        let shift = modifier(
+            aggressive: aggressive,
+            preserve: !preserve,
+            smartCrop: false,
+            subtitle: preserveText
+        )
+        let option = supportsSmartCrop ? modifier(
+            aggressive: aggressive,
+            preserve: preserve,
+            smartCrop: true,
+            subtitle: "enable Smart Crop"
+        ) : nil
+        return ScriptFilterMods(
+            command: command,
+            option: option,
+            control: control,
+            shift: shift,
+            commandOption: supportsSmartCrop ? modifier(
+                aggressive: !aggressive,
+                preserve: preserve,
+                smartCrop: true,
+                subtitle: "\(commandText) and enable Smart Crop"
+            ) : nil,
+            commandShift: modifier(
+                aggressive: !aggressive,
+                preserve: !preserve,
+                smartCrop: false,
+                subtitle: "\(commandText) and \(preserveText)"
+            ),
+            optionShift: supportsSmartCrop ? modifier(
+                aggressive: aggressive,
+                preserve: !preserve,
+                smartCrop: true,
+                subtitle: "enable Smart Crop and \(preserveText)"
+            ) : nil,
+            commandOptionShift: supportsSmartCrop ? modifier(
+                aggressive: !aggressive,
+                preserve: !preserve,
+                smartCrop: true,
+                subtitle: "\(commandText), enable Smart Crop, and \(preserveText)"
+            ) : nil
         )
     }
 
@@ -658,16 +798,12 @@ enum CropParameterMenu {
         case PresetStoreError.missingWorkflowDataDirectory:
             return "Alfred did not provide a workflow data directory."
         case PresetStoreError.unsupportedVersion:
-            return "presets.json uses an unsupported schema version."
+            return "settings.json uses an unsupported schema version."
         case PresetStoreError.invalidFile:
-            return "presets.json is malformed or contains unsupported presets."
+            return "settings.json is malformed or contains unsupported data."
         default:
             return error.localizedDescription
         }
-    }
-
-    private static var defaultExecutionOptions: ExecutionOptions {
-        Environment().executionOptions
     }
 
     private static func error(
