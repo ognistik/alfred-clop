@@ -13,6 +13,8 @@ enum AlfredClopCommand {
             request(arguments: Array(arguments.dropFirst()))
         case "route":
             requestRoute(arguments: Array(arguments.dropFirst()))
+        case "handoff":
+            requestHandoff(arguments: Array(arguments.dropFirst()))
         case "automate":
             automate(arguments: Array(arguments.dropFirst()))
         case nil:
@@ -83,6 +85,39 @@ enum AlfredClopCommand {
         case .execute:
             printText("execute")
         }
+    }
+
+    private static func requestHandoff(arguments: [String]) {
+        guard let requestJSON = value(after: "--request-json", in: arguments),
+              let json = menuHandoffJSON(requestJSON: requestJSON) else {
+            printText("Invalid menu handoff.")
+            return
+        }
+        printText(json)
+    }
+
+    static func menuHandoffJSON(requestJSON: String) -> String? {
+        guard let request = try? JSONDecoder().decode(
+            ClopRequest.self,
+            from: Data(requestJSON.utf8)
+        ), case .menu = request.route else {
+            return nil
+        }
+        let output: [String: Any] = [
+            "alfredworkflow": [
+                "arg": "",
+                "variables": [
+                    ActionMenu.publicRequestVariable: requestJSON,
+                    "alfred_clop_public_route": "menu"
+                ]
+            ]
+        ]
+        guard JSONSerialization.isValidJSONObject(output),
+              let data = try? JSONSerialization.data(withJSONObject: output),
+              let json = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return json
     }
 
     private static func automate(arguments: [String]) {

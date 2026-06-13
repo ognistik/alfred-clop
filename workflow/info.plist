@@ -45,6 +45,19 @@
 				<false/>
 			</dict>
 		</array>
+		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 		<key>22222222-2222-4222-8222-222222222222</key>
 		<array>
 			<dict>
@@ -173,6 +186,21 @@
 				<false/>
 			</dict>
 		</array>
+		<key>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>ABABABAB-ABAB-4BAB-8BAB-ABABABABABAB</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 	</dict>
 	<key>createdby</key>
 	<string></string>
@@ -184,6 +212,25 @@
 	<string>Clop</string>
 	<key>objects</key>
 	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>externaltriggerid</key>
+				<string>mainMenu</string>
+				<key>passinputasargument</key>
+				<false/>
+				<key>passvariables</key>
+				<true/>
+				<key>workflowbundleid</key>
+				<string>com.aft.clop</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.callexternaltrigger</string>
+			<key>uid</key>
+			<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
 		<dict>
 			<key>config</key>
 			<dict>
@@ -218,14 +265,8 @@ on run argv
 end run
 APPLESCRIPT
   fi
-else
-  /usr/bin/osascript - "$request" &lt;&lt;'APPLESCRIPT'
-on run argv
-  tell application id "com.runningwithcrayons.Alfred"
-    run trigger "mainMenu" in workflow "com.aft.clop" with argument (item 1 of argv)
-  end tell
-end run
-APPLESCRIPT
+elif [[ "$route" == "menu" ]]; then
+  ./alfred-clop handoff --request-json "$request"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -244,87 +285,57 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>externaltriggerid</key>
-				<string>mainMenu</string>
-				<key>passinputasargument</key>
+				<key>conditions</key>
+				<array>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_public_route}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>menu</string>
+						<key>outputlabel</key>
+						<string>Open menu</string>
+						<key>uid</key>
+						<string>ABABABAB-ABAB-4BAB-8BAB-ABABABABABAB</string>
+					</dict>
+				</array>
+				<key>elselabel</key>
+				<string>Stop</string>
+				<key>hideelse</key>
 				<false/>
-				<key>passvariables</key>
-				<true/>
-				<key>workflowbundleid</key>
-				<string>com.aft.clop</string>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.output.callexternaltrigger</string>
+			<string>alfred.workflow.utility.conditional</string>
 			<key>uid</key>
-			<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
+			<string>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>alfredfiltersresults</key>
+				<key>concurrently</key>
 				<false/>
-				<key>alfredfiltersresultsmatchmode</key>
-				<integer>0</integer>
-				<key>argumenttreatemptyqueryasnil</key>
-				<true/>
-				<key>argumenttrimmode</key>
-				<integer>0</integer>
-				<key>argumenttype</key>
-				<integer>1</integer>
 				<key>escaping</key>
-				<integer>102</integer>
-				<key>keyword</key>
-				<string>clop</string>
-				<key>queuedelaycustom</key>
-				<integer>3</integer>
-				<key>queuedelayimmediatelyinitially</key>
-				<true/>
-				<key>queuedelaymode</key>
-				<integer>0</integer>
-				<key>queuemode</key>
-				<integer>1</integer>
-				<key>runningsubtext</key>
-				<string>Reading files...</string>
+				<integer>68</integer>
 				<key>script</key>
-				<string>if [[ "${1:-}" == \{* ]]; then
-  ./alfred-clop request --request-json "${1:-}" --input-context "arguments"
-elif [[ -n "${alfred_clop_menu_state:-}" ]]; then
-  ./alfred-clop menu --menu-state "$alfred_clop_menu_state" --input-json "${alfred_clop_input_json:-}" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
-elif [[ -n "${alfred_clop_input_json:-}" ]]; then
-  ./alfred-clop menu --input-json "$alfred_clop_input_json" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
-elif [[ -n "${alfred_clop_explicit_input:-}" ]]; then
-  ./alfred-clop menu --explicit-input "$alfred_clop_explicit_input" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
-else
-  ./alfred-clop menu --input-source clipboard --query "${1:-}"
-fi</string>
+				<string>tell application id "com.runningwithcrayons.Alfred" to reveal workflow (system attribute "alfred_workflow_bundleid") with configuration</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
-				<key>skipuniversalaction</key>
-				<true/>
-				<key>subtext</key>
-				<string>Choose an action for copied files</string>
-				<key>title</key>
-				<string>Clop</string>
 				<key>type</key>
-				<integer>11</integer>
-				<key>withspace</key>
-				<true/>
-			</dict>
-			<key>inboundconfig</key>
-			<dict>
-				<key>externalid</key>
-				<string>mainMenu</string>
+				<integer>6</integer>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.input.scriptfilter</string>
+			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
-			<string>086222E0-0634-41BB-8795-059C6B8AF42C</string>
+			<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
 			<key>version</key>
-			<integer>3</integer>
+			<integer>2</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -360,25 +371,68 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>concurrently</key>
+				<key>alfredfiltersresults</key>
 				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<true/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
 				<key>escaping</key>
-				<integer>68</integer>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>clop</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Reading files...</string>
 				<key>script</key>
-				<string>tell application id "com.runningwithcrayons.Alfred" to reveal workflow (system attribute "alfred_workflow_bundleid") with configuration</string>
+				<string>if [[ -n "${alfred_clop_request:-}" ]]; then
+  ./alfred-clop request --request-json "$alfred_clop_request" --input-context "arguments" --query "${1:-}"
+elif [[ -n "${alfred_clop_menu_state:-}" ]]; then
+  ./alfred-clop menu --menu-state "$alfred_clop_menu_state" --input-json "${alfred_clop_input_json:-}" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
+elif [[ -n "${alfred_clop_input_json:-}" ]]; then
+  ./alfred-clop menu --input-json "$alfred_clop_input_json" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
+elif [[ -n "${alfred_clop_explicit_input:-}" ]]; then
+  ./alfred-clop menu --explicit-input "$alfred_clop_explicit_input" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
+else
+  ./alfred-clop menu --input-source clipboard --query "${1:-}"
+fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
 				<string></string>
+				<key>skipuniversalaction</key>
+				<true/>
+				<key>subtext</key>
+				<string>Choose an action for copied files</string>
+				<key>title</key>
+				<string>Clop</string>
 				<key>type</key>
-				<integer>6</integer>
+				<integer>11</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>inboundconfig</key>
+			<dict>
+				<key>externalid</key>
+				<string>mainMenu</string>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.action.script</string>
+			<string>alfred.workflow.input.scriptfilter</string>
 			<key>uid</key>
-			<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
+			<string>086222E0-0634-41BB-8795-059C6B8AF42C</string>
 			<key>version</key>
-			<integer>2</integer>
+			<integer>3</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -541,6 +595,37 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>action</key>
+				<integer>0</integer>
+				<key>argument</key>
+				<integer>0</integer>
+				<key>focusedappvariable</key>
+				<false/>
+				<key>focusedappvariablename</key>
+				<string></string>
+				<key>hotkey</key>
+				<integer>0</integer>
+				<key>hotmod</key>
+				<integer>0</integer>
+				<key>hotstring</key>
+				<string></string>
+				<key>leftcursor</key>
+				<false/>
+				<key>modsmode</key>
+				<integer>0</integer>
+				<key>relatedAppsMode</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.trigger.hotkey</string>
+			<key>uid</key>
+			<string>33333333-3333-4333-8333-333333333333</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>concurrently</key>
 				<false/>
 				<key>escaping</key>
@@ -595,7 +680,7 @@ fi</string>
 			<key>type</key>
 			<string>alfred.workflow.trigger.hotkey</string>
 			<key>uid</key>
-			<string>33333333-3333-4333-8333-333333333333</string>
+			<string>44444444-4444-4444-8444-444444444444</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -635,7 +720,7 @@ fi</string>
 				<key>action</key>
 				<integer>0</integer>
 				<key>argument</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>focusedappvariable</key>
 				<false/>
 				<key>focusedappvariablename</key>
@@ -656,7 +741,7 @@ fi</string>
 			<key>type</key>
 			<string>alfred.workflow.trigger.hotkey</string>
 			<key>uid</key>
-			<string>44444444-4444-4444-8444-444444444444</string>
+			<string>55555555-5555-4555-8555-555555555555</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -687,37 +772,6 @@ fi</string>
 			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
 			<string>99999999-9999-4999-8999-999999999999</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>action</key>
-				<integer>0</integer>
-				<key>argument</key>
-				<integer>1</integer>
-				<key>focusedappvariable</key>
-				<false/>
-				<key>focusedappvariablename</key>
-				<string></string>
-				<key>hotkey</key>
-				<integer>0</integer>
-				<key>hotmod</key>
-				<integer>0</integer>
-				<key>hotstring</key>
-				<string></string>
-				<key>leftcursor</key>
-				<false/>
-				<key>modsmode</key>
-				<integer>0</integer>
-				<key>relatedAppsMode</key>
-				<integer>0</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.trigger.hotkey</string>
-			<key>uid</key>
-			<string>55555555-5555-4555-8555-555555555555</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -909,7 +963,7 @@ fi</string>
 			<key>xpos</key>
 			<real>1095</real>
 			<key>ypos</key>
-			<real>250</real>
+			<real>235</real>
 		</dict>
 		<key>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</key>
 		<dict>
@@ -918,21 +972,28 @@ fi</string>
 			<key>xpos</key>
 			<real>1270</real>
 			<key>ypos</key>
-			<real>220</real>
+			<real>205</real>
 		</dict>
 		<key>C81E575B-0A6B-45AE-B968-6A2313FB84A7</key>
 		<dict>
 			<key>xpos</key>
 			<real>910</real>
 			<key>ypos</key>
-			<real>225</real>
+			<real>210</real>
+		</dict>
+		<key>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</key>
+		<dict>
+			<key>xpos</key>
+			<real>715</real>
+			<key>ypos</key>
+			<real>100</real>
 		</dict>
 		<key>D922B7A2-2433-441D-B70D-4556591E487D</key>
 		<dict>
 			<key>xpos</key>
-			<real>1120</real>
+			<real>1095</real>
 			<key>ypos</key>
-			<real>90</real>
+			<real>65</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>

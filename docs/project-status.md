@@ -100,6 +100,8 @@ clear stale public-request state, and quiet errors honor the `dnd` setting.
   compatibility versions
 - Public menu requests enter the internal `mainMenu` route, while execute
   requests bypass the Script Filter and run headlessly
+- Public menu requests pass typed JSON through a workflow variable and open
+  `mainMenu` with an empty query, keeping request data out of Alfred's bar
 - Internal `mainMenu` trigger remains reserved for Script Filter navigation
 - Shared normalized input state stored in `alfred_clop_input_json`
 - Immediate actions handed to a quiet Run Script execution action

@@ -18,12 +18,13 @@ struct WorkflowRoutingTests {
         #expect(dispatcher["type"] as? String == "alfred.workflow.action.script")
         #expect(script.contains("alfred-clop route"))
         #expect(script.contains("alfred-clop request --request-json \"$request\" --quiet"))
-        #expect(script.contains("run trigger \"mainMenu\""))
-        #expect(connections["1D00E9FC-D864-41B6-B316-BDAEF753DCE4"] == nil)
+        #expect(script.contains("alfred-clop handoff --request-json \"$request\""))
+        #expect(!script.contains("run trigger \"mainMenu\""))
+        #expect(connections["1D00E9FC-D864-41B6-B316-BDAEF753DCE4"] != nil)
     }
 
     @Test
-    func internalMenuAcceptsFreshRequestArgumentsBeforeCachedVariables() throws {
+    func internalMenuReadsFreshRequestFromVariableAndKeepsQuerySeparate() throws {
         let plist = try workflowPlist()
         let objects = try #require(plist["objects"] as? [[String: Any]])
         let scriptFilter = try #require(objects.first {
@@ -32,9 +33,10 @@ struct WorkflowRoutingTests {
         let config = try #require(scriptFilter["config"] as? [String: Any])
         let script = try #require(config["script"] as? String)
 
-        #expect(script.hasPrefix("if [[ \"${1:-}\" == \\{* ]]"))
+        #expect(script.hasPrefix("if [[ -n \"${alfred_clop_request:-}\" ]]"))
+        #expect(script.contains("--request-json \"$alfred_clop_request\""))
+        #expect(script.contains("--query \"${1:-}\""))
         #expect(script.contains("elif [[ -n \"${alfred_clop_menu_state:-}\" ]]"))
-        #expect(!script.contains("alfred_clop_request:-"))
     }
 
     @Test
