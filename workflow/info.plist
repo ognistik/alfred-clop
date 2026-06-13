@@ -488,7 +488,11 @@ fi</string>
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
+				<string>if [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
+  feedback="$(./alfred-clop configure --menu-state "${1:-}")"
+else
+  feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
+fi
 if [[ -n "$feedback" ]]; then
   /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
@@ -1087,14 +1091,14 @@ fi</string>
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<false/>
+				<true/>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Notify after successful processing.</string>
+				<string>Notify after successful background processing and Configuration updates.</string>
 			</dict>
 			<key>description</key>
-			<string>Clop UI and completion notifications are independent.</string>
+			<string>Successful processing stays quiet when Clop's result UI is shown.</string>
 			<key>label</key>
 			<string>Completion notifications</string>
 			<key>type</key>

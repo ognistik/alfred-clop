@@ -398,7 +398,9 @@ struct ActionMenuTests {
 
         #expect(response.items[1].subtitle == "Passed input · Image, video, or PDF only")
         #expect(response.items[3].subtitle == "Passed input · Images only")
-        #expect(response.items.allSatisfy { $0.subtitle.count < 60 })
+        #expect(response.items
+            .filter { $0.uid != "action.configuration" }
+            .allSatisfy { $0.subtitle.count < 60 })
     }
 
     @Test

@@ -18,6 +18,7 @@ enum ActionInputContext: String, Codable {
 enum WorkflowRequestKind: String, Codable {
     case operation
     case parameterStep
+    case configurationMutation
     case workflowSettings
 }
 

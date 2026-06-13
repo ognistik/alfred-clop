@@ -9,6 +9,8 @@ enum AlfredClopCommand {
             JSONOutput.print(menuResponse(arguments: Array(arguments.dropFirst())))
         case "execute":
             execute(arguments: Array(arguments.dropFirst()))
+        case "configure":
+            configure(arguments: Array(arguments.dropFirst()))
         case "request":
             request(arguments: Array(arguments.dropFirst()))
         case "route":
@@ -77,6 +79,7 @@ enum AlfredClopCommand {
                 let environment = Environment()
                 let shouldNotify = successful
                     ? environment.completionNotifications
+                        && !environment.executionOptions.showClopUI
                     : environment.errorNotifications
                 if shouldNotify {
                     notify(feedback.subtitle.isEmpty
@@ -208,6 +211,18 @@ enum AlfredClopCommand {
             }
         } else {
             JSONOutput.print(ExecuteMode.response(requestJSON: requestJSON))
+        }
+    }
+
+    private static func configure(arguments: [String]) {
+        guard let stateJSON = value(after: "--menu-state", in: arguments) else {
+            printText("Unable to update settings: Missing Configuration state.")
+            return
+        }
+        if let feedback = ConfigurationMenu.quietMutationFeedback(
+            stateJSON: stateJSON
+        ) {
+            printText(feedback)
         }
     }
 

@@ -380,6 +380,33 @@ struct ExecuteModeTests {
     }
 
     @Test
+    func successfulBackgroundExecutionUsesDefaultCompletionNotification() throws {
+        var execution = makeExecutionOptions()
+        execution.showClopUI = false
+        let json = try JSONOutput.string(
+            for: OperationRequest(
+                inputs: ["/tmp/photo.png"],
+                action: .stripMetadata,
+                execution: execution
+            ),
+            prettyPrinted: false
+        )
+
+        let feedback = ExecuteMode.quietFeedback(
+            requestJSON: json,
+            environment: Environment(values: [:]),
+            builder: builder(),
+            runner: StubProcessRunner(result: ClopProcessResult(
+                terminationStatus: 0,
+                standardOutput: Data(),
+                standardError: Data()
+            ))
+        )
+
+        #expect(feedback == "Metadata removed: Clop processed 1 file.")
+    }
+
+    @Test
     func quietExecutionReturnsConciseTextOnFailure() throws {
         let feedback = ExecuteMode.quietFeedback(
             requestJSON: try requestJSON(action: .stripMetadata),

@@ -130,9 +130,11 @@ clipboard-image cache cleanup.
 - Internal `mainMenu` trigger remains reserved for Script Filter navigation
 - Shared normalized input state stored in `alfred_clop_input_json`
 - Immediate actions handed to a quiet Run Script execution action
-- Clop UI used for successful progress/results, with notifications for errors
-- Completion and error notification settings independently control quiet and
-  headless feedback without hiding interactive Script Filter errors
+- Clop UI is the sole successful processing feedback when enabled; background
+  successes may use Completion notifications
+- Completion notifications default on and also cover successful Configuration
+  mutations; error notifications remain independent without hiding
+  interactive Script Filter errors
 - Release binary built at `workflow/alfred-clop`
 - User configuration fields for `settingsPath`, preservation, optimization
   default, Clop UI, notifications, copying, recursion, and cache retention
@@ -260,14 +262,18 @@ clipboard-image cache cleanup.
   recursion, and 1-15 day clipboard-image retention
 - Automatic `--skip-errors` for implemented app-backed batch commands that
   support it, while structured partial failures remain visible
-- Independent completion and error notification policy for interactive,
-  Hotkey, and headless execution
+- Successful processing notifications are suppressed when Clop UI is visible;
+  background execution and Configuration mutations follow the default-on
+  completion policy
 - Raw clipboard-image expiry follows the configured retention period
 - Discoverable Configuration action remains available without processable
   input
+- Command-Return on the main Configuration item opens Alfred workflow settings
 - The Output Template editor offers complete prefix and suffix choices for
   plain text, advanced entry for template syntax, immediate validation, and
   raw-template plus example-path subtitles
+- `%P` examples use `Original folder`; home-relative and absolute destinations
+  remain literal
 - The empty Output Template editor contains one instructional row showing the
   current template; every editor result and error exposes the concise token
   reference through `⌘L`
@@ -280,6 +286,8 @@ clipboard-image cache cleanup.
   `%P/%f-clop` without changing presets or Alfred preferences
 - Separate global preset removal appears only when presets exist and requires
   confirmation with the preset count
+- Final template saves/resets, global preset removal, and cache cleanup close
+  Alfred and optionally notify instead of returning a redundant result menu
 - Conditional clipboard-image cleanup reports file count and space usage,
   requires confirmation, and removes only workflow-owned cache files
 - Return uses configured aggressive and preservation defaults
@@ -382,7 +390,7 @@ Implement the Downscale parameter menu and action presets:
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 176 tests.
+- `./scripts/test.sh` passes 178 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

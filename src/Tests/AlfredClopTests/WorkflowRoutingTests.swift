@@ -59,6 +59,10 @@ struct WorkflowRoutingTests {
             $0.contains("if [[ -n \"$feedback\" ]]")
                 && !$0.contains("${dnd")
         })
+        #expect(notificationScripts.contains {
+            $0.contains("alfred-clop configure")
+                && $0.contains("configurationMutation")
+        })
     }
 
     @Test
@@ -80,6 +84,13 @@ struct WorkflowRoutingTests {
             "recursiveFolders",
             "cacheRetention"
         ]))
+        let completion = try #require(settings.first {
+            $0["variable"] as? String == "completionNotifications"
+        })
+        let completionConfig = try #require(
+            completion["config"] as? [String: Any]
+        )
+        #expect(completionConfig["default"] as? Bool == true)
     }
 
     @Test

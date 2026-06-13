@@ -136,6 +136,9 @@ enum ClopRequestDispatcher {
             return nil
         }
         let isSuccess = isSuccessfulExecution(item.title)
+        if isSuccess && environment.executionOptions.showClopUI {
+            return nil
+        }
         guard isSuccess ? environment.completionNotifications
             : environment.errorNotifications else {
             return nil

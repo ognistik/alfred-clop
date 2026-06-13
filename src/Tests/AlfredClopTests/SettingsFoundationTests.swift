@@ -134,6 +134,7 @@ struct SettingsFoundationTests {
         #expect(execution.copyResult)
         #expect(execution.recursiveFolders)
         #expect(execution.output == .sameFolder(template: "%P/%f-clop"))
+        #expect(Environment(values: [:]).completionNotifications)
     }
 
     @Test
@@ -220,11 +221,14 @@ struct SettingsFoundationTests {
             query: "",
             environment: environment
         )
-        _ = ConfigurationMenu.response(
-            stateJSON: try #require(confirmation.items.first?.arg),
-            query: "",
-            environment: environment
+        #expect(
+            confirmation.items.first?.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.configurationMutation.rawValue
         )
+        #expect(ConfigurationMenu.quietMutationFeedback(
+            stateJSON: try #require(confirmation.items.first?.arg),
+            environment: environment
+        ) == "Output template reset")
 
         let document = try store.load()
         #expect(document.outputTemplate == "%P/%f-clop")
@@ -252,11 +256,10 @@ struct SettingsFoundationTests {
             query: "",
             environment: environment
         )
-        _ = ConfigurationMenu.response(
+        #expect(ConfigurationMenu.quietMutationFeedback(
             stateJSON: try #require(presetConfirmation.items.first?.arg),
-            query: "",
             environment: environment
-        )
+        ) == "Removed 1 action preset")
         let afterPresetRemoval = try store.load()
         #expect(afterPresetRemoval.outputTemplate == "%P/%f-clop")
         #expect(afterPresetRemoval.presets.isEmpty)
@@ -312,6 +315,8 @@ struct SettingsFoundationTests {
         ])
         #expect(friendly.items[0].subtitle.contains("Photo-optimized.png"))
         #expect(friendly.items[1].subtitle.contains("optimized-Photo.png"))
+        #expect(friendly.items[0].subtitle.contains("Original folder/"))
+        #expect(!friendly.items[0].subtitle.contains("~/Pictures"))
         #expect(friendly.items.allSatisfy {
             $0.subtitle.contains("⌘L")
                 && $0.text?.largetype == reference
@@ -375,6 +380,44 @@ struct SettingsFoundationTests {
         )
         #expect(literalExtension.items.first?.valid == false)
         #expect(literalExtension.items.first?.subtitle.contains("automatically") == true)
+    }
+
+    @Test
+    func configurationMutationNotificationsFollowCompletionSetting() throws {
+        let directory = try makeTemporaryDirectory()
+        let enabled = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let disabled = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path,
+            "completionNotifications": "false"
+        ])
+        let stateJSON = try JSONOutput.string(
+            for: MenuState.configuration(
+                mode: .configurationSaveOutput,
+                value: "%P/%f-edited"
+            ),
+            prettyPrinted: false
+        )
+
+        #expect(ConfigurationMenu.quietMutationFeedback(
+            stateJSON: stateJSON,
+            environment: enabled
+        ) == "Output template updated")
+        #expect(ConfigurationMenu.quietMutationFeedback(
+            stateJSON: stateJSON,
+            environment: disabled
+        ) == nil)
+
+        let action = ConfigurationMenu.actionItem
+        #expect(
+            action.subtitle
+                == "Output template, presets, and maintenance · ⌘⏎ Workflow settings"
+        )
+        #expect(
+            action.mods?.command?.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.workflowSettings.rawValue
+        )
     }
 
     @Test

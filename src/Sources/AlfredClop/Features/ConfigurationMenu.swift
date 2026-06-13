@@ -121,7 +121,7 @@ enum ConfigurationMenu {
         return ScriptFilterItem(
             uid: "action.configuration",
             title: "Configuration",
-            subtitle: "Output template, settings migration, and cache maintenance",
+            subtitle: "Output template, presets, and maintenance · ⌘⏎ Workflow settings",
             arg: stateJSON,
             valid: true,
             autocomplete: "Configuration",
@@ -130,8 +130,69 @@ enum ConfigurationMenu {
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.parameterStep.rawValue,
                 ActionMenu.menuStateVariable: stateJSON
-            ]
+            ],
+            mods: ScriptFilterMods(command: ScriptFilterModifier(
+                arg: "",
+                subtitle: "Open workflow settings",
+                valid: true,
+                variables: [
+                    ActionMenu.requestKindVariable:
+                        WorkflowRequestKind.workflowSettings.rawValue
+                ]
+            ))
         )
+    }
+
+    static func quietMutationFeedback(
+        stateJSON: String,
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter(),
+        cache: ClipboardImageCache? = nil
+    ) -> String? {
+        guard let state = try? JSONDecoder().decode(
+            MenuState.self,
+            from: Data(stateJSON.utf8)
+        ) else {
+            return environment.errorNotifications
+                ? "Unable to update settings: The Configuration state is invalid."
+                : nil
+        }
+
+        do {
+            let store = try PresetStore(
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            )
+            let message: String
+            switch state.mode {
+            case .configurationSaveOutput:
+                try store.updateOutputTemplate(state.configurationValue ?? "")
+                message = "Output template updated"
+            case .configurationResetOutput:
+                try store.updateOutputTemplate(SettingsDocument.builtInOutputTemplate)
+                message = "Output template reset"
+            case .configurationResetPresets:
+                let count = try store.removeAllPresets()
+                message = "Removed \(count) action \(count == 1 ? "preset" : "presets")"
+            case .configurationCacheCleanup:
+                let removed = (cache ?? ClipboardImageCache(
+                    environment: environment,
+                    fileManager: fileManager
+                )).removeAll()
+                message = "Cleared \(removed.fileCount) cached clipboard \(removed.fileCount == 1 ? "image" : "images")"
+            default:
+                return environment.errorNotifications
+                    ? "Unable to update settings: The Configuration action is invalid."
+                    : nil
+            }
+            return environment.completionNotifications ? message : nil
+        } catch {
+            return environment.errorNotifications
+                ? "Unable to update settings: \(error.localizedDescription)"
+                : nil
+        }
     }
 
     private static func menu(
@@ -289,7 +350,7 @@ enum ConfigurationMenu {
             subtitle: "\(templateExample(template)) · ⌘L reference",
             arg: stateJSON,
             valid: true,
-            variables: transitionVariables(stateJSON)
+            variables: mutationVariables(stateJSON)
         )
     }
 
@@ -358,12 +419,18 @@ enum ConfigurationMenu {
     private static func templateExample(_ template: String) -> String {
         let preview = OutputTemplateValidator.preview(
             template: template,
+            source: URL(fileURLWithPath: "/Original folder/Photo.png"),
             homeDirectory: "/Users/me"
         ) ?? template
-        let friendly = preview.replacingOccurrences(
-            of: "/Users/me",
-            with: "~"
-        )
+        let friendly: String
+        if preview.hasPrefix("/Original folder/") {
+            friendly = String(preview.dropFirst())
+        } else {
+            friendly = preview.replacingOccurrences(
+                of: "/Users/me",
+                with: "~"
+            )
+        }
         return "\(template) · Photo.png → \(friendly)"
     }
 
@@ -410,7 +477,7 @@ enum ConfigurationMenu {
                 subtitle: subtitle,
                 arg: stateJSON,
                 valid: true,
-                variables: transitionVariables(stateJSON)
+                variables: mutationVariables(stateJSON)
             )
         ])
     }
@@ -433,6 +500,14 @@ enum ConfigurationMenu {
         [
             ActionMenu.requestKindVariable:
                 WorkflowRequestKind.parameterStep.rawValue,
+            ActionMenu.menuStateVariable: stateJSON
+        ]
+    }
+
+    private static func mutationVariables(_ stateJSON: String) -> [String: String] {
+        [
+            ActionMenu.requestKindVariable:
+                WorkflowRequestKind.configurationMutation.rawValue,
             ActionMenu.menuStateVariable: stateJSON
         ]
     }

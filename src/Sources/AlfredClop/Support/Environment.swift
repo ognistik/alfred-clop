@@ -36,7 +36,7 @@ struct Environment {
     }
 
     var completionNotifications: Bool {
-        checkbox("completionNotifications")
+        checkbox("completionNotifications", default: true)
     }
 
     var errorNotifications: Bool {

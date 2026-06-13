@@ -145,6 +145,13 @@ enum ExecuteMode {
             return nil
         }
         let isSuccess = successTitles.contains(item.title)
+        let showsClopUI = (try? JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data(requestJSON.utf8)
+        ).execution.showClopUI) ?? false
+        if isSuccess && showsClopUI {
+            return nil
+        }
         guard isSuccess ? environment.completionNotifications
             : environment.errorNotifications else {
             return nil

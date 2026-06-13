@@ -755,6 +755,12 @@ Expected responsibilities:
   built-in value;
 - offer a separate confirmed `Remove all action presets` action only when at
   least one preset exists. Never couple global preset removal to output reset;
+- final output-template saves, resets, global preset removal, and cache cleanup
+  leave Alfred immediately instead of returning another result menu. Their
+  concise success notifications follow the Completion notifications setting;
+- expose Command-Return on the main `Configuration` item as a shortcut to
+  Alfred's workflow settings, with the subtitle
+  `Output template, presets, and maintenance · ⌘⏎ Workflow settings`;
 - export or back up portable user-created settings to a chosen location;
 - restore or import settings only after conflict, merge, schema-version, and
   overwrite behavior has been designed;
@@ -795,6 +801,10 @@ The output-template editor follows these rules:
 - `%z`, `%s`, `%x`, and `%q` remain accepted for advanced users but are omitted
   from the workflow's concise Large Type reference because they are meaningful
   only for particular operations.
+
+Example output paths must represent `%P` as `Original folder` instead of
+inventing a sample home directory. Home-relative and explicit absolute
+destinations remain literal in previews.
 
 Design the shared settings document and conflict policy before implementing
 the menu so output settings and presets do not require another incompatible
@@ -959,7 +969,7 @@ Suggested Alfred user configuration:
 | Preserve original files | Off / On; Shift inverts for one run |
 | Default optimization | Standard / Aggressive |
 | Show Clop UI | On / Off |
-| Completion notifications | Off / On |
+| Completion notifications | On / Off |
 | Error notifications | On / Off |
 | Ensure result is copied | On / Off |
 | Recurse into folders | On / Off |
@@ -994,6 +1004,12 @@ The `copyResult` workflow checkbox should resolve into
 Clop's explicit `--copy` option. Do not assume that showing Clop's floating UI
 also guarantees clipboard copying; `--gui` and `--copy` are independent CLI
 options.
+
+Completion notifications default on. Successful Clop processing does not emit
+a duplicate workflow notification when `showClopUI` is enabled because Clop's
+result interface is already the completion feedback. Successful background
+processing and Configuration mutations may notify. Disabling Completion
+notifications silences both categories. Error notifications remain independent.
 
 The `recursiveFolders` checkbox should resolve once and control both folder
 inspection depth and `--recursive` command construction.
