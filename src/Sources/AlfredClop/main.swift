@@ -31,10 +31,23 @@ enum AlfredClopCommand {
     }
 
     private static func request(arguments: [String]) {
-        guard let requestJSON = value(after: "--request-json", in: arguments) else {
+        let requestJSON: String
+        do {
+            requestJSON = try resolvedRequestJSON(arguments)
+        } catch let error as PublicRequestError {
+            if arguments.contains("--quiet") {
+                printText("\(error.title): \(error.detail)")
+            } else {
+                JSONOutput.print(errorResponse(
+                    title: error.title,
+                    subtitle: error.detail
+                ))
+            }
+            return
+        } catch {
             JSONOutput.print(errorResponse(
                 title: "Missing Clop request",
-                subtitle: "The request mode requires request JSON."
+                subtitle: "Pass shorthand input or request JSON."
             ))
             return
         }
@@ -71,12 +84,8 @@ enum AlfredClopCommand {
     }
 
     private static func requestRoute(arguments: [String]) {
-        guard let requestJSON = value(after: "--request-json", in: arguments),
-              let request = try? JSONDecoder().decode(
-                  ClopRequest.self,
-                  from: Data(requestJSON.utf8)
-              ) else {
-            printText("invalid")
+        guard let request = try? resolvedRequest(arguments) else {
+            printText("menu")
             return
         }
         switch request.route {
@@ -88,26 +97,20 @@ enum AlfredClopCommand {
     }
 
     private static func requestHandoff(arguments: [String]) {
-        guard let requestJSON = value(after: "--request-json", in: arguments),
-              let json = menuHandoffJSON(requestJSON: requestJSON) else {
+        guard let publicRequest = value(after: "--public-request", in: arguments),
+              let json = menuHandoffJSON(publicRequest: publicRequest) else {
             printText("Invalid menu handoff.")
             return
         }
         printText(json)
     }
 
-    static func menuHandoffJSON(requestJSON: String) -> String? {
-        guard let request = try? JSONDecoder().decode(
-            ClopRequest.self,
-            from: Data(requestJSON.utf8)
-        ), case .menu = request.route else {
-            return nil
-        }
+    static func menuHandoffJSON(publicRequest: String) -> String? {
         let output: [String: Any] = [
             "alfredworkflow": [
                 "arg": "",
                 "variables": [
-                    ActionMenu.publicRequestVariable: requestJSON,
+                    ActionMenu.publicRequestVariable: publicRequest,
                     "alfred_clop_public_route": "menu"
                 ]
             ]
@@ -118,6 +121,26 @@ enum AlfredClopCommand {
             return nil
         }
         return json
+    }
+
+    private static func resolvedRequest(_ arguments: [String]) throws -> ClopRequest {
+        if let publicRequest = value(after: "--public-request", in: arguments) {
+            return try PublicRequestParser.parse(publicRequest)
+        }
+        if let requestJSON = value(after: "--request-json", in: arguments) {
+            return try JSONDecoder().decode(
+                ClopRequest.self,
+                from: Data(requestJSON.utf8)
+            )
+        }
+        throw PublicRequestError.empty
+    }
+
+    private static func resolvedRequestJSON(_ arguments: [String]) throws -> String {
+        try JSONOutput.string(
+            for: resolvedRequest(arguments),
+            prettyPrinted: false
+        )
     }
 
     private static func automate(arguments: [String]) {

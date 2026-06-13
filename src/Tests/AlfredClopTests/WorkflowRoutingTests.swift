@@ -17,8 +17,9 @@ struct WorkflowRoutingTests {
 
         #expect(dispatcher["type"] as? String == "alfred.workflow.action.script")
         #expect(script.contains("alfred-clop route"))
-        #expect(script.contains("alfred-clop request --request-json \"$request\" --quiet"))
-        #expect(script.contains("alfred-clop handoff --request-json \"$request\""))
+        #expect(script.contains("alfred-clop route --public-request \"$request\""))
+        #expect(script.contains("alfred-clop request --public-request \"$request\" --quiet"))
+        #expect(script.contains("alfred-clop handoff --public-request \"$request\""))
         #expect(!script.contains("run trigger \"mainMenu\""))
         #expect(connections["1D00E9FC-D864-41B6-B316-BDAEF753DCE4"] != nil)
     }
@@ -34,7 +35,7 @@ struct WorkflowRoutingTests {
         let script = try #require(config["script"] as? String)
 
         #expect(script.hasPrefix("if [[ -n \"${alfred_clop_request:-}\" ]]"))
-        #expect(script.contains("--request-json \"$alfred_clop_request\""))
+        #expect(script.contains("--public-request \"$alfred_clop_request\""))
         #expect(script.contains("--query \"${1:-}\""))
         #expect(script.contains("elif [[ -n \"${alfred_clop_menu_state:-}\" ]]"))
     }

@@ -343,8 +343,54 @@ a compatibility alias. Keep the Script Filter's `mainMenu` inbound External
 Trigger as an internal workflow navigation mechanism, not part of the public
 API.
 
-The public trigger accepts one JSON envelope. Input acquisition and routing
-are independent typed choices:
+The primary public interface is a line-based shorthand that uses visible
+workflow action names and American-English spelling. Bare `finder`,
+`clipboard`, paths, folders, or URLs open the main menu. Directive forms use a
+blank line to separate configuration from exact input:
+
+```text
+crop:
+
+finder
+```
+
+```text
+execute: Crop / Resize
+size: 16:9
+smart crop: true
+
+/path/one image.png
+/path/two image.png
+```
+
+Each explicit input line is one exact file, folder, or URL value. The blank
+separator prevents directive syntax from conflicting with URL schemes, aspect
+ratios, spaces, or punctuation in inputs. Omitted optional booleans default to
+false unless a future field explicitly inherits a workflow setting. Required
+action values such as crop size remain required when no global default exists.
+Global execution settings such as copying results and recursive folder
+processing continue to resolve through `Environment`; shorthand does not
+duplicate them as per-request fields unless the product later deliberately
+adds typed overrides.
+
+Menu shortcuts mirror the workflow:
+
+- `optimize:`
+- `crop:`
+- `downscale:`
+- `convert image:`, `convert video:`, and `convert audio:`
+- `crop pdf:`
+- `uncrop pdf:`
+- `strip metadata:`
+
+`menu: ACTION` accepts the visible workflow action name. `execute: ACTION`
+builds a complete typed action request. Actions whose execution parameter
+model is not implemented must fail clearly rather than accepting speculative
+syntax.
+
+The shorthand parser immediately produces the same typed request used by the
+rest of the workflow. Input acquisition and routing remain independent typed
+choices:
 
 - `clipboard`: inspect the current clipboard dynamically;
 - `finderSelection`: ask Finder for its selected items;
@@ -352,6 +398,10 @@ are independent typed choices:
 - `menu`: open the main action menu or one action's parameter menu;
 - `execute`: run one complete typed operation without showing Alfred;
 - `recipe`: later run a stored recipe by stable identifier.
+
+Typed JSON remains an advanced compatibility API for integrations that need a
+versioned structured contract. It is decoded into the same `ClopRequest`
+model; it does not maintain a second routing or execution implementation.
 
 Normal callers should omit `version`. An omitted version means "use the current
 request contract implemented by this installed workflow," so ordinary
@@ -368,7 +418,13 @@ necessary.
 Use `items`, not `paths`, because explicit input may include local files,
 folders, and remote URLs.
 
-Open the main menu for clipboard content:
+Open the main menu for clipboard content with shorthand:
+
+```text
+clipboard
+```
+
+The equivalent typed JSON is:
 
 ```json
 {
@@ -381,7 +437,15 @@ Open the main menu for clipboard content:
 }
 ```
 
-Open Crop / Resize for Finder's current selection:
+Open Crop / Resize for Finder's current selection with shorthand:
+
+```text
+crop:
+
+finder
+```
+
+The equivalent typed JSON is:
 
 ```json
 {
@@ -395,7 +459,18 @@ Open Crop / Resize for Finder's current selection:
 }
 ```
 
-Execute a complete operation for explicit mixed input:
+Execute a complete operation for explicit mixed input with shorthand:
+
+```text
+execute: Optimize
+aggressive: false
+
+/path/one image.png
+/path/media folder
+https://example.com/video.mp4
+```
+
+The equivalent typed JSON is:
 
 ```json
 {

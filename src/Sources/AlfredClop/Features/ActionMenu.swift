@@ -79,7 +79,7 @@ enum ActionCatalog {
         ),
         ActionDefinition(
             action: .cropPDF,
-            title: "Reversible PDF Crop",
+            title: "Crop PDF (Reversible)",
             subtitle: "Crop PDF pages using Clop's reversible crop box",
             aliases: ["pdf", "crop pdf", "ipad", "paper", "device"],
             supportedKinds: [.pdf],

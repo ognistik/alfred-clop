@@ -80,7 +80,7 @@ struct ActionMenuTests {
             "Convert Image",
             "Convert Video",
             "Convert Audio",
-            "Reversible PDF Crop",
+            "Crop PDF (Reversible)",
             "Uncrop PDF",
             "Strip Metadata"
         ])

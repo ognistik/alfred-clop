@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 12, 2026
+Last updated: June 13, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -98,10 +98,17 @@ clear stale public-request state, and quiet errors honor the `dnd` setting.
 - Clipboard keyword `clop`
 - Public External Trigger `clop` accepts typed requests with optional explicit
   compatibility versions
+- Human-friendly External Trigger shorthand for bare Finder, clipboard, path,
+  folder, and URL input; workflow action menus; and complete supported actions
+- Required blank-line boundary between shorthand directives and exact input
+- Workflow-facing action names and American-English `Optimize` spelling
+- Typed JSON retained as an advanced compatibility form that decodes into the
+  same `ClopRequest` model
 - Public menu requests enter the internal `mainMenu` route, while execute
   requests bypass the Script Filter and run headlessly
-- Public menu requests pass typed JSON through a workflow variable and open
-  `mainMenu` with an empty query, keeping request data out of Alfred's bar
+- Public menu requests pass their raw public request through a workflow
+  variable and open `mainMenu` with an empty query, keeping request data out of
+  Alfred's bar
 - Internal `mainMenu` trigger remains reserved for Script Filter navigation
 - Shared normalized input state stored in `alfred_clop_input_json`
 - Immediate actions handed to a quiet Run Script execution action
@@ -252,9 +259,10 @@ structure.
   the unreleased `paths` trigger
 - Internal `mainMenu` External Trigger retained only for Script Filter
   navigation
-- JSON request with independent `input` and `route` values; omitted `version`
-  tracks the installed workflow's current contract, while explicit version 1
-  remains a pinned compatibility target
+- Line-based shorthand is the primary public interface; typed JSON remains the
+  advanced compatibility form with independent `input` and `route` values
+- Omitted JSON `version` tracks the installed workflow's current contract,
+  while explicit version 1 remains a pinned compatibility target
 - Input sources: clipboard, explicit items, and an injectable Finder-selection
   bridge for External Trigger requests
 - Explicit items may be local files, folders, or `http`/`https` URLs
@@ -303,7 +311,7 @@ action parameter menus in that slice.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 145 tests.
+- `./scripts/test.sh` passes 159 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

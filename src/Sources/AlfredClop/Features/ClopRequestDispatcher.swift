@@ -32,7 +32,7 @@ enum ClopRequestDispatcher {
         } catch {
             return feedback(
                 title: "Invalid Clop request",
-                subtitle: "Use the documented input and route JSON format."
+                subtitle: "Use the documented shorthand or typed JSON format."
             )
         }
 

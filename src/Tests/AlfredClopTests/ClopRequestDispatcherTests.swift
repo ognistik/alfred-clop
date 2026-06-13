@@ -82,22 +82,14 @@ struct ClopRequestDispatcherTests {
 
     @Test
     func menuHandoffKeepsRequestInVariableAndClearsVisibleArgument() throws {
-        let request = ClopRequest(
-            input: .explicit(
-                items: [
-                    "/tmp/first \"quoted\" image.png",
-                    "/tmp/second image.png"
-                ],
-                extractText: false
-            ),
-            route: .menu(action: .crop)
-        )
-        let requestJSON = try JSONOutput.string(
-            for: request,
-            prettyPrinted: false
-        )
+        let publicRequest = """
+        crop:
+
+        /tmp/first "quoted" image.png
+        /tmp/second image.png
+        """
         let handoffJSON = try #require(
-            AlfredClopCommand.menuHandoffJSON(requestJSON: requestJSON)
+            AlfredClopCommand.menuHandoffJSON(publicRequest: publicRequest)
         )
         let root = try #require(
             JSONSerialization.jsonObject(with: Data(handoffJSON.utf8))
@@ -111,24 +103,8 @@ struct ClopRequestDispatcherTests {
         )
 
         #expect(workflow["arg"] as? String == "")
-        #expect(variables[ActionMenu.publicRequestVariable] == requestJSON)
+        #expect(variables[ActionMenu.publicRequestVariable] == publicRequest)
         #expect(variables["alfred_clop_public_route"] == "menu")
-    }
-
-    @Test
-    func executeRequestCannotProduceMenuHandoff() throws {
-        let request = ClopRequest(
-            input: .clipboard,
-            route: .execute(action: .optimise(aggressive: false))
-        )
-        let requestJSON = try JSONOutput.string(
-            for: request,
-            prettyPrinted: false
-        )
-
-        #expect(
-            AlfredClopCommand.menuHandoffJSON(requestJSON: requestJSON) == nil
-        )
     }
 
     @Test(arguments: [

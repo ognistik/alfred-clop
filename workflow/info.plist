@@ -255,9 +255,9 @@
 				<integer>102</integer>
 				<key>script</key>
 				<string>request="${1:-}"
-route="$(./alfred-clop route --request-json "$request")"
+route="$(./alfred-clop route --public-request "$request")"
 if [[ "$route" == "execute" ]]; then
-  feedback="$(./alfred-clop request --request-json "$request" --quiet)"
+  feedback="$(./alfred-clop request --public-request "$request" --quiet)"
   if [[ -n "$feedback" &amp;&amp; "${dnd:-0}" != "1" &amp;&amp; "${dnd:-false}" != "true" ]]; then
     /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
 on run argv
@@ -266,7 +266,7 @@ end run
 APPLESCRIPT
   fi
 elif [[ "$route" == "menu" ]]; then
-  ./alfred-clop handoff --request-json "$request"
+  ./alfred-clop handoff --public-request "$request"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -397,7 +397,7 @@ fi</string>
 				<string>Reading files...</string>
 				<key>script</key>
 				<string>if [[ -n "${alfred_clop_request:-}" ]]; then
-  ./alfred-clop request --request-json "$alfred_clop_request" --input-context "arguments" --query "${1:-}"
+  ./alfred-clop request --public-request "$alfred_clop_request" --input-context "arguments" --query "${1:-}"
 elif [[ -n "${alfred_clop_menu_state:-}" ]]; then
   ./alfred-clop menu --menu-state "$alfred_clop_menu_state" --input-json "${alfred_clop_input_json:-}" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
 elif [[ -n "${alfred_clop_input_json:-}" ]]; then
