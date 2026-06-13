@@ -851,6 +851,7 @@ Recommended defaults:
 | Command-Return | Enable aggressive processing where the command supports it |
 | Option-Return | Enable the action's documented alternate processing mode where one exists |
 | Command-Option-Return | Combine aggressive processing with the alternate mode when both are supported |
+| Shift-Return | Preserve the original using the configured output policy |
 | Control-Return | Save a typed value as a preset, or request removal of an existing preset |
 
 Do not hard-code "Command means aggressive" at execution time. Encode the
@@ -872,9 +873,21 @@ for resize-only forms such as a long edge, fixed width, or fixed height because
 those forms do not choose crop positioning.
 
 Option is therefore reserved for a clearly labeled action-specific alternate
-processing mode, not for preserving the original. Original preservation must
-remain unavailable until the output-policy design assigns it a separate,
-workflow-wide interaction that does not conflict with Smart Crop.
+processing mode, not for preserving the original.
+
+Shift is the workflow-wide Preserve Original modifier. It must resolve through
+the configured output policy and encode that resolved `OutputBehavior` in the
+item's `OperationRequest`; it must not rely on a later execution-time guess.
+Do not expose Shift-Return until the output policy has been implemented and
+tested.
+
+Modifier effects are additive when Alfred exposes the combination and the
+action supports every requested effect. For example, Command-Shift means
+Aggressive + Preserve Original, Option-Shift means alternate mode + Preserve
+Original, and Command-Option-Shift means Aggressive + alternate mode +
+Preserve Original. Each combined modifier needs an accurate subtitle and a
+fully resolved request. Unsupported combinations must be omitted rather than
+silently dropping one effect.
 
 Control-Return is valid only when the selected item contains complete
 parameters that can be saved and replayed. On an existing preset it must route

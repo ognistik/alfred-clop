@@ -300,11 +300,13 @@ execution-setting foundation:
    results and verify the modifier in Alfred.
 2. Add Option-Return Smart Crop to crop-producing Crop / Resize results, plus
    Command-Option-Return for Aggressive + Smart Crop where both are supported.
-3. Resolve the remaining shared execution settings into typed
+3. Reserve Shift-Return for Preserve Original and add its modifier combinations
+   after the configured output policy is implemented and tested.
+4. Resolve the remaining shared execution settings into typed
    `ExecutionOptions` without adding output or backup policies prematurely.
-4. Keep URL and folder capability validation shared between interactive and
+5. Keep URL and folder capability validation shared between interactive and
    quiet execution.
-5. Add focused modifier and configuration-inheritance tests.
+6. Add focused modifier and configuration-inheritance tests.
 
 Do not implement recipes, raw bitmap materialization, output policies, or new
 action parameter menus in that slice.
