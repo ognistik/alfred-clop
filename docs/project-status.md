@@ -245,7 +245,7 @@ structure.
 
 - Modifier behavior for aggressive processing and original preservation
 - Downscale, conversion, and PDF-crop parameter menus and parsing
-- Smart Crop menu choices
+- Smart Crop modifier behavior
 - Output and backup policies
 - Dynamic PDF device and paper-size menus
 - Configuration menu for preset and recipe management, explicit resets,
@@ -298,11 +298,13 @@ execution-setting foundation:
 
 1. Add Command-Return aggressive optimization requests to supported Optimize
    results and verify the modifier in Alfred.
-2. Resolve the remaining shared execution settings into typed
+2. Add Option-Return Smart Crop to crop-producing Crop / Resize results, plus
+   Command-Option-Return for Aggressive + Smart Crop where both are supported.
+3. Resolve the remaining shared execution settings into typed
    `ExecutionOptions` without adding output or backup policies prematurely.
-3. Keep URL and folder capability validation shared between interactive and
+4. Keep URL and folder capability validation shared between interactive and
    quiet execution.
-4. Add focused modifier and configuration-inheritance tests.
+5. Add focused modifier and configuration-inheritance tests.
 
 Do not implement recipes, raw bitmap materialization, output policies, or new
 action parameter menus in that slice.

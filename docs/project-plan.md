@@ -849,8 +849,8 @@ Recommended defaults:
 | --- | --- |
 | Return | Run with configured defaults |
 | Command-Return | Enable aggressive processing where the command supports it |
-| Option-Return | Preserve the original using the configured output policy |
-| Command-Option-Return | Enable aggressive processing and preserve the original |
+| Option-Return | Enable the action's documented alternate processing mode where one exists |
+| Command-Option-Return | Combine aggressive processing with the alternate mode when both are supported |
 | Control-Return | Save a typed value as a preset, or request removal of an existing preset |
 
 Do not hard-code "Command means aggressive" at execution time. Encode the
@@ -863,10 +863,22 @@ different action-specific meaning.
 
 Do not add a separate Aggressive Optimize action. Command-Return provides that
 override on Optimize once the modifier is implemented and verified.
-Option-Return depends on a tested output-preservation policy and must not be
-enabled before that policy exists. Control-Return is valid only when the
-selected item contains complete parameters that can be saved and replayed. On
-an existing preset it must route to a confirmation step before removal.
+
+For Crop / Resize results that perform an actual crop, Option-Return enables
+Smart Crop, centering the crop around detected visual features.
+Command-Option-Return combines aggressive processing and Smart Crop when the
+selected input and Clop command support both. Do not offer Smart Crop modifiers
+for resize-only forms such as a long edge, fixed width, or fixed height because
+those forms do not choose crop positioning.
+
+Option is therefore reserved for a clearly labeled action-specific alternate
+processing mode, not for preserving the original. Original preservation must
+remain unavailable until the output-policy design assigns it a separate,
+workflow-wide interaction that does not conflict with Smart Crop.
+
+Control-Return is valid only when the selected item contains complete
+parameters that can be saved and replayed. On an existing preset it must route
+to a confirmation step before removal.
 
 Do not reserve modifiers for width/height syntax. Use `w128` and `h720` in the
 query grammar so modifier keys remain available for consistent workflow-wide
