@@ -502,8 +502,26 @@ operation actually supplies its value.
 
 Legacy conversion additionally supports `%q` for conversion quality.
 
-For multiple inputs, output generally needs to be a directory or a template
-that produces distinct paths.
+Disposable-file probes against Clop 3.0.0 verified these output details:
+
+- omitting `--output` processes the input in place;
+- Clop appends the resulting extension automatically, so a preservation
+  template should use `%P/%f-clop`, not `%P/%f-clop.%e`;
+- a literal directory path, including one with a trailing slash, is treated as
+  an output filename rather than as a destination directory;
+- writing to a chosen directory therefore requires a filename template such as
+  `/chosen/folder/%f-clop`;
+- an empty output value fails inside the JSON result and must not be passed;
+- unknown template tokens remain literal instead of producing a validation
+  error;
+- an existing output path is overwritten without confirmation;
+- `%f` gives distinct names for ordinary multiple-file batches, but inputs
+  from different directories may still collide when they share a basename;
+- app-backed conversion appends the converted extension, such as `.webp`.
+
+The workflow must validate templates itself and preflight batch collisions
+before launching Clop. The built-in preservation template is
+`%P/%f-clop`.
 
 ## Integration behavior
 
@@ -540,20 +558,17 @@ returns before processing completes.
 The typed app-backed commands require communication with Clop. Legacy image
 conversion explicitly runs without the app.
 
-### Backups and output safety
+### Original preservation and output safety
 
-Clop's in-place behavior and backup location are controlled by Clop itself.
-The CLI has no explicit `--backup` or `--backup-directory` option.
+The CLI has no explicit `--backup` or `--backup-directory` option. Alfred Clop
+does not promise workflow-managed backup copies. It preserves an original by
+supplying a distinct, validated `--output` template and replaces in place by
+omitting `--output`.
 
-The workflow therefore has three honest strategies:
-
-1. Trust Clop's configured in-place backup behavior.
-2. Preserve the source by supplying a distinct `--output` template.
-3. Implement workflow-managed backup copies with Swift `FileManager` before
-   invoking Clop.
-
-The third option is needed if Alfred Clop promises a custom backup folder that
-is independent of Clop's app settings.
+Because Clop silently overwrites an existing output path, the workflow must
+detect collisions between planned outputs, existing files, and the source
+paths before process launch. An output template is preservation behavior, not
+a true backup policy.
 
 ## Known limitations and items to probe
 
@@ -565,8 +580,8 @@ is independent of Clop's app settings.
   must inspect both arrays rather than relying on termination status.
 - Legacy image conversion has no JSON output.
 - `crop-pdf`, `uncrop-pdf`, and `strip-exif` have no JSON output.
-- App-backed typed conversion's default replacement and backup behavior needs
-  disposable-file integration tests.
+- Output behavior for folders, remote URLs, videos, audio, and PDFs still needs
+  disposable-fixture coverage where each command supports `--output`.
 - The parent `optimise` help's `--dpi 96` example conflicts with the typed
   parser, which accepts only `adaptive`, `300`, `250`, `200`, `150`, `100`,
   `72`, or `48`.

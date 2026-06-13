@@ -251,17 +251,21 @@ structure.
 - Main-menu conversion discovery is media-specific for homogeneous image,
   video, and audio input; ambiguous broad input shows separate honest,
   non-executable conversion routes until their parameter menus are built
+- Disposable-file output probes verified in-place behavior, automatic
+  extension appending, directory-template requirements, silent collision
+  overwrites, empty-output failure, literal unknown tokens, multi-file
+  expansion, and app-backed conversion extensions
 
 ## Not implemented
 
 - Modifier behavior for aggressive processing and original preservation
 - Downscale, conversion, and PDF-crop parameter menus and parsing
 - Smart Crop modifier behavior
-- Output and backup policies
+- Original preservation through validated output templates
 - Dynamic PDF device and paper-size menus
-- Configuration menu for preset and recipe management, explicit resets,
-  storage migration, portable settings export or backup, and an explicit
-  cleanup action for workflow-owned materialized clipboard images
+- Shared `settings.json` migration and Configuration menu for output-template
+  editing, conditional settings migration, workflow-setting reset, portable
+  settings export or backup, and conditional cached-image cleanup
 - Workflow icons, user configuration, packaging, and release automation
 
 ### Implemented unified input design
@@ -307,23 +311,33 @@ structure.
 
 ## Next recommended task
 
-Implement capability-aware modifier behavior and finish the remaining global
-execution-setting foundation:
+Implement the shared settings and global execution-policy foundation:
 
-1. Add Command-Return aggressive optimization requests to supported Optimize
-   results and verify the modifier in Alfred.
-2. Add Option-Return Smart Crop to crop-producing Crop / Resize results, plus
-   Command-Option-Return for Aggressive + Smart Crop where both are supported.
-3. Reserve Shift-Return for Preserve Original and add its modifier combinations
-   after the configured output policy is implemented and tested.
-4. Resolve the remaining shared execution settings into typed
-   `ExecutionOptions` without adding output or backup policies prematurely.
-5. Keep URL and folder capability validation shared between interactive and
-   quiet execution.
-6. Add focused modifier and configuration-inheritance tests.
+1. Replace the preset-only document with a versioned `settings.json` that
+   retains existing presets and adds the output template, including explicit
+   migration from `presets.json` and `presetsPath` to `settingsPath`.
+2. Add the static workflow settings agreed for Preserve Original, Standard or
+   Aggressive default, Clop UI, completion notifications, error notifications,
+   copy result, recursion, and 1-15 day clipboard-image retention.
+3. Use `%P/%f-clop` as the valid built-in preservation template and add
+   preflight validation for empty templates, unsupported tokens, duplicate
+   planned outputs, existing-file collisions, and source-path collisions.
+4. Pass `--skip-errors` automatically wherever the selected command supports
+   it, while continuing to report per-input failures from structured results.
+5. Add the Configuration menu foundation for guided output-template setup,
+   conditional pending migration, reset of the output template without
+   removing action presets or changing Alfred preferences, and conditional
+   cached-image cleanup with file count and space usage. Command-Return on the
+   reset item opens a separate confirmation to remove all saved action presets
+   globally, including the number that will be deleted.
+6. Add Command-Return and Shift-Return as inversions of the configured
+   aggressive and preservation defaults, plus the already planned Smart Crop
+   modifier combinations.
+7. Keep pipeline delivery behavior owned by Clop; `pipeline run` has no
+   workflow output-template override.
 
-Do not implement recipes, output policies, or new action parameter menus in
-that slice.
+Do not create a workflow-owned recipe system or duplicate action-preset
+management in Configuration.
 
 ## Verification baseline
 

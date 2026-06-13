@@ -68,9 +68,10 @@ feature being deferred must still have an explicit place in this plan.
 ### Product enhancements
 
 - User-defined action presets for reusable values inside parameter menus
-- User-defined recipes that combine multiple typed actions and delivery steps
 - A Configuration menu for user-created settings, storage, reset, and portable
   export or backup
+- Discoverable management of Clop's native saved and inline pipelines instead
+  of a separate workflow-owned recipe system
 - Live progress UI
 - Automatic update/release mechanism
 
@@ -396,8 +397,10 @@ choices:
 - `finderSelection`: ask Finder for its selected items;
 - `explicit`: classify the supplied exact `items`;
 - `menu`: open the main action menu or one action's parameter menu;
-- `execute`: run one complete typed operation without showing Alfred;
-- `recipe`: later run a stored recipe by stable identifier.
+- `execute`: run one complete typed operation without showing Alfred.
+
+Saved and inline Clop pipelines are typed actions within `menu` or `execute`;
+they do not introduce a separate workflow route or recipe identifier.
 
 Typed JSON remains an advanced compatibility API for integrations that need a
 versioned structured contract. It is decoded into the same `ClopRequest`
@@ -502,8 +505,9 @@ Automation uses the same `InputCollector`, capability validation,
 configuration resolution, command builder, and execution path as interactive
 results. Successful execution stays quiet while Clop's configured UI may show
 progress and results; failures produce a visible notification. Automation
-inherits workflow execution settings. Recipes may later override those
-settings.
+inherits workflow execution settings. Clop pipelines retain the behavior
+defined by Clop and accept only the shared CLI options supported by
+`pipeline run`.
 
 ### Hotkeys
 
@@ -696,72 +700,81 @@ immediately from the modifier action.
 
 Presets live only in the submenu for their action. Crop presets appear in Crop
 / Resize, downscale presets in Downscale, and conversion presets in the
-relevant Convert menu. A separate preset-only management menu is not required;
-broader lifecycle operations belong in the future Configuration menu.
+relevant Convert menu. Add and remove them there; do not duplicate preset
+management in Configuration.
 
-Preset storage:
+Portable workflow settings storage:
 
-- if the `presetsPath` workflow setting is empty, store `presets.json` in
+- store one versioned `settings.json` document containing action presets,
+  the configured output template, and future portable workflow-owned settings;
+- if the `settingsPath` workflow setting is empty, store `settings.json` in
   `alfred_workflow_data`;
-- if `presetsPath` points to a custom folder, read and write
-  `<presetsPath>/presets.json`;
-- create the file when absent and use an existing compatible file when present;
+- if `settingsPath` points to a custom folder, read and write
+  `<settingsPath>/settings.json`;
+- migrate the existing versioned `presets.json` content explicitly and
+  non-destructively when introducing the shared document;
+- temporarily recognize the old `presetsPath` variable while moving users to
+  `settingsPath`;
+- create the document when absent and use an existing compatible file when
+  present;
 - use a versioned JSON schema and atomic writes;
-- never store presets in the workflow bundle itself;
+- never store user settings in the workflow bundle itself;
 - when the configured location changes, do not silently copy, merge, or delete
-  files. A future explicit migration action may move or merge presets between
-  the previous and new locations.
+  files. Offer an explicit pending settings migration.
 
 The custom folder is the simple cross-Mac strategy: users may choose an iCloud
 Drive, Dropbox, or other locally available synchronized directory.
 
-Recipes are a separate future concept. A recipe may combine multiple ordered
-actions with output naming or destination behavior and may eventually have a
-custom name and management menu. Do not widen the action-preset schema into a
-recipe schema or implement recipe persistence as part of the initial preset
-work. Clop saved pipelines remain a separate native Clop feature and should
-stay opaque until their grammar is stable enough to model safely.
+Do not create a separate workflow recipe system. Clop saved and inline
+pipelines are the multi-step automation feature. Keep pipeline expressions
+opaque until their grammar is stable enough to model safely.
 
 ### Configuration menu
 
-Add a discoverable `Configuration` action to the main menu when preset and
-recipe management justify a dedicated surface. It is separate from Alfred's
-static workflow configuration and must remain available without files to
-process.
+Add a discoverable `Configuration` action to the main menu. It is separate
+from Alfred's static workflow configuration and must remain available without
+files to process.
 
 Expected responsibilities:
 
-- manage the active settings location and pending migrations;
-- browse and remove saved presets and recipes;
-- reset saved presets or all user-created workflow data through explicit,
-  destructive confirmations;
+- configure the active output template through friendly starting points,
+  guided token insertion, validation, and an example output preview;
+- show a pending settings migration only when one requires action; remove the
+  migration action from the main action menu once Configuration owns it;
+- reset the workflow-owned output template to `%P/%f-clop` through explicit
+  confirmation while preserving action presets and Alfred's static
+  preferences;
+- offer Command-Return on that reset item as a clearly labeled shortcut to a
+  separate confirmation for removing all saved action presets across every
+  action menu; never remove presets directly from the modifier;
 - export or back up portable user-created settings to a chosen location;
 - restore or import settings only after conflict, merge, schema-version, and
   overwrite behavior has been designed;
 - provide an explicit maintenance action to remove workflow-owned materialized
   clipboard images from the workflow cache and temporary fallback directory.
   Keep this separate from settings reset, import, and export because cached
-  images are disposable runtime data. Show the action only when matching cache
-  files exist, require confirmation, and report the number of files and space
-  reclaimed.
+  images are disposable runtime data. Show the action only when matching
+  cached images exist, include the image count and space used, require
+  confirmation, and report the number of files and space reclaimed.
 
 When a pending migration blocks an inline save, Return on the explicit
 `Move existing settings` row should perform the non-destructive move directly
-and resume the interrupted menu operation without a second confirmation. Main
-menu migrations retain their confirmation. Once Configuration exists,
-Command-Return on the inline migration prompt should open Configuration
-instead of performing a destructive shortcut.
+and resume the interrupted menu operation without a second confirmation.
+Otherwise, pending migration is managed from Configuration and omitted when
+there is nothing to migrate.
 
-Use precise destructive labels such as `Reset saved presets` rather than the
-ambiguous `Reset settings`. A reset must state whether it affects presets,
-recipes, or both. Export and backup cover portable user-created data, not
+Use the precise label `Reset output template` and state the built-in template
+that will be restored. Its Command-Return subtitle must explicitly say
+`Reset all action presets` and route to a destructive confirmation stating the
+number of presets that will be removed. Individual preset removal remains in
+each action menu. Export and backup cover portable user-created data, not
 Alfred preferences, Clop preferences, workflow binaries, or caches. Cache
 cleanup is a separate maintenance operation and must delete only files created
 by this workflow's clipboard image materializer.
 
-Do not implement this menu as incidental preset-migration work. Design the
-shared settings document and conflict policy first so recipes can participate
-without another incompatible storage transition.
+Design the shared settings document and conflict policy before implementing
+the menu so output settings and presets do not require another incompatible
+storage transition.
 
 ### Downscale
 
@@ -837,7 +850,6 @@ Show an optional final options menu for commands that support it:
 - recurse into folders;
 - include or exclude file types;
 - copy result;
-- skip invalid/unreachable inputs;
 - show Clop UI;
 - submit asynchronously.
 
@@ -856,10 +868,10 @@ Recommended defaults:
 | Input | Effect |
 | --- | --- |
 | Return | Run with configured defaults |
-| Command-Return | Enable aggressive processing where the command supports it |
+| Command-Return | Invert the configured aggressive-processing default where supported |
 | Option-Return | Enable the action's documented alternate processing mode where one exists |
-| Command-Option-Return | Combine aggressive processing with the alternate mode when both are supported |
-| Shift-Return | Preserve the original using the configured output policy |
+| Command-Option-Return | Combine the aggressive-default inversion with the alternate mode when both are supported |
+| Shift-Return | Invert the configured Preserve Original behavior |
 | Control-Return | Save a typed value as a preset, or request removal of an existing preset |
 
 Do not hard-code "Command means aggressive" at execution time. Encode the
@@ -870,31 +882,38 @@ Modifiers keep one meaning across top-level and parameter menus, but only
 appear where applicable. Unsupported modifiers must not silently acquire a
 different action-specific meaning.
 
-Do not add a separate Aggressive Optimize action. Command-Return provides that
-override on Optimize once the modifier is implemented and verified.
+Configuration is an administrative surface rather than an operation menu. Its
+reset item may therefore use Command-Return for the clearly labeled global
+preset-reset confirmation without changing Command's aggressive inversion
+meaning on executable media actions.
+
+Do not add a separate Aggressive Optimize action to the menu. Return uses the
+configured Standard or Aggressive default, while Command-Return resolves the
+opposite behavior and states it accurately in the subtitle.
 
 For Crop / Resize results that perform an actual crop, Option-Return enables
 Smart Crop, centering the crop around detected visual features.
-Command-Option-Return combines aggressive processing and Smart Crop when the
-selected input and Clop command support both. Do not offer Smart Crop modifiers
-for resize-only forms such as a long edge, fixed width, or fixed height because
-those forms do not choose crop positioning.
+Command-Option-Return combines the configured aggressive-default inversion and
+Smart Crop when the selected input and Clop command support both. Do not offer
+Smart Crop modifiers for resize-only forms such as a long edge, fixed width,
+or fixed height because those forms do not choose crop positioning.
 
 Option is therefore reserved for a clearly labeled action-specific alternate
 processing mode, not for preserving the original.
 
-Shift is the workflow-wide Preserve Original modifier. It must resolve through
-the configured output policy and encode that resolved `OutputBehavior` in the
-item's `OperationRequest`; it must not rely on a later execution-time guess.
-Do not expose Shift-Return until the output policy has been implemented and
-tested.
+Shift is the workflow-wide Preserve Original inversion. When the global
+checkbox is off, Shift uses the configured output template. When it is on,
+Shift omits `--output` and replaces in place for that run. It must encode the
+resolved `OutputBehavior` in the item's `OperationRequest`; it must not rely on
+a later execution-time guess. Do not expose Shift-Return until the output
+policy has been implemented and tested.
 
 Modifier effects are additive when Alfred exposes the combination and the
-action supports every requested effect. For example, Command-Shift means
-Aggressive + Preserve Original, Option-Shift means alternate mode + Preserve
-Original, and Command-Option-Shift means Aggressive + alternate mode +
-Preserve Original. Each combined modifier needs an accurate subtitle and a
-fully resolved request. Unsupported combinations must be omitted rather than
+action supports every requested effect. Command-Shift inverts both the
+aggressive and preservation defaults. Option-Shift combines the alternate mode
+with the preservation inversion. Command-Option-Shift applies all three
+effects. Each combined modifier needs an accurate subtitle and a fully
+resolved request. Unsupported combinations must be omitted rather than
 silently dropping one effect.
 
 Control-Return is valid only when the selected item contains complete
@@ -912,15 +931,15 @@ Suggested Alfred user configuration:
 | Setting | Initial values |
 | --- | --- |
 | Clop CLI path | Auto-detect, optional override |
-| Presets path | Empty for `alfred_workflow_data`, or a custom folder |
+| Settings path | Empty for `alfred_workflow_data`, or a custom folder |
+| Preserve original files | Off / On; Shift inverts for one run |
 | Default optimization | Standard / Aggressive |
-| Output behavior | Replace in place / Same folder / Specific folder |
-| Output template | `%P/%f_optimised.%e` or custom |
-| Backup behavior | Trust Clop / Workflow copy / None |
-| Backup folder | Same folder / Specific folder |
 | Show Clop UI | On / Off |
+| Completion notifications | Off / On |
+| Error notifications | On / Off |
 | Ensure result is copied | On / Off |
 | Recurse into folders | On / Off |
+| Clipboard image retention | 1-15 days; default 7 |
 | Default image conversion | WebP / AVIF / HEIC / JXL / JPEG / PNG |
 | Default video conversion | MP4 / GIF / WebM / HEVC / x265 / AV1 |
 | Default audio conversion | MP3 / AAC / M4A / Opus / Ogg / FLAC / WAV / AIFF |
@@ -933,16 +952,18 @@ Suggested Alfred user configuration:
 | Default audio compression | App default / 5-100 |
 | Adaptive optimization | App default / On / Off |
 | PDF aggressive DPI | App default / Adaptive / fixed DPI |
-| Skip errors | On / Off |
 | Conversion engine | App-backed / Legacy local when available |
 
-There is an important distinction between output and backup:
+For output behavior, the static Alfred panel exposes only the Preserve Original
+toggle. The interactive Configuration menu owns how preservation works. Its
+built-in default template is `%P/%f-clop`, so enabling preservation works
+immediately without prior setup. Friendly choices such as Beside Original and
+Choose Folder generate a complete template; users may then edit it through
+guided token insertion and preview. Do not expose permanently visible
+dependent folder, suffix, and template fields in Alfred's non-dynamic panel.
 
-- `--output` preserves the original by writing elsewhere;
-- a workflow-managed backup copies the original before an in-place operation;
-- Clop's own backup behavior is configured in Clop, not through a CLI flag.
-
-The interface should use those precise terms.
+An output template preserves the original by writing elsewhere. Alfred Clop
+does not implement workflow-managed backup copies.
 
 The `copyResult` workflow checkbox should resolve into
 `ExecutionOptions.copyResult`. When enabled, supported commands must receive
@@ -951,8 +972,18 @@ also guarantees clipboard copying; `--gui` and `--copy` are independent CLI
 options.
 
 The `recursiveFolders` checkbox should resolve once and control both folder
-inspection depth and `--recursive` command construction. Recipes may later
-override it.
+inspection depth and `--recursive` command construction.
+
+Pass `--skip-errors` automatically to every supported batch-capable command.
+Do not expose it as a user preference. Continue to inspect structured results
+and report skipped or failed inputs according to the notification settings.
+
+Completion and error notifications are independent preferences and should be
+honored even when Clop's floating UI is enabled. macOS remains responsible for
+Focus and notification presentation.
+
+Clipboard image retention applies only to workflow-owned materialized raw
+clipboard images. It accepts 1 through 15 days and defaults to 7.
 
 ## Execution design
 
@@ -1170,7 +1201,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Derive available actions from selected media types.
 - Dynamically read Clop's PDF presets.
 - Treat the installed Clop CLI as the capability authority.
-- Separate output preservation from true backups.
+- Preserve originals only through a validated `--output` template; do not
+  implement workflow-managed backups.
 - Keep empty parameter menus instructional rather than filling them with
   workflow-authored presets.
 - Define an action preset as one normalized typed action with no inputs, custom
@@ -1180,16 +1212,23 @@ Run tests against a temporary copy, never the original fixture. Capture:
   item fixed at the top.
 - Use Control-Return to save a typed value and to request confirmed removal of
   an existing preset.
-- Keep recipes, recipe naming, recipe management, and multi-step execution as
-  a separate future product concept.
-- Store user presets in a versioned `presets.json`, using
-  `alfred_workflow_data` by default or the configured custom folder.
+- Use Clop pipelines instead of a separate workflow-owned recipe system.
+- Store portable workflow settings and action presets in one versioned
+  `settings.json`, using `alfred_workflow_data` by default or the configured
+  custom folder.
+- Use `%P/%f-clop` as the built-in original-preservation template.
+- Make Preserve Original and aggressive processing configurable defaults;
+  Shift-Return and Command-Return invert them for one run.
+- Pass `--skip-errors` automatically where supported rather than exposing a
+  preference.
+- Keep completion and error notifications independent.
 - Use one typed JSON automation contract for headless execution; never parse
   comma-separated paths or shell-like request strings.
 - Use one public `clop` External Trigger for interactive menus and quiet
   execution; keep `mainMenu` internal.
 - Keep input source separate from route: clipboard, Finder selection, or
-  explicit items may target a menu, complete action, or future recipe.
+  explicit items may target a menu or complete action, including a Clop
+  pipeline action.
 - Let `InputCollector` classify files, folders, and `http`/`https` URLs;
   extract supported inputs from prose only for clipboard and Alfred text.
 - Prefer native clipboard files over text and do not merge pasteboard formats.
@@ -1197,8 +1236,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
   `recursiveFolders` setting; treat budget-limited scans as ambiguous.
 - Use `menu` for both the main action menu and action parameter menus; ignore
   accidental action values on menu routes.
-- Inherit workflow execution settings for automation; recipes may override
-  them later.
+- Inherit workflow execution settings for automation; Clop pipelines retain
+  their own step behavior and receive only supported shared execution options.
 - Provide configurable Hotkeys for menu, standard optimization, and aggressive
   optimization using clipboard or Alfred's selected input.
 - Keep `--gui` and `--copy` as independent execution options.
@@ -1210,9 +1249,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Minimum macOS version.
 - Whether the released binary is universal or Apple Silicon only.
 - Whether Clop should be launched automatically when needed.
-- Exact default output and backup policy.
-- Exact preset location-migration flow.
-- Recipe schema, naming, editing, deletion, ordering, and execution behavior.
+- Exact `presets.json` to `settings.json` migration mechanics and compatibility
+  lifetime for `presetsPath`.
 - Whether headless automation should optionally return structured result JSON
   to callers in addition to quiet execution.
 - Which complete-coverage features ship in the first public release versus
