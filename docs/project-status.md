@@ -22,6 +22,10 @@ The routing and feedback hardening checkpoint is complete: public execute
 requests bypass Alfred's interactive Script Filter, normalized menu reruns
 clear stale public-request state, and quiet errors honor the `dnd` setting.
 
+Raw image clipboard materialization is also complete. Clipboard PNG or TIFF
+data now becomes a private cached image input when no native files or usable
+path/URL text are available.
+
 ## Completed
 
 ### Swift foundation
@@ -61,6 +65,13 @@ clear stale public-request state, and quiet errors honor the `dnd` setting.
   quoted or backtick-wrapped paths with spaces, unquoted absolute paths,
   `~/...` paths, and `file://` URLs
 - Native clipboard files take precedence over clipboard text
+- Raw PNG and TIFF clipboard data materialized only after native files and
+  usable path/URL text are unavailable
+- Content-addressed clipboard image files stored in Alfred's workflow cache,
+  with a private temporary fallback, restricted permissions, stable reuse
+  across Script Filter reruns, and opportunistic expiry
+- Clipboard image materialization failures retain the existing no-input
+  feedback without requiring Alfred Clipboard History or its private database
 - Exact structured explicit items remain distinct from prose extraction
 - Local files, folders, and remote URLs classified through `InputCollector`
 - HTTP/HTTPS query strings and fragments preserved
@@ -249,9 +260,9 @@ structure.
 - Output and backup policies
 - Dynamic PDF device and paper-size menus
 - Configuration menu for preset and recipe management, explicit resets,
-  storage migration, and portable settings export or backup
+  storage migration, portable settings export or backup, and an explicit
+  cleanup action for workflow-owned materialized clipboard images
 - Workflow icons, user configuration, packaging, and release automation
-- Raw bitmap clipboard data materialization
 
 ### Implemented unified input design
 
@@ -269,6 +280,9 @@ structure.
 - Universal Actions and Hotkeys pass files, URLs, or text as explicit input
 - Native clipboard files take precedence over text without merging pasteboard
   representations
+- Raw PNG or TIFF pasteboard data is a final clipboard fallback and normalizes
+  into the same local-file pipeline without querying Alfred's clipboard
+  database
 - Prose extraction for URLs, quoted or backtick-wrapped paths containing
   spaces, and unquoted absolute or `~/...` paths without spaces
 - Credential-bearing and unsupported-scheme URLs rejected; query strings and
@@ -308,8 +322,8 @@ execution-setting foundation:
    quiet execution.
 6. Add focused modifier and configuration-inheritance tests.
 
-Do not implement recipes, raw bitmap materialization, output policies, or new
-action parameter menus in that slice.
+Do not implement recipes, output policies, or new action parameter menus in
+that slice.
 
 ## Verification baseline
 

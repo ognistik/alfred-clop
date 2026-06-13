@@ -213,6 +213,8 @@ struct InputCollector {
     var fileManager: FileManager = .default
     var detector = MediaKindDetector()
     var folderInspector: any FolderInspecting = FoundationFolderInspector()
+    var clipboardImageMaterializer: any ClipboardImageMaterializing =
+        FoundationClipboardImageMaterializer()
 
     func collect(
         request: ClopInputRequest,
@@ -258,15 +260,28 @@ struct InputCollector {
             )
         }
 
-        guard let clipboardString = clipboard.string() else {
-            throw InputCollectionError.noInputs
+        if let clipboardString = clipboard.string() {
+            do {
+                return try collect(
+                    items: [clipboardString],
+                    extractText: true,
+                    recursiveFolders: recursiveFolders
+                )
+            } catch InputCollectionError.noInputs {
+                // Unrelated text can coexist with a useful image representation.
+            }
         }
 
-        return try collect(
-            items: [clipboardString],
-            extractText: true,
-            recursiveFolders: recursiveFolders
-        )
+        if let image = clipboard.image(),
+           let fileURL = try? clipboardImageMaterializer.materialize(image) {
+            return try collect(
+                items: [fileURL.path],
+                extractText: false,
+                recursiveFolders: recursiveFolders
+            )
+        }
+
+        throw InputCollectionError.noInputs
     }
 
     func collect(json: String) throws -> InputSelection {

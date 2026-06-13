@@ -737,7 +737,13 @@ Expected responsibilities:
   destructive confirmations;
 - export or back up portable user-created settings to a chosen location;
 - restore or import settings only after conflict, merge, schema-version, and
-  overwrite behavior has been designed.
+  overwrite behavior has been designed;
+- provide an explicit maintenance action to remove workflow-owned materialized
+  clipboard images from the workflow cache and temporary fallback directory.
+  Keep this separate from settings reset, import, and export because cached
+  images are disposable runtime data. Show the action only when matching cache
+  files exist, require confirmation, and report the number of files and space
+  reclaimed.
 
 When a pending migration blocks an inline save, Return on the explicit
 `Move existing settings` row should perform the non-destructive move directly
@@ -749,7 +755,9 @@ instead of performing a destructive shortcut.
 Use precise destructive labels such as `Reset saved presets` rather than the
 ambiguous `Reset settings`. A reset must state whether it affects presets,
 recipes, or both. Export and backup cover portable user-created data, not
-Alfred preferences, Clop preferences, workflow binaries, or caches.
+Alfred preferences, Clop preferences, workflow binaries, or caches. Cache
+cleanup is a separate maintenance operation and must delete only files created
+by this workflow's clipboard image materializer.
 
 Do not implement this menu as incidental preset-migration work. Design the
 shared settings document and conflict policy first so recipes can participate

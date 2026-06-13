@@ -188,6 +188,45 @@ struct ActionMenuTests {
     }
 
     @Test
+    func rawClipboardImagePathSurvivesMenuReruns() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let collector = InputCollector(
+            clipboardImageMaterializer: FoundationClipboardImageMaterializer(
+                directoryURL: directory.appendingPathComponent("clipboard cache")
+            )
+        )
+        let first = ActionMenu.response(
+            clipboard: ActionMenuClipboard(
+                imageValue: ClipboardImage(
+                    data: Data("raw image".utf8),
+                    format: .tiff
+                )
+            ),
+            query: "",
+            collector: collector
+        )
+        let inputJSON = try #require(
+            first.variables?[ActionMenu.inputJSONVariable]
+        )
+        let normalized = try JSONDecoder().decode(
+            MenuInput.self,
+            from: Data(inputJSON.utf8)
+        )
+
+        let rerun = ActionMenu.response(
+            inputJSON: inputJSON,
+            query: "crop",
+            context: .clipboard
+        )
+
+        #expect(normalized.paths.count == 1)
+        #expect(normalized.paths[0].hasSuffix(".tiff"))
+        #expect(rerun.items.map(\.title) == ["Crop / Resize"])
+        #expect(rerun.variables?[ActionMenu.inputJSONVariable] == inputJSON)
+    }
+
+    @Test
     func emptyClipboardReturnsVisibleErrorItem() {
         let response = ActionMenu.response(
             clipboard: ActionMenuClipboard(),
@@ -414,6 +453,7 @@ struct ActionMenuTests {
 private struct ActionMenuClipboard: ClipboardReading {
     var urls: [URL] = []
     var text: String?
+    var imageValue: ClipboardImage?
 
     func fileURLs() -> [URL] {
         urls
@@ -421,5 +461,9 @@ private struct ActionMenuClipboard: ClipboardReading {
 
     func string() -> String? {
         text
+    }
+
+    func image() -> ClipboardImage? {
+        imageValue
     }
 }

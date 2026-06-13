@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import AlfredClop
@@ -48,6 +49,126 @@ struct InputCollectorTests {
 
         #expect(selection.inputs == [file.standardizedFileURL.path])
         #expect(selection.mediaKinds == [.video])
+    }
+
+    @Test
+    func clipboardMaterializesRawImageWhenFilesAndTextAreUnavailable() throws {
+        let directory = try makeTemporaryDirectory()
+            .appendingPathComponent("cache with spaces", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory.deletingLastPathComponent()) }
+        let image = ClipboardImage(
+            data: Data("raw tiff fixture".utf8),
+            format: .tiff
+        )
+        let collector = InputCollector(
+            clipboardImageMaterializer: FoundationClipboardImageMaterializer(
+                directoryURL: directory
+            )
+        )
+
+        let selection = try collector.collect(
+            clipboard: StubClipboard(imageValue: image)
+        )
+
+        #expect(selection.inputs.count == 1)
+        #expect(selection.inputs[0].contains("cache with spaces"))
+        #expect(selection.inputs[0].hasSuffix(".tiff"))
+        #expect(selection.mediaKinds == [.image])
+        #expect(try Data(contentsOf: URL(fileURLWithPath: selection.inputs[0])) == image.data)
+    }
+
+    @Test
+    func systemClipboardReaderReadsPNGImageData() {
+        let pasteboard = NSPasteboard(
+            name: NSPasteboard.Name("alfred-clop-tests-\(UUID().uuidString)")
+        )
+        let data = Data("png fixture".utf8)
+        pasteboard.declareTypes([.png], owner: nil)
+        pasteboard.setData(data, forType: .png)
+
+        let image = SystemClipboardReader(pasteboard: pasteboard).image()
+
+        #expect(image == ClipboardImage(data: data, format: .png))
+    }
+
+    @Test
+    func clipboardFilesAndValidTextTakePrecedenceOverRawImage() throws {
+        let nativeFile = try temporaryFile(named: "native.png")
+        let textFile = nativeFile.deletingLastPathComponent()
+            .appendingPathComponent("text.pdf")
+        try Data().write(to: textFile)
+        defer { try? FileManager.default.removeItem(at: nativeFile.deletingLastPathComponent()) }
+        let materializer = RecordingImageMaterializer(
+            fileURL: nativeFile.deletingLastPathComponent()
+                .appendingPathComponent("unused.tiff")
+        )
+
+        let nativeSelection = try InputCollector(
+            clipboardImageMaterializer: materializer
+        ).collect(clipboard: StubClipboard(
+            urls: [nativeFile],
+            text: textFile.path,
+            imageValue: ClipboardImage(data: Data([1]), format: .tiff)
+        ))
+        let textSelection = try InputCollector(
+            clipboardImageMaterializer: materializer
+        ).collect(clipboard: StubClipboard(
+            text: textFile.path,
+            imageValue: ClipboardImage(data: Data([1]), format: .tiff)
+        ))
+
+        #expect(nativeSelection.inputs == [nativeFile.path])
+        #expect(textSelection.inputs == [textFile.path])
+        #expect(materializer.callCount == 0)
+    }
+
+    @Test
+    func unrelatedClipboardTextFallsThroughToRawImage() throws {
+        let imageFile = try temporaryFile(named: "clipboard.png")
+        defer { try? FileManager.default.removeItem(at: imageFile.deletingLastPathComponent()) }
+        let materializer = RecordingImageMaterializer(fileURL: imageFile)
+
+        let selection = try InputCollector(
+            clipboardImageMaterializer: materializer
+        ).collect(clipboard: StubClipboard(
+            text: "Image: 300x300 (2.8 MB)",
+            imageValue: ClipboardImage(data: Data([1]), format: .png)
+        ))
+
+        #expect(selection.inputs == [imageFile.path])
+        #expect(materializer.callCount == 1)
+    }
+
+    @Test
+    func materializedClipboardImagesAreStableAndPrivate() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let materializer = FoundationClipboardImageMaterializer(
+            directoryURL: directory.appendingPathComponent("images")
+        )
+        let image = ClipboardImage(data: Data("same image".utf8), format: .png)
+
+        let first = try materializer.materialize(image)
+        let second = try materializer.materialize(image)
+        let permissions = try FileManager.default.attributesOfItem(
+            atPath: first.path
+        )[.posixPermissions] as? NSNumber
+
+        #expect(first == second)
+        #expect(permissions?.intValue == 0o600)
+    }
+
+    @Test
+    func failedImageMaterializationPreservesNoInputBehavior() {
+        let collector = InputCollector(
+            clipboardImageMaterializer: FailingImageMaterializer()
+        )
+
+        #expect(throws: InputCollectionError.noInputs) {
+            try collector.collect(clipboard: StubClipboard(
+                imageValue: ClipboardImage(data: Data([1]), format: .tiff)
+            ))
+        }
     }
 
     @Test
@@ -361,6 +482,7 @@ struct InputCollectorTests {
 private struct StubClipboard: ClipboardReading {
     var urls: [URL] = []
     var text: String?
+    var imageValue: ClipboardImage?
 
     func fileURLs() -> [URL] {
         urls
@@ -368,6 +490,31 @@ private struct StubClipboard: ClipboardReading {
 
     func string() -> String? {
         text
+    }
+
+    func image() -> ClipboardImage? {
+        imageValue
+    }
+}
+
+private final class RecordingImageMaterializer: ClipboardImageMaterializing,
+    @unchecked Sendable {
+    var fileURL: URL
+    var callCount = 0
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+
+    func materialize(_ image: ClipboardImage) throws -> URL {
+        callCount += 1
+        return fileURL
+    }
+}
+
+private struct FailingImageMaterializer: ClipboardImageMaterializing {
+    func materialize(_ image: ClipboardImage) throws -> URL {
+        throw CocoaError(.fileWriteNoPermission)
     }
 }
 
