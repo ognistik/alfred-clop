@@ -14,7 +14,7 @@ struct SettingsFoundationTests {
     }
 
     @Test
-    func outputPreflightProtectsDuplicatesExistingFilesAndSources() throws {
+    func outputPlanningProtectsDuplicatesAndSources() throws {
         let firstDirectory = try makeTemporaryDirectory()
         let secondDirectory = try makeTemporaryDirectory()
         let first = firstDirectory.appendingPathComponent("same.png")
@@ -22,27 +22,63 @@ struct SettingsFoundationTests {
         try Data().write(to: first)
         try Data().write(to: second)
 
-        #expect(
-            OutputTemplateValidator.preflight(
+        #expect(throws: OutputTemplateError.duplicateOutput(
+            "/tmp/same-clop.png"
+        )) {
+            try OutputTemplateValidator.plan(
                 template: "/tmp/%f-clop",
                 inputs: [first.path, second.path]
-            ) == .duplicateOutput("/tmp/same-clop.png")
-        )
+            )
+        }
 
         let existing = firstDirectory.appendingPathComponent("same-clop.png")
         try Data().write(to: existing)
-        #expect(
-            OutputTemplateValidator.preflight(
-                template: "%P/%f-clop",
-                inputs: [first.path]
-            ) == .existingFile(existing.path)
-        )
-        #expect(
-            OutputTemplateValidator.preflight(
+        #expect(throws: OutputTemplateError.sourceCollision(first.path)) {
+            try OutputTemplateValidator.plan(
                 template: "%P/%f.%e",
                 inputs: [first.path]
-            ) == .sourceCollision(first.path)
+            )
+        }
+    }
+
+    @Test
+    func outputPlanningAddsNextAvailableNumericSuffix() throws {
+        let directory = try makeTemporaryDirectory()
+        let source = directory.appendingPathComponent("photo.png")
+        try Data().write(to: source)
+        try Data().write(
+            to: directory.appendingPathComponent("photo-clop.png")
         )
+        try Data().write(
+            to: directory.appendingPathComponent("photo-clop-2.png")
+        )
+
+        let plan = try OutputTemplateValidator.plan(
+            template: "%P/%f-clop",
+            inputs: [source.path]
+        )
+
+        #expect(plan.template == "%P/%f-clop-3")
+        #expect(plan.outputPaths == [
+            directory.appendingPathComponent("photo-clop-3.png").path
+        ])
+    }
+
+    @Test
+    func numericSuffixPrecedesExplicitExtensionToken() throws {
+        let directory = try makeTemporaryDirectory()
+        let source = directory.appendingPathComponent("photo.png")
+        try Data().write(to: source)
+        try Data().write(
+            to: directory.appendingPathComponent("photo-small.png")
+        )
+
+        let plan = try OutputTemplateValidator.plan(
+            template: "%P/%f-small.%e",
+            inputs: [source.path]
+        )
+
+        #expect(plan.template == "%P/%f-small-2.%e")
     }
 
     @Test

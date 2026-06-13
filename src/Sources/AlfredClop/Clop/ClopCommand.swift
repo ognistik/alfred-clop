@@ -41,13 +41,21 @@ struct ClopCommandBuilder {
         guard request.execution.backup == .trustClop else {
             throw ClopCommandBuilderError.unsupportedBackupBehavior
         }
-        if let template = request.execution.output.template,
-           let error = OutputTemplateValidator.preflight(
-               template: template,
-               inputs: request.inputs,
-               fileManager: fileManager
-           ) {
-            throw ClopCommandBuilderError.invalidOutputTemplate(error)
+        var resolvedRequest = request
+        if let template = request.execution.output.template {
+            do {
+                let plan = try OutputTemplateValidator.plan(
+                    template: template,
+                    inputs: request.inputs,
+                    fileManager: fileManager
+                )
+                resolvedRequest.execution.output = outputBehavior(
+                    request.execution.output,
+                    replacingTemplateWith: plan.template
+                )
+            } catch let error as OutputTemplateError {
+                throw ClopCommandBuilderError.invalidOutputTemplate(error)
+            }
         }
 
         let diagnostics = discovery.discover()
@@ -61,7 +69,7 @@ struct ClopCommandBuilder {
         switch request.action {
         case let .optimise(aggressive):
             arguments = optimiseArguments(
-                for: request,
+                for: resolvedRequest,
                 aggressive: aggressive
             )
             expectsJSON = true
@@ -71,7 +79,7 @@ struct ClopCommandBuilder {
                 throw ClopCommandBuilderError.invalidCropSize
             }
             arguments = cropArguments(
-                for: request,
+                for: resolvedRequest,
                 size: size,
                 smartCrop: smartCrop,
                 longEdge: longEdge
@@ -79,8 +87,8 @@ struct ClopCommandBuilder {
             expectsJSON = true
         case .uncropPDF:
             arguments = ["uncrop-pdf"]
-                + recursiveArguments(for: request.execution)
-                + outputArguments(for: request.execution.output)
+                + recursiveArguments(for: resolvedRequest.execution)
+                + outputArguments(for: resolvedRequest.execution.output)
                 + request.inputs
             expectsJSON = false
         case .stripMetadata:
@@ -179,6 +187,20 @@ struct ClopCommandBuilder {
                 .appendingPathComponent(template)
                 .path
             return ["--output", outputPath]
+        }
+    }
+
+    private func outputBehavior(
+        _ output: OutputBehavior,
+        replacingTemplateWith template: String
+    ) -> OutputBehavior {
+        switch output {
+        case .inPlace:
+            return .inPlace
+        case .sameFolder:
+            return .sameFolder(template: template)
+        case let .specificFolder(folder, _):
+            return .specificFolder(folder: folder, template: template)
         }
     }
 

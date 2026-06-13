@@ -5,8 +5,12 @@ enum OutputTemplateError: Error, Equatable {
     case unsupportedToken(String)
     case cannotPreflight(String)
     case duplicateOutput(String)
-    case existingFile(String)
     case sourceCollision(String)
+}
+
+struct OutputTemplatePlan: Equatable {
+    var template: String
+    var outputPaths: [String]
 }
 
 enum OutputTemplateValidator {
@@ -39,49 +43,53 @@ enum OutputTemplateValidator {
         return nil
     }
 
-    static func preflight(
+    static func plan(
         template: String,
         inputs: [String],
         fileManager: FileManager = .default,
         now: Date = Date()
-    ) -> OutputTemplateError? {
+    ) throws -> OutputTemplatePlan {
         if let error = validate(template) {
-            return error
+            throw error
         }
 
-        var planned = Set<String>()
-        for (offset, input) in inputs.enumerated() {
-            guard !input.hasPrefix("http://"), !input.hasPrefix("https://") else {
-                return .cannotPreflight(input)
-            }
-            var isDirectory: ObjCBool = false
-            let exists = fileManager.fileExists(
-                atPath: input,
-                isDirectory: &isDirectory
-            )
-            guard !exists || !isDirectory.boolValue else {
-                return .cannotPreflight(input)
-            }
-
-            let source = URL(fileURLWithPath: input).standardizedFileURL
-            let output = plannedURL(
+        let basePlan = try plannedPaths(
+            template: template,
+            inputs: inputs,
+            fileManager: fileManager,
+            now: now
+        )
+        if basePlan.allSatisfy({
+            !fileManager.fileExists(atPath: $0)
+        }) {
+            return OutputTemplatePlan(
                 template: template,
-                source: source,
-                index: offset + 1,
-                now: now
-            ).standardizedFileURL
-
-            if output == source {
-                return .sourceCollision(output.path)
-            }
-            if !planned.insert(output.path).inserted {
-                return .duplicateOutput(output.path)
-            }
-            if fileManager.fileExists(atPath: output.path) {
-                return .existingFile(output.path)
-            }
+                outputPaths: basePlan
+            )
         }
-        return nil
+
+        var suffix = 2
+        while true {
+            let candidate = templateByAddingSuffix(
+                suffix,
+                to: template
+            )
+            let outputPaths = try plannedPaths(
+                template: candidate,
+                inputs: inputs,
+                fileManager: fileManager,
+                now: now
+            )
+            if outputPaths.allSatisfy({
+                !fileManager.fileExists(atPath: $0)
+            }) {
+                return OutputTemplatePlan(
+                    template: candidate,
+                    outputPaths: outputPaths
+                )
+            }
+            suffix += 1
+        }
     }
 
     static func preview(
@@ -135,6 +143,58 @@ enum OutputTemplateValidator {
         return output
     }
 
+    private static func plannedPaths(
+        template: String,
+        inputs: [String],
+        fileManager: FileManager,
+        now: Date
+    ) throws -> [String] {
+        var planned = Set<String>()
+        return try inputs.enumerated().map { offset, input in
+            guard !input.hasPrefix("http://"), !input.hasPrefix("https://") else {
+                throw OutputTemplateError.cannotPreflight(input)
+            }
+            var isDirectory: ObjCBool = false
+            let exists = fileManager.fileExists(
+                atPath: input,
+                isDirectory: &isDirectory
+            )
+            guard !exists || !isDirectory.boolValue else {
+                throw OutputTemplateError.cannotPreflight(input)
+            }
+
+            let source = URL(fileURLWithPath: input).standardizedFileURL
+            let output = plannedURL(
+                template: template,
+                source: source,
+                index: offset + 1,
+                now: now
+            ).standardizedFileURL
+            if output == source {
+                throw OutputTemplateError.sourceCollision(output.path)
+            }
+            guard planned.insert(output.path).inserted else {
+                throw OutputTemplateError.duplicateOutput(output.path)
+            }
+            return output.path
+        }
+    }
+
+    private static func templateByAddingSuffix(
+        _ suffix: Int,
+        to template: String
+    ) -> String {
+        let slash = template.lastIndex(of: "/")
+        let filenameStart = slash.map { template.index(after: $0) }
+            ?? template.startIndex
+        let filename = template[filenameStart...]
+        guard let dot = filename.lastIndex(of: "."),
+              dot != filename.startIndex else {
+            return "\(template)-\(suffix)"
+        }
+        return "\(template[..<dot])-\(suffix)\(template[dot...])"
+    }
+
     private static func monthName(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -161,8 +221,6 @@ extension OutputTemplateError: LocalizedError {
             return "Preservation cannot safely preflight \(input)."
         case .duplicateOutput(let path):
             return "Multiple inputs would write to \(path)."
-        case .existingFile(let path):
-            return "The output already exists at \(path)."
         case .sourceCollision(let path):
             return "The output would overwrite its source at \(path)."
         }

@@ -246,8 +246,10 @@ clipboard-image cache cleanup.
   changed `settingsPath` locations, and legacy location metadata
 - Built-in preservation template `%P/%f-clop`
 - Template validation rejects empty values and unsupported tokens
-- Preflight rejects duplicate planned outputs, existing-file collisions,
-  source-path collisions, and inputs that cannot be safely planned
+- Preflight rejects duplicate planned outputs, source-path collisions, and
+  inputs that cannot be safely planned
+- Existing output collisions resolve to the next available numeric suffix,
+  such as `-clop-2` and `-clop-3`, without changing the stored template
 - Preservation uses Clop's validated `--output` template only; no
   workflow-managed backups
 - Static settings for Preserve Original, Standard or Aggressive default,
@@ -369,7 +371,7 @@ Implement the Downscale parameter menu and action presets:
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 170 tests.
+- `./scripts/test.sh` passes 173 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

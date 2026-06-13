@@ -62,6 +62,36 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
+    func existingPreservedOutputUsesNextNumericSuffix() throws {
+        let directory = try makeTemporaryDirectory()
+        let source = directory.appendingPathComponent("photo.png")
+        try Data().write(to: source)
+        try Data().write(
+            to: directory.appendingPathComponent("photo-clop.png")
+        )
+        var execution = makeExecutionOptions(
+            output: .sameFolder(template: "%P/%f-clop")
+        )
+        execution.showClopUI = false
+
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: [source.path],
+            action: .optimise(aggressive: false),
+            execution: execution
+        ))
+
+        #expect(command.arguments == [
+            "optimise",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--output",
+            "%P/%f-clop-2",
+            source.path
+        ])
+    }
+
+    @Test
     func uncropPDFDoesNotRequestJSON() throws {
         let command = try makeBuilder().command(for: OperationRequest(
             inputs: ["/tmp/book one.pdf", "/tmp/book two.pdf"],
