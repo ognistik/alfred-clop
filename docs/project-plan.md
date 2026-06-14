@@ -68,8 +68,8 @@ feature being deferred must still have an explicit place in this plan.
 ### Product enhancements
 
 - User-defined action presets for reusable values inside parameter menus
-- A Configuration menu for user-created settings, storage, reset, and portable
-  export or backup
+- A Configuration menu for workflow-owned settings, storage, reset, and
+  maintenance
 - Discoverable management of Clop's native saved and inline pipelines instead
   of a separate workflow-owned recipe system
 - Live progress UI
@@ -679,8 +679,8 @@ Alfred learns the order among presets.
 
 An action preset is one normalized typed action choice. It stores no inputs
 and no execution settings. Output behavior, filename templates, copy-result
-behavior, Clop UI visibility, preservation, and backups always come from the
-current workflow configuration. Presets never override those global settings.
+behavior, Clop UI visibility, and preservation always come from the current
+workflow configuration. Presets never override those global settings.
 
 Simple action presets do not have custom names. Their normalized value is
 their identity and display label: for example `1200x630`, `16:9`, `1920`,
@@ -703,27 +703,61 @@ Presets live only in the submenu for their action. Crop presets appear in Crop
 relevant Convert menu. Add and remove them there; do not duplicate preset
 management in Configuration.
 
-Portable workflow settings storage:
+Workflow settings storage:
 
 - store one versioned `settings.json` document containing action presets,
-  the configured output template, and future portable workflow-owned settings;
+  the configured output template, and future workflow-owned settings;
 - if the `settingsPath` workflow setting is empty, store `settings.json` in
   `alfred_workflow_data`;
 - if `settingsPath` points to a custom folder, read and write
   `<settingsPath>/settings.json`;
-- migrate the existing versioned `presets.json` content explicitly and
-  non-destructively when introducing the shared document;
-- temporarily recognize the old `presetsPath` variable while moving users to
-  `settingsPath`;
 - create the document when absent and use an existing compatible file when
   present;
 - use a versioned JSON schema and atomic writes;
 - never store user settings in the workflow bundle itself;
-- when the configured location changes, do not silently copy, merge, or delete
-  files. Offer an explicit pending settings migration.
+- retain compatibility for the already-supported `presets.json`,
+  `presetsPath`, and location metadata formats until a deliberate compatibility
+  cleanup removes them.
 
 The custom folder is the simple cross-Mac strategy: users may choose an iCloud
 Drive, Dropbox, or other locally available synchronized directory.
+
+#### Settings location changes
+
+The configured location is authoritative whenever it contains a valid
+`settings.json`. Ignore files in other locations and do not offer merging,
+import, export, or restore workflows. A malformed configured file remains a
+visible error; do not bypass it with older settings.
+
+When the configured location is empty and a valid previous settings file
+exists:
+
+- keep every Clop action available;
+- hide presets from the previous file and show one concise parameter-menu item:
+  `Presets are in the previous location`, with the subtitle
+  `Press Return to move settings here`;
+- allow typed parameter values to execute normally;
+- treat the previous file as read-only and block preset mutations,
+  output-template edits, resets, and other settings writes;
+- use the previous output template temporarily for interactive and headless
+  execution;
+- show Configuration choices to `Move existing settings` or
+  `Start with new settings`;
+- make moving explicit and non-destructive until the destination has been
+  written and validated;
+- make starting fresh create default settings at the configured location
+  without deleting the previous file.
+
+Warn after a successful operation only when the temporary template was
+actually relevant: Preserve Original was active, the previous template differs
+from `%P/%f-clop`, and Error notifications are enabled. Do not warn for
+in-place operations or failed executions. Use concise notification wording:
+`Using previous output settings` and
+`Open Configuration to move settings or start fresh`.
+
+Once either resolution succeeds, stop fallback reads and warnings immediately.
+If neither location contains settings, initialize the configured location
+normally.
 
 Do not create a separate workflow recipe system. Clop saved and inline
 pipelines are the multi-step automation feature. Keep pipeline expressions
@@ -746,8 +780,8 @@ Expected responsibilities:
   without adding a dedicated non-actionable menu row. Advertise source path,
   filename, date, time, random, and incrementing tokens there. Do not advertise
   `%e` or operation-specific advanced tokens;
-- show a pending settings migration only when one requires action; remove the
-  migration action from the main action menu once Configuration owns it;
+- resolve an empty configured location through `Move existing settings` or
+  `Start with new settings`;
 - reset the workflow-owned output template to `%P/%f-clop` through explicit
   confirmation while preserving action presets and Alfred's static
   preferences;
@@ -761,29 +795,17 @@ Expected responsibilities:
 - expose Command-Return on the main `Configuration` item as a shortcut to
   Alfred's workflow settings, with the subtitle
   `Output template, presets, and maintenance · ⌘⏎ Workflow settings`;
-- export or back up portable user-created settings to a chosen location;
-- restore or import settings only after conflict, merge, schema-version, and
-  overwrite behavior has been designed;
 - provide an explicit maintenance action to remove workflow-owned materialized
   clipboard images from the workflow cache and temporary fallback directory.
-  Keep this separate from settings reset, import, and export because cached
-  images are disposable runtime data. Show the action only when matching
-  cached images exist, include the image count and space used, require
-  confirmation, and report the number of files and space reclaimed.
-
-When a pending migration blocks an inline save, Return on the explicit
-`Move existing settings` row should perform the non-destructive move directly
-and resume the interrupted menu operation without a second confirmation.
-Otherwise, pending migration is managed from Configuration and omitted when
-there is nothing to migrate.
+  Show the action only when matching cached images exist, include the image
+  count and space used, require confirmation, and report the number of files
+  and space reclaimed.
 
 Use the precise label `Reset output template` and state the built-in template
 that will be restored. The separate preset-removal confirmation must state the
 number of presets that will be removed. Individual preset removal remains in
-each action menu. Export and backup cover portable user-created data, not
-Alfred preferences, Clop preferences, workflow binaries, or caches. Cache
-cleanup is a separate maintenance operation and must delete only files created
-by this workflow's clipboard image materializer.
+each action menu. Cache cleanup must delete only files created by this
+workflow's clipboard image materializer.
 
 The output-template editor follows these rules:
 
@@ -805,10 +827,6 @@ The output-template editor follows these rules:
 Example output paths must represent `%P` as `Original folder` instead of
 inventing a sample home directory. Home-relative and explicit absolute
 destinations remain literal in previews.
-
-Design the shared settings document and conflict policy before implementing
-the menu so output settings and presets do not require another incompatible
-storage transition.
 
 ### Downscale
 
@@ -1158,7 +1176,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - every media-specific conversion target
 - saved pipeline browsing and destructive pipeline confirmation
 - missing Clop installation
-- workflow configuration migration
+- settings location changes, including move and start-fresh resolution
 
 ## Milestones
 
@@ -1182,11 +1200,13 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Implement mixed optimize, crop, and downscale.
 - Add typed command builder.
 - Decode Clop JSON.
-- Add output and backup policies.
+- Add output behavior.
 - Replace built-in crop presets with a guided dynamic grammar.
 - Add user-defined action-preset persistence and Control-Return add/remove
   behavior.
 - Add capability-aware modifier requests.
+- Make settings-location changes non-blocking for execution while guarding
+  settings mutations.
 
 ### 4. Typed optimization and conversion
 
@@ -1261,9 +1281,11 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Use Control-Return to save a typed value and to request confirmed removal of
   an existing preset.
 - Use Clop pipelines instead of a separate workflow-owned recipe system.
-- Store portable workflow settings and action presets in one versioned
+- Store workflow settings and action presets in one versioned
   `settings.json`, using `alfred_workflow_data` by default or the configured
   custom folder.
+- Follow the settings-location contract above; do not add import, export,
+  backup, restore, merge, or automatic-move workflows.
 - Use `%P/%f-clop` as the built-in original-preservation template.
 - Make Preserve Original and aggressive processing configurable defaults;
   Shift-Return and Command-Return invert them for one run.

@@ -10,8 +10,8 @@ file whenever a task materially changes what works or what should happen next.
 
 Milestones 1 and 2 are substantially complete. Milestone 3 includes
 parameter-free execution, a guided dynamic parameter step for crop and resize,
-user-defined Crop / Resize action presets, explicit preset-location migration,
-and the unified input and routing foundation planned for Milestone 6.
+user-defined Crop / Resize action presets, shared settings, and the unified
+input and routing foundation planned for Milestone 6.
 
 The public automation surface is now one typed `clop` request with independent
 input and route values. Files, folders, HTTP/HTTPS URLs, clipboard content,
@@ -28,10 +28,10 @@ data now becomes a private cached image input when no native files or usable
 path/URL text are available.
 
 The shared settings and global execution-policy foundation is complete.
-Portable workflow-owned settings and action presets now share `settings.json`,
+Workflow-owned settings and action presets now share `settings.json`,
 original preservation uses validated Clop output templates, and Configuration
-owns migration, output-template reset, global preset reset confirmation, and
-clipboard-image cache cleanup.
+owns output-template reset, global preset reset confirmation, location moves,
+and clipboard-image cache cleanup.
 
 ## Completed
 
@@ -222,40 +222,16 @@ clipboard-image cache cleanup.
   overwritten
 - Configured paths and input filenames containing spaces are covered by tests
 
-### Preset location migration
-
-- Versioned workflow-owned location metadata stored under
-  `alfred_workflow_data`
-- Changed settings locations detected without silently moving, merging,
-  overwriting, or deleting portable data
-- Context-specific Move existing settings action appears first in the main
-  action menu with concise, path-free wording
-- Pending settings migration remains available when there are no current files
-  to process, alongside the relevant non-executable input message
-- New preset saves are blocked while a settings move or two-location conflict
-  is unresolved, preventing accidental creation of a second settings file
-- A blocked preset save offers the move inline; Return performs it directly,
-  saves the pending preset, and restores Crop / Resize
-- Separate typed confirmation and execution states
-- Atomic destination write followed by destination reload and validation
-  before source deletion
-- Default-to-custom and custom-to-default moves supported
-- Successful moves return to the main action menu with inputs and selected,
-  copied, or passed context preserved
-- Both-files conflicts, missing sources, malformed or unsupported sources, and
-  malformed or unsupported metadata produce visible non-destructive feedback
-- No accumulating migration backup copies
-- Paths containing spaces and injected write/validation failures covered by
-  focused tests
-
 ### Shared settings and execution policy
 
 - Versioned `settings.json` stores action presets and the active output
   template together
 - Default storage under `alfred_workflow_data`; optional `settingsPath`
   selects a custom folder
-- Explicit, non-destructive migration from `presets.json`, `presetsPath`,
-  changed `settingsPath` locations, and legacy location metadata
+- Existing compatibility for `presets.json`, `presetsPath`, changed
+  `settingsPath` locations, and legacy location metadata
+- Explicit settings moves use atomic destination writes and validation before
+  source deletion
 - Built-in preservation template `%P/%f-clop`
 - Template validation rejects empty values, unsupported tokens, `%e`, literal
   terminal extensions, folder-only values, and unpredictable relative paths
@@ -290,8 +266,8 @@ clipboard-image cache cleanup.
 - The Large Type reference does not advertise `%e` or operation-specific
   advanced tokens
 - `%z`, `%s`, `%x`, and `%q` remain accepted for advanced users
-- Pending migration appears in Configuration and inline blocked preset saves
-  still move directly before resuming
+- Pending location moves appear in Configuration and inline blocked preset
+  saves
 - `Reset output template` appears only for a customized template and restores
   `%P/%f-clop` without changing presets or Alfred preferences
 - Separate global preset removal appears only when presets exist and requires
@@ -337,9 +313,9 @@ structure.
 
 ## Not implemented
 
+- Non-blocking settings-location behavior described below
 - Downscale, conversion, and PDF-crop parameter menus and parsing
 - Dynamic PDF device and paper-size menus
-- Portable settings export, backup, restore, and import
 - Workflow icons, packaging, and release automation
 
 ### Implemented unified input design
@@ -385,16 +361,28 @@ structure.
 
 ## Next recommended task
 
-Implement the Downscale parameter menu and action presets:
+Implement the revised settings-location behavior:
 
-1. Add guided parsing for factors and percentages such as `0.5` and `75%`.
-2. Normalize percentages to typed factors and validate the supported range
-   without permitting enlargement.
-3. Add per-action preset save and confirmed removal using the shared
-   `settings.json`.
-4. Apply the shared aggressive, preservation, Clop UI, copy, recursion,
-   notification, output preflight, and `--skip-errors` policies.
-5. Preserve every existing input route, normalized state, and modifier meaning.
+1. When the configured location contains valid settings, use it exclusively
+   and ignore files elsewhere.
+2. When it is empty and previous settings exist, hide previous presets but keep
+   typed parameters and every Clop action executable.
+3. Show `Presets are in the previous location` with
+   `Press Return to move settings here` in affected parameter menus.
+4. Block preset and output-template mutations until the user chooses
+   `Move existing settings` or `Start with new settings` in Configuration.
+5. Use the previous output template as a read-only fallback for interactive
+   and headless execution. Starting fresh must create defaults without deleting
+   the previous file.
+6. After successful preserved-output execution, warn only when the fallback
+   template differs from `%P/%f-clop` and Error notifications are enabled:
+   `Using previous output settings` /
+   `Open Configuration to move settings or start fresh`.
+7. Do not warn for in-place operations or failures. Stop fallback behavior and
+   warnings immediately after resolution.
+8. Add focused tests for menu visibility, mutation blocking, authoritative
+   destination behavior, both resolution paths, headless execution, and
+   notification boundaries.
 
 ## Verification baseline
 
