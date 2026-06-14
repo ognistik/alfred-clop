@@ -133,6 +133,7 @@ enum ExecuteMode {
     static func quietFeedback(
         requestJSON: String,
         environment: Environment = Environment(),
+        fileManager: FileManager = .default,
         builder: ClopCommandBuilder = ClopCommandBuilder(),
         runner: any ClopProcessRunning = FoundationClopProcessRunner()
     ) -> String? {
@@ -145,10 +146,20 @@ enum ExecuteMode {
             return nil
         }
         let isSuccess = successTitles.contains(item.title)
-        let showsClopUI = (try? JSONDecoder().decode(
+        let request = try? JSONDecoder().decode(
             OperationRequest.self,
             from: Data(requestJSON.utf8)
-        ).execution.showClopUI) ?? false
+        )
+        if isSuccess,
+           request?.execution.output != .inPlace,
+           environment.errorNotifications,
+           PresetMigrationCoordinator(
+               environment: environment,
+               fileManager: fileManager
+           ).resolution().usesPreviousNonDefaultOutputTemplate {
+            return "Using previous output settings: Open Configuration to move settings or start fresh"
+        }
+        let showsClopUI = request?.execution.showClopUI ?? false
         if isSuccess && showsClopUI {
             return nil
         }

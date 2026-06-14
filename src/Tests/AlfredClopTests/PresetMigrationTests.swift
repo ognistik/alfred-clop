@@ -129,19 +129,24 @@ struct PresetMigrationTests {
     }
 
     @Test
-    func bothSettingsFilesProduceConflictWithoutChanges() throws {
+    func configuredSettingsAreAuthoritativeWhenBothFilesExist() throws {
         let fixture = try MigrationFixture(configured: true)
         try fixture.writeSettings(at: fixture.defaultSettingsFile, value: "w128")
         try fixture.writeSettings(at: fixture.customSettingsFile, value: "h720")
         let source = try Data(contentsOf: fixture.defaultSettingsFile)
-        let destination = try Data(contentsOf: fixture.customSettingsFile)
 
-        #expect({
-            guard case .conflict = fixture.status() else { return false }
-            return true
-        }())
+        guard case .authoritative(let document) =
+            PresetMigrationCoordinator(environment: fixture.environment).resolution()
+        else {
+            Issue.record("Expected authoritative configured settings")
+            return
+        }
+        #expect(document.presets == [
+            .crop(CropActionPreset(
+                size: try #require(CropSizeParser.parse("h720"))
+            ))
+        ])
         #expect(try Data(contentsOf: fixture.defaultSettingsFile) == source)
-        #expect(try Data(contentsOf: fixture.customSettingsFile) == destination)
     }
 
     @Test
@@ -163,7 +168,7 @@ struct PresetMigrationTests {
     }
 
     @Test
-    func inlinePresetSaveMovesThenResumes() throws {
+    func pendingLocationHidesPresetsAndBlocksInlineMutation() throws {
         let fixture = try MigrationFixture(configured: true)
         try fixture.writeSettings(at: fixture.defaultSettingsFile, value: "1920")
         let request = ParameterStepRequest(
@@ -179,8 +184,12 @@ struct PresetMigrationTests {
             query: "w128",
             environment: fixture.environment
         )
+        #expect(menu.items.first?.title == "Presets are in the previous location")
+        #expect(menu.items.first?.subtitle == "Press Return to move settings here")
+        #expect(!menu.items.contains { $0.title == "1920" })
+        let typed = try #require(menu.items.first { $0.title == "Width 128, auto height" })
         let saveState = try #require(
-            menu.items.first?.mods?.control?
+            typed.mods?.control?
                 .variables?[ActionMenu.menuStateVariable]
         )
         let pending = CropParameterMenu.response(
@@ -189,16 +198,119 @@ struct PresetMigrationTests {
             environment: fixture.environment
         )
 
-        #expect(pending.items.first?.title == "Move existing settings")
+        #expect(pending.items.first?.title == "Resolve the settings location first")
+        #expect(!FileManager.default.fileExists(
+            atPath: fixture.customSettingsFile.path
+        ))
+    }
 
-        _ = PresetMigrationMenu.response(
-            stateJSON: try #require(pending.items.first?.arg),
+    @Test
+    func malformedConfiguredSettingsDoNotFallBack() throws {
+        let fixture = try MigrationFixture(configured: true)
+        try fixture.writeSettings(
+            at: fixture.defaultSettingsFile,
+            value: "w128",
+            outputTemplate: "%P/%f-previous"
+        )
+        try FileManager.default.createDirectory(
+            at: fixture.customDirectory,
+            withIntermediateDirectories: true
+        )
+        try Data("not-json".utf8).write(to: fixture.customSettingsFile)
+
+        #expect(
+            PresetMigrationCoordinator(environment: fixture.environment)
+                .resolution() == .failure(.invalidFile)
+        )
+        #expect(throws: PresetStoreError.invalidFile) {
+            try fixture.environment.resolvedExecutionOptions()
+        }
+    }
+
+    @Test
+    func configurationOffersMoveAndStartFreshWhileWritesAreBlocked() throws {
+        let fixture = try MigrationFixture(configured: true)
+        try fixture.writeSettings(
+            at: fixture.defaultSettingsFile,
+            value: "w128",
+            outputTemplate: "%P/%f-previous"
+        )
+        let menu = ConfigurationMenu.response(
+            stateJSON: try JSONOutput.string(
+                for: MenuState.configuration(),
+                prettyPrinted: false
+            ),
+            query: "",
             environment: fixture.environment
         )
 
-        #expect(try PresetStore(
-            fileURL: fixture.customSettingsFile
-        ).load().presets.count == 2)
+        #expect(menu.items.prefix(2).map(\.title) == [
+            "Move existing settings",
+            "Start with new settings"
+        ])
+        #expect(!menu.items.contains { $0.title == "Remove all action presets" })
+        #expect(!menu.items.contains { $0.title == "Reset output template" })
+
+        let blocked = ConfigurationMenu.response(
+            stateJSON: try JSONOutput.string(
+                for: MenuState.configuration(
+                    mode: .configurationSaveOutput,
+                    value: "%P/%f-new"
+                ),
+                prettyPrinted: false
+            ),
+            query: "",
+            environment: fixture.environment
+        )
+        #expect(blocked.items.first?.title == "Resolve the settings location first")
+        #expect(!FileManager.default.fileExists(
+            atPath: fixture.customSettingsFile.path
+        ))
+    }
+
+    @Test
+    func startFreshCreatesDefaultsWithoutDeletingPreviousSettings() throws {
+        let fixture = try MigrationFixture(configured: true)
+        try fixture.writeSettings(
+            at: fixture.defaultSettingsFile,
+            value: "w128",
+            outputTemplate: "%P/%f-previous"
+        )
+
+        try PresetMigrationCoordinator(environment: fixture.environment)
+            .startFresh()
+
+        #expect(FileManager.default.fileExists(
+            atPath: fixture.defaultSettingsFile.path
+        ))
+        #expect(try PresetStore(fileURL: fixture.customSettingsFile).load()
+            == SettingsDocument())
+        guard case .authoritative =
+            PresetMigrationCoordinator(environment: fixture.environment).resolution()
+        else {
+            Issue.record("Expected configured settings to become authoritative")
+            return
+        }
+    }
+
+    @Test
+    func moveStopsFallbackAndDeletesPreviousSettings() throws {
+        let fixture = try MigrationFixture(configured: true)
+        try fixture.writeSettings(
+            at: fixture.defaultSettingsFile,
+            value: "w128",
+            outputTemplate: "%P/%f-previous"
+        )
+        let coordinator = PresetMigrationCoordinator(environment: fixture.environment)
+        let migration = try #require(availableMigration(coordinator.status()))
+
+        try coordinator.move(migration)
+
+        #expect(!FileManager.default.fileExists(
+            atPath: fixture.defaultSettingsFile.path
+        ))
+        #expect(try fixture.environment.resolvedExecutionOptions().output
+            == .inPlace)
     }
 
     @Test
@@ -277,11 +389,19 @@ private struct MigrationFixture {
         )).write(to: url, options: .atomic)
     }
 
-    func writeSettings(at url: URL, value: String = "w128") throws {
-        let store = PresetStore(fileURL: url)
-        _ = try store.save(.crop(CropActionPreset(
-            size: try #require(CropSizeParser.parse(value))
-        )))
+    func writeSettings(
+        at url: URL,
+        value: String = "w128",
+        outputTemplate: String = SettingsDocument.builtInOutputTemplate
+    ) throws {
+        try PresetStore(fileURL: url).persist(SettingsDocument(
+            presets: [
+                .crop(CropActionPreset(
+                    size: try #require(CropSizeParser.parse(value))
+                ))
+            ],
+            outputTemplate: outputTemplate
+        ))
     }
 }
 

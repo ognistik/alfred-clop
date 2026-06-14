@@ -77,16 +77,21 @@ struct Environment {
         fileManager: FileManager = .default,
         preserveOriginal override: Bool? = nil
     ) throws -> ExecutionOptions {
-        let store: PresetStore
-        do {
-            store = try PresetStore(environment: self, fileManager: fileManager)
-        } catch PresetStoreError.missingWorkflowDataDirectory {
+        let resolution = PresetMigrationCoordinator(
+            environment: self,
+            fileManager: fileManager
+        ).resolution()
+        switch resolution {
+        case .authoritative(let document), .fallback(let document, _):
+            return executionOptions(
+                outputTemplate: document.outputTemplate,
+                preserveOriginal: override
+            )
+        case .empty:
             return executionOptions(preserveOriginal: override)
+        case .failure(let error):
+            throw error
         }
-        return executionOptions(
-            outputTemplate: try store.load().outputTemplate,
-            preserveOriginal: override
-        )
     }
 
     var executionOptions: ExecutionOptions {

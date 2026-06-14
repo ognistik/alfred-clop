@@ -6,6 +6,19 @@ enum PresetStoreError: Error, Equatable {
     case invalidFile
 }
 
+extension PresetStoreError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .missingWorkflowDataDirectory:
+            return "Alfred did not provide a workflow data directory."
+        case .unsupportedVersion(let version):
+            return "settings.json schema version \(version) is unsupported."
+        case .invalidFile:
+            return "settings.json is malformed or contains unsupported data."
+        }
+    }
+}
+
 protocol AtomicDataWriting {
     func writeAtomically(_ data: Data, to url: URL) throws
 }

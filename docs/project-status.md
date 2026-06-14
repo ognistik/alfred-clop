@@ -33,6 +33,11 @@ original preservation uses validated Clop output templates, and Configuration
 owns output-template reset, global preset reset confirmation, location moves,
 and clipboard-image cache cleanup.
 
+The revised settings-location behavior is complete. A valid configured
+`settings.json` is authoritative, while an empty configured location may use
+the previous output template read-only until the user explicitly moves the
+settings or starts fresh.
+
 ## Completed
 
 ### Swift foundation
@@ -283,6 +288,19 @@ and clipboard-image cache cleanup.
   forms omit Smart Crop modifiers
 - Pipeline delivery remains owned by Clop; no workflow recipe system or
   pipeline output override was added
+- Configured settings are authoritative and malformed configured files never
+  fall back to another location
+- Pending location changes hide previous presets while keeping every action
+  and typed parameter executable
+- Previous settings remain read-only; preset and output-template writes are
+  blocked until Configuration moves the settings or starts fresh
+- Starting fresh creates defaults at the configured location without deleting
+  the previous file
+- Interactive and headless preserved-output execution use the previous output
+  template during the unresolved state
+- Successful preserved-output execution warns only for a previous customized
+  template when Error notifications are enabled; in-place and failed
+  operations remain unchanged
 
 Alfred was verified directly after implementation. Script Filter knowledge
 sorting is response-wide: after a UID result is learned, Alfred can promote it
@@ -313,7 +331,6 @@ structure.
 
 ## Not implemented
 
-- Non-blocking settings-location behavior described below
 - Downscale, conversion, and PDF-crop parameter menus and parsing
 - Dynamic PDF device and paper-size menus
 - Workflow icons, packaging, and release automation
@@ -361,34 +378,15 @@ structure.
 
 ## Next recommended task
 
-Implement the revised settings-location behavior:
-
-1. When the configured location contains valid settings, use it exclusively
-   and ignore files elsewhere.
-2. When it is empty and previous settings exist, hide previous presets but keep
-   typed parameters and every Clop action executable.
-3. Show `Presets are in the previous location` with
-   `Press Return to move settings here` in affected parameter menus.
-4. Block preset and output-template mutations until the user chooses
-   `Move existing settings` or `Start with new settings` in Configuration.
-5. Use the previous output template as a read-only fallback for interactive
-   and headless execution. Starting fresh must create defaults without deleting
-   the previous file.
-6. After successful preserved-output execution, warn only when the fallback
-   template differs from `%P/%f-clop` and Error notifications are enabled:
-   `Using previous output settings` /
-   `Open Configuration to move settings or start fresh`.
-7. Do not warn for in-place operations or failures. Stop fallback behavior and
-   warnings immediately after resolution.
-8. Add focused tests for menu visibility, mutation blocking, authoritative
-   destination behavior, both resolution paths, headless execution, and
-   notification boundaries.
+Implement the bounded Downscale parameter menu and typed parsing described in
+the product plan, following the established Crop / Resize routing, validation,
+execution, and preset patterns without starting conversion or PDF-crop work.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 178 tests.
+- `./scripts/test.sh` passes 190 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

@@ -22,8 +22,42 @@ enum ConfigurationMenu {
                 fileManager: fileManager,
                 writer: writer
             )
+            let resolution = PresetMigrationCoordinator(
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            ).resolution()
+            if isSettingsMutation(state.mode),
+               case .fallback = resolution {
+                return error(
+                    "Resolve the settings location first",
+                    "Move existing settings or start with new settings in Configuration."
+                )
+            }
             switch state.mode {
             case .configuration:
+                return menu(
+                    store: store,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer,
+                    cache: cache ?? ClipboardImageCache(
+                        environment: environment,
+                        fileManager: fileManager
+                    )
+                )
+            case .configurationStartFreshConfirmation:
+                return confirmation(
+                    title: "Start with new settings?",
+                    subtitle: "Create defaults here and leave the previous file unchanged.",
+                    nextMode: .configurationStartFresh
+                )
+            case .configurationStartFresh:
+                try PresetMigrationCoordinator(
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                ).startFresh()
                 return menu(
                     store: store,
                     environment: environment,
@@ -165,8 +199,26 @@ enum ConfigurationMenu {
                 fileManager: fileManager,
                 writer: writer
             )
+            let resolution = PresetMigrationCoordinator(
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            ).resolution()
+            if isSettingsMutation(state.mode),
+               case .fallback = resolution {
+                return environment.errorNotifications
+                    ? "Unable to update settings: Resolve the settings location first."
+                    : nil
+            }
             let message: String
             switch state.mode {
+            case .configurationStartFresh:
+                try PresetMigrationCoordinator(
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                ).startFresh()
+                message = "Started with new settings"
             case .configurationSaveOutput:
                 try store.updateOutputTemplate(state.configurationValue ?? "")
                 message = "Output template updated"
@@ -202,14 +254,49 @@ enum ConfigurationMenu {
         writer: any AtomicDataWriting,
         cache: ClipboardImageCache
     ) -> ScriptFilterResponse {
-        let document: SettingsDocument
-        do {
-            document = try store.load()
-        } catch let caughtError {
+        let coordinator = PresetMigrationCoordinator(
+            environment: environment,
+            fileManager: fileManager,
+            writer: writer
+        )
+        let resolution = coordinator.resolution()
+        if case .failure(let caughtError) = resolution {
             return error(
                 "Unable to read settings",
                 caughtError.localizedDescription
             )
+        }
+        let document = resolution.documentForExecution ?? SettingsDocument()
+
+        if case .fallback(_, let migration) = resolution {
+            var items = [
+                moveItem(
+                    migration: migration,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: .arguments
+                ),
+                startFreshItem(),
+                ScriptFilterItem(
+                    title: "Output Template",
+                    subtitle: "Using previous settings until this location is resolved",
+                    arg: "",
+                    valid: false
+                )
+            ]
+            let summary = cache.summary()
+            if summary.fileCount > 0 {
+                let stateJSON = encoded(.configuration(
+                    mode: .configurationCacheCleanupConfirmation
+                ))
+                items.append(ScriptFilterItem(
+                    title: "Clear cached clipboard images",
+                    subtitle: "\(summary.fileCount) files · \(formattedBytes(summary.byteCount))",
+                    arg: stateJSON,
+                    valid: true,
+                    variables: transitionVariables(stateJSON)
+                ))
+            }
+            return ScriptFilterResponse(items: items)
         }
 
         let outputState = encoded(.configuration(
@@ -233,20 +320,6 @@ enum ConfigurationMenu {
             items.append(removePresetsItem(count: document.presets.count))
         }
 
-        let migrationStatus = PresetMigrationCoordinator(
-            environment: environment,
-            fileManager: fileManager,
-            writer: writer
-        ).status()
-        if let migration = ActionMenu.presetMigrationItem(
-            status: migrationStatus,
-            selection: InputSelection(inputs: [], mediaKinds: []),
-            context: .arguments,
-            requiresConfirmation: false
-        ) {
-            items.insert(migration, at: 0)
-        }
-
         let summary = cache.summary()
         if summary.fileCount > 0 {
             let stateJSON = encoded(.configuration(
@@ -261,6 +334,42 @@ enum ConfigurationMenu {
             ))
         }
         return ScriptFilterResponse(items: items)
+    }
+
+    private static func moveItem(
+        migration: PresetMigration,
+        selection: InputSelection,
+        context: ActionInputContext
+    ) -> ScriptFilterItem {
+        ActionMenu.presetMigrationItem(
+            status: .available(migration),
+            selection: selection,
+            context: context,
+            requiresConfirmation: false
+        )!
+    }
+
+    private static func startFreshItem() -> ScriptFilterItem {
+        let stateJSON = encoded(.configuration(
+            mode: .configurationStartFreshConfirmation
+        ))
+        return ScriptFilterItem(
+            title: "Start with new settings",
+            subtitle: "Create default settings here and keep the previous file",
+            arg: stateJSON,
+            valid: true,
+            variables: transitionVariables(stateJSON)
+        )
+    }
+
+    private static func isSettingsMutation(_ mode: MenuMode) -> Bool {
+        switch mode {
+        case .configurationSaveOutput, .configurationResetOutput,
+             .configurationResetPresets:
+            return true
+        default:
+            return false
+        }
     }
 
     private static func outputTemplateMenu(

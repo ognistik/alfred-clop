@@ -272,9 +272,15 @@ route="$(./alfred-clop route --public-request "$request")"
 if [[ "$route" == "execute" ]]; then
   feedback="$(./alfred-clop request --public-request "$request" --quiet)"
   if [[ -n "$feedback" ]]; then
-    /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+    title="Alfred Clop"
+    message="$feedback"
+    if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
+      title="Using previous output settings"
+      message="Open Configuration to move settings or start fresh"
+    fi
+    /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
+  display notification (item 2 of argv) with title (item 1 of argv)
 end run
 APPLESCRIPT
   fi
@@ -509,9 +515,15 @@ else
   feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
 fi
 if [[ -n "$feedback" ]]; then
-  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+  title="Alfred Clop"
+  message="$feedback"
+  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
+    title="Using previous output settings"
+    message="Open Configuration to move settings or start fresh"
+  fi
+  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
+  display notification (item 2 of argv) with title (item 1 of argv)
 end run
 APPLESCRIPT
 fi</string>
@@ -684,9 +696,15 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard)"
 if [[ -n "$feedback" ]]; then
-  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+  title="Alfred Clop"
+  message="$feedback"
+  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
+    title="Using previous output settings"
+    message="Open Configuration to move settings or start fresh"
+  fi
+  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
+  display notification (item 2 of argv) with title (item 1 of argv)
 end run
 APPLESCRIPT
 fi</string>
@@ -745,9 +763,15 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard --aggressive)"
 if [[ -n "$feedback" ]]; then
-  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+  title="Alfred Clop"
+  message="$feedback"
+  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
+    title="Using previous output settings"
+    message="Open Configuration to move settings or start fresh"
+  fi
+  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
+  display notification (item 2 of argv) with title (item 1 of argv)
 end run
 APPLESCRIPT
 fi</string>
@@ -775,9 +799,15 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}")"
 if [[ -n "$feedback" ]]; then
-  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+  title="Alfred Clop"
+  message="$feedback"
+  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
+    title="Using previous output settings"
+    message="Open Configuration to move settings or start fresh"
+  fi
+  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
+  display notification (item 2 of argv) with title (item 1 of argv)
 end run
 APPLESCRIPT
 fi</string>
@@ -867,9 +897,15 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --aggressive)"
 if [[ -n "$feedback" ]]; then
-  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+  title="Alfred Clop"
+  message="$feedback"
+  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
+    title="Using previous output settings"
+    message="Open Configuration to move settings or start fresh"
+  fi
+  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
+  display notification (item 2 of argv) with title (item 1 of argv)
 end run
 APPLESCRIPT
 fi</string>

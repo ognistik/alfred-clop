@@ -201,6 +201,8 @@ enum MenuMode: String, Codable, Equatable {
     case cropPresetRemoval
     case presetMigrationConfirmation
     case presetMigration
+    case configurationStartFreshConfirmation
+    case configurationStartFresh
     case configuration
     case configurationOutputTemplate
     case configurationSaveOutput
@@ -305,4 +307,5 @@ struct MenuState: Codable, Equatable {
     ) -> MenuState {
         MenuState(mode: mode, configurationValue: value)
     }
+
 }

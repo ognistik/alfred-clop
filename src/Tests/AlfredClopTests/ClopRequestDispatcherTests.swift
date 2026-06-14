@@ -192,6 +192,51 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func headlessExecutionUsesPreviousOutputTemplateUntilResolution() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let root = try makeTemporaryDirectory()
+        let previous = root.appendingPathComponent("Previous")
+        let configured = root.appendingPathComponent("Configured")
+        try PresetStore(
+            fileURL: previous.appendingPathComponent("settings.json")
+        ).persist(SettingsDocument(outputTemplate: "%P/%f-previous"))
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: previous.path,
+            PresetStore.configuredPathEnvironmentKey: configured.path,
+            "preserveOriginal": "true",
+            "showClopUI": "false",
+            "errorNotifications": "true"
+        ])
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(action: .optimise(aggressive: false))
+        )
+        let json = try JSONOutput.string(for: request, prettyPrinted: false)
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: json,
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: environment,
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Optimization complete")
+        #expect(runner.command?.arguments.contains("%P/%f-previous") == true)
+        #expect(ClopRequestDispatcher.quietFeedback(
+            requestJSON: json,
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: environment,
+            builder: dispatcherBuilder(),
+            runner: CapturingDispatcherRunner()
+        ) == "Using previous output settings: Open Configuration to move settings or start fresh")
+    }
+
+    @Test
     func aggressiveExecuteRouteUsesOptimizeCapabilityWithoutMenuItem() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

@@ -26,6 +26,29 @@ enum PresetMigrationStatus: Equatable {
     case metadataInvalid(PresetMigrationError)
 }
 
+enum SettingsLocationResolution: Equatable {
+    case authoritative(SettingsDocument)
+    case fallback(SettingsDocument, PresetMigration)
+    case empty
+    case failure(PresetStoreError)
+
+    var documentForExecution: SettingsDocument? {
+        switch self {
+        case .authoritative(let document), .fallback(let document, _):
+            return document
+        case .empty, .failure:
+            return nil
+        }
+    }
+
+    var usesPreviousNonDefaultOutputTemplate: Bool {
+        guard case .fallback(let document, _) = self else {
+            return false
+        }
+        return document.outputTemplate != SettingsDocument.builtInOutputTemplate
+    }
+}
+
 struct PresetMigrationCoordinator {
     static let metadataFileName = "settings-location.json"
     static let legacyMetadataFileName = "preset-location.json"
@@ -45,6 +68,15 @@ struct PresetMigrationCoordinator {
     }
 
     func status() -> PresetMigrationStatus {
+        switch resolution() {
+        case .authoritative, .empty:
+            return .none
+        case .fallback(_, let migration):
+            return .available(migration)
+        case .failure:
+            break
+        }
+
         do {
             let destinationURL = try PresetStore.fileURL(environment: environment)
             let metadataURL = try metadataFileURL()
@@ -90,8 +122,61 @@ struct PresetMigrationCoordinator {
         }
     }
 
+    func resolution() -> SettingsLocationResolution {
+        let destinationURL: URL
+        do {
+            destinationURL = try PresetStore.fileURL(environment: environment)
+        } catch PresetStoreError.missingWorkflowDataDirectory {
+            return .empty
+        } catch {
+            return .failure(.missingWorkflowDataDirectory)
+        }
+
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            do {
+                return .authoritative(try PresetStore(
+                    fileURL: destinationURL,
+                    fileManager: fileManager,
+                    writer: writer
+                ).load())
+            } catch let error as PresetStoreError {
+                return .failure(error)
+            } catch {
+                return .failure(.invalidFile)
+            }
+        }
+
+        switch unresolvedStatus(destinationURL: destinationURL) {
+        case .available(let migration):
+            do {
+                return .fallback(
+                    try loadMigrationSource(at: migration.sourceURL),
+                    migration
+                )
+            } catch let error as PresetStoreError {
+                return .failure(error)
+            } catch {
+                return .failure(.invalidFile)
+            }
+        case .none, .sourceMissing:
+            return .empty
+        case .sourceInvalid(_, let error):
+            switch error {
+            case .sourceUnsupportedVersion(let version):
+                return .failure(.unsupportedVersion(version))
+            default:
+                return .failure(.invalidFile)
+            }
+        case .conflict:
+            // A destination file was checked above, so this is unreachable.
+            return .failure(.invalidFile)
+        case .metadataInvalid:
+            return .failure(.invalidFile)
+        }
+    }
+
     func move(_ migration: PresetMigration) throws {
-        guard case let .available(currentMigration) = status(),
+        guard case let .fallback(_, currentMigration) = resolution(),
               currentMigration == migration else {
             throw PresetMigrationError.locationChanged
         }
@@ -143,6 +228,22 @@ struct PresetMigrationCoordinator {
            legacyMetadataURL != currentMetadataURL {
             try? fileManager.removeItem(at: legacyMetadataURL)
         }
+    }
+
+    func startFresh() throws {
+        guard case .fallback = resolution() else {
+            throw PresetMigrationError.locationChanged
+        }
+        let destinationURL = try PresetStore.fileURL(environment: environment)
+        try PresetStore(
+            fileURL: destinationURL,
+            fileManager: fileManager,
+            writer: writer
+        ).persist(SettingsDocument())
+        try persistMetadata(
+            directoryURL: destinationURL.deletingLastPathComponent(),
+            at: metadataFileURL()
+        )
     }
 
     func metadataFileURL() throws -> URL {
@@ -213,6 +314,38 @@ struct PresetMigrationCoordinator {
             at: metadataURL
         )
         return .none
+    }
+
+    private func unresolvedStatus(
+        destinationURL: URL
+    ) -> PresetMigrationStatus {
+        do {
+            let metadataURL = try metadataFileURL()
+            let existingMetadataURL = existingMetadataFileURL() ?? metadataURL
+            guard fileManager.fileExists(atPath: existingMetadataURL.path) else {
+                return try initialStatus(
+                    destinationURL: destinationURL,
+                    metadataURL: metadataURL
+                )
+            }
+
+            let metadata = try loadMetadata(at: existingMetadataURL)
+            let sourceURL = sourceFileURL(
+                directoryPath: metadata.lastActiveDirectoryPath,
+                destinationURL: destinationURL
+            )
+            guard sourceURL.standardizedFileURL != destinationURL.standardizedFileURL else {
+                return .none
+            }
+            return migrationStatus(PresetMigration(
+                sourceURL: sourceURL,
+                destinationURL: destinationURL
+            ))
+        } catch let error as PresetMigrationError {
+            return .metadataInvalid(error)
+        } catch {
+            return .metadataInvalid(.invalidMetadata)
+        }
     }
 
     private func migrationStatus(

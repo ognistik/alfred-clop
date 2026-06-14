@@ -249,6 +249,8 @@ enum AlfredClopCommand {
             case .presetMigrationConfirmation, .presetMigration:
                 return PresetMigrationMenu.response(stateJSON: stateJSON)
             case .configuration,
+                 .configurationStartFreshConfirmation,
+                 .configurationStartFresh,
                  .configurationOutputTemplate,
                  .configurationSaveOutput,
                  .configurationResetOutputConfirmation,
@@ -368,16 +370,26 @@ enum AlfredClopCommand {
     }
 
     private static func notify(_ text: String) {
+        let warning = "Using previous output settings: "
+        let title: String
+        let message: String
+        if text.hasPrefix(warning) {
+            title = "Using previous output settings"
+            message = String(text.dropFirst(warning.count))
+        } else {
+            title = "Alfred Clop"
+            message = text
+        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-", text]
+        process.arguments = ["-", title, message]
         let input = Pipe()
         process.standardInput = input
         do {
             try process.run()
             input.fileHandleForWriting.write(Data("""
             on run argv
-                display notification (item 1 of argv) with title "Alfred Clop"
+                display notification (item 2 of argv) with title (item 1 of argv)
             end run
             """.utf8))
             try? input.fileHandleForWriting.close()

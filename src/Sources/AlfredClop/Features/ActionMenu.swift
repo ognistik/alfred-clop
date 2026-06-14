@@ -715,10 +715,11 @@ enum ActionMenu {
 
         let configuredAggressive = environment.aggressiveByDefault
         let configuredPreserve = environment.preserveOriginal
-        let template = (try? PresetStore(
+        let template = PresetMigrationCoordinator(
             environment: environment,
             fileManager: fileManager
-        ).load().outputTemplate) ?? SettingsDocument.builtInOutputTemplate
+        ).resolution().documentForExecution?.outputTemplate
+            ?? SettingsDocument.builtInOutputTemplate
 
         func modifier(
             aggressive: Bool,
