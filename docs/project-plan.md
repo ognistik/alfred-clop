@@ -964,6 +964,7 @@ Suggested Alfred user configuration:
 
 | Setting | Initial values |
 | --- | --- |
+| Keyword | User-defined text with a built-in fallback |
 | Clop CLI path | Auto-detect, optional override |
 | Settings path | Empty for `alfred_workflow_data`, or a custom folder |
 | Preserve original files | Off / On; Shift inverts for one run |
@@ -973,6 +974,7 @@ Suggested Alfred user configuration:
 | Error notifications | On / Off |
 | Ensure result is copied | On / Off |
 | Recurse into folders | On / Off |
+| Read clipboard for keyword | On / Off; default On |
 | Clipboard image retention | 1-15 days; default 7 |
 | Default image conversion | WebP / AVIF / HEIC / JXL / JPEG / PNG |
 | Default video conversion | MP4 / GIF / WebM / HEVC / x265 / AV1 |
@@ -1024,6 +1026,12 @@ Focus and notification presentation.
 
 Clipboard image retention applies only to workflow-owned materialized raw
 clipboard images. It accepts 1 through 15 days and defaults to 7.
+
+The keyword reads the current clipboard only when `Read clipboard for keyword`
+is enabled. When disabled, it shows an actionable result that opens Alfred's
+workflow configuration. Explicit clipboard Hotkeys and External Trigger
+requests remain available because those routes deliberately request clipboard
+input.
 
 ## Execution design
 

@@ -151,6 +151,34 @@ enum ActionMenu {
     static let requestKindVariable = "alfred_clop_request_kind"
     static let publicRequestVariable = "alfred_clop_request"
 
+    static func keywordResponse(
+        clipboard: ClipboardReading,
+        query: String,
+        collector: InputCollector = InputCollector(),
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter()
+    ) -> ScriptFilterResponse {
+        guard environment.readClipboardForKeyword else {
+            let disabledItem = workflowSettingsItem(
+                title: "Clipboard input is disabled",
+                subtitle: "Press Return to enable it in Workflow Configuration."
+            ).items[0]
+            return ScriptFilterResponse(items: [
+                disabledItem,
+                ConfigurationMenu.actionItem
+            ])
+        }
+        return response(
+            clipboard: clipboard,
+            query: query,
+            collector: collector,
+            environment: environment,
+            fileManager: fileManager,
+            writer: writer
+        )
+    }
+
     static func response(
         clipboard: ClipboardReading,
         query: String,

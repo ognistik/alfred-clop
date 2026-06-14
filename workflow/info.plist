@@ -36,7 +36,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>086222E0-0634-41BB-8795-059C6B8AF42C</string>
+				<string>BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -137,6 +137,19 @@
 			</dict>
 		</array>
 		<key>91B8DA36-20F9-40E0-A192-1DBD7779B33E</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>086222E0-0634-41BB-8795-059C6B8AF42C</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
@@ -384,7 +397,7 @@ fi</string>
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>keyword</key>
-				<string>clop</string>
+				<string>{var:theKw}||Clop</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -402,10 +415,12 @@ elif [[ -n "${alfred_clop_menu_state:-}" ]]; then
   ./alfred-clop menu --menu-state "$alfred_clop_menu_state" --input-json "${alfred_clop_input_json:-}" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
 elif [[ -n "${alfred_clop_input_json:-}" ]]; then
   ./alfred-clop menu --input-json "$alfred_clop_input_json" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
+elif [[ "${alfred_clop_explicit_clipboard:-}" == "true" ]]; then
+  ./alfred-clop menu --input-source clipboard --query "${1:-}"
 elif [[ -n "${alfred_clop_explicit_input:-}" ]]; then
   ./alfred-clop menu --explicit-input "$alfred_clop_explicit_input" --input-context "${alfred_clop_input_context:-selected}" --query "${1:-}"
 else
-  ./alfred-clop menu --input-source clipboard --query "${1:-}"
+  ./alfred-clop menu --input-source keywordClipboard --query "${1:-}"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -513,6 +528,38 @@ fi</string>
 			<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
 			<key>version</key>
 			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argument</key>
+				<string></string>
+				<key>passthroughargument</key>
+				<false/>
+				<key>variables</key>
+				<dict>
+					<key>alfred_clop_explicit_clipboard</key>
+					<string>true</string>
+					<key>alfred_clop_explicit_input</key>
+					<string></string>
+					<key>alfred_clop_input_context</key>
+					<string>clipboard</string>
+					<key>alfred_clop_input_json</key>
+					<string></string>
+					<key>alfred_clop_menu_state</key>
+					<string></string>
+					<key>alfred_clop_paths</key>
+					<string></string>
+					<key>alfred_clop_request</key>
+					<string></string>
+				</dict>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.argument</string>
+			<key>uid</key>
+			<string>BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB</string>
+			<key>version</key>
+			<integer>1</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -721,6 +768,36 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}")"
+if [[ -n "$feedback" ]]; then
+  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
+on run argv
+  display notification (item 1 of argv) with title "Alfred Clop"
+end run
+APPLESCRIPT
+fi</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>99999999-9999-4999-8999-999999999999</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>action</key>
 				<integer>0</integer>
 				<key>argument</key>
@@ -746,36 +823,6 @@ fi</string>
 			<string>alfred.workflow.trigger.hotkey</string>
 			<key>uid</key>
 			<string>55555555-5555-4555-8555-555555555555</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>102</integer>
-				<key>script</key>
-				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}")"
-if [[ -n "$feedback" ]]; then
-  /usr/bin/osascript - "$feedback" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 1 of argv) with title "Alfred Clop"
-end run
-APPLESCRIPT
-fi</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>11</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>99999999-9999-4999-8999-999999999999</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -966,6 +1013,15 @@ fi</string>
 		<dict>
 			<key>xpos</key>
 			<real>1095</real>
+			<key>ypos</key>
+			<real>235</real>
+		</dict>
+		<key>BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB</key>
+		<dict>
+			<key>note</key>
+			<string>Explicit Clipboard Input</string>
+			<key>xpos</key>
+			<real>465</real>
 			<key>ypos</key>
 			<real>235</real>
 		</dict>
@@ -1166,6 +1222,25 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>default</key>
+				<true/>
+				<key>required</key>
+				<false/>
+				<key>text</key>
+				<string>Allow the keyword to inspect the current clipboard.</string>
+			</dict>
+			<key>description</key>
+			<string>Explicit clipboard Hotkeys and External Trigger requests remain available.</string>
+			<key>label</key>
+			<string>Read clipboard for keyword</string>
+			<key>type</key>
+			<string>checkbox</string>
+			<key>variable</key>
+			<string>readClipboardForKeyword</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>defaultvalue</key>
 				<integer>7</integer>
 				<key>markercount</key>
@@ -1187,6 +1262,27 @@ fi</string>
 			<string>slider</string>
 			<key>variable</key>
 			<string>cacheRetention</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>cl</string>
+				<key>placeholder</key>
+				<string></string>
+				<key>required</key>
+				<false/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string></string>
+			<key>label</key>
+			<string>Keyword</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>theKw</string>
 		</dict>
 	</array>
 	<key>version</key>

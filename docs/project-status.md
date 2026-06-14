@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 13, 2026
+Last updated: June 14, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -117,7 +117,7 @@ clipboard-image cache cleanup.
 ### Workflow
 
 - Universal Action wired through an Args and Vars object
-- Clipboard keyword `clop`
+- Customizable clipboard keyword, with `Clop` as its fallback keyword
 - Public External Trigger `clop` accepts typed requests with optional explicit
   compatibility versions
 - Human-friendly External Trigger shorthand for bare Finder, clipboard, path,
@@ -141,7 +141,13 @@ clipboard-image cache cleanup.
   interactive Script Filter errors
 - Release binary built at `workflow/alfred-clop`
 - User configuration fields for `settingsPath`, preservation, optimization
-  default, Clop UI, notifications, copying, recursion, and cache retention
+  default, Clop UI, notifications, copying, recursion, keyword clipboard
+  access, and cache retention
+- Keyword clipboard access defaults on and can be disabled without affecting
+  explicit clipboard Hotkeys or External Trigger requests; the disabled
+  keyword result opens Alfred workflow configuration
+- The menu-with-clipboard Hotkey uses an explicit clipboard route and bypasses
+  the keyword-only clipboard preference
 - `copyResult` is applied to supported app-backed commands
 - `recursiveFolders` controls both folder inspection and supported Clop
   command arguments

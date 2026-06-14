@@ -169,6 +169,57 @@ struct ActionMenuTests {
     }
 
     @Test
+    func keywordClipboardCanBeDisabledWithoutAffectingExplicitRoutes() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let clipboard = ActionMenuClipboard(urls: [file])
+        let disabled = Environment(values: [
+            "readClipboardForKeyword": "false"
+        ])
+
+        let keywordResponse = ActionMenu.keywordResponse(
+            clipboard: clipboard,
+            query: "",
+            environment: disabled
+        )
+        let explicitResponse = ActionMenu.response(
+            clipboard: clipboard,
+            query: "",
+            environment: disabled
+        )
+
+        #expect(keywordResponse.items.map(\.title) == [
+            "Clipboard input is disabled",
+            "Configuration"
+        ])
+        #expect(keywordResponse.items[0].title == "Clipboard input is disabled")
+        #expect(
+            keywordResponse.items[0].subtitle
+                == "Press Return to enable it in Workflow Configuration."
+        )
+        #expect(keywordResponse.items[0].valid == true)
+        #expect(
+            keywordResponse.items[0].variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.workflowSettings.rawValue
+        )
+        #expect(explicitResponse.items.map(\.title).contains("Optimize"))
+    }
+
+    @Test
+    func keywordClipboardReadingDefaultsToEnabled() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+
+        let response = ActionMenu.keywordResponse(
+            clipboard: ActionMenuClipboard(urls: [file]),
+            query: "exif",
+            environment: Environment(values: [:])
+        )
+
+        #expect(response.items.map(\.title) == ["Strip Metadata"])
+    }
+
+    @Test
     func clipboardContextSurvivesJSONMenuReruns() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

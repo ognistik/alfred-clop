@@ -41,6 +41,49 @@ struct WorkflowRoutingTests {
     }
 
     @Test
+    func clipboardMenuHotkeyBypassesKeywordClipboardPreference() throws {
+        let plist = try workflowPlist()
+        let objects = try #require(plist["objects"] as? [[String: Any]])
+        let connections = try #require(
+            plist["connections"] as? [String: [[String: Any]]]
+        )
+        let hotkeyRoutes = try #require(
+            connections["11111111-1111-4111-8111-111111111111"]
+        )
+        let explicitClipboard = try #require(objects.first {
+            $0["uid"] as? String == "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB"
+        })
+        let explicitConfig = try #require(
+            explicitClipboard["config"] as? [String: Any]
+        )
+        let variables = try #require(
+            explicitConfig["variables"] as? [String: String]
+        )
+        let explicitRoutes = try #require(
+            connections["BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB"]
+        )
+        let scriptFilter = try #require(objects.first {
+            $0["uid"] as? String == "086222E0-0634-41BB-8795-059C6B8AF42C"
+        })
+        let scriptFilterConfig = try #require(
+            scriptFilter["config"] as? [String: Any]
+        )
+        let script = try #require(scriptFilterConfig["script"] as? String)
+
+        #expect(hotkeyRoutes.contains {
+            $0["destinationuid"] as? String
+                == "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB"
+        })
+        #expect(variables["alfred_clop_explicit_clipboard"] == "true")
+        #expect(explicitRoutes.contains {
+            $0["destinationuid"] as? String
+                == "086222E0-0634-41BB-8795-059C6B8AF42C"
+        })
+        #expect(script.contains("--input-source clipboard"))
+        #expect(script.contains("--input-source keywordClipboard"))
+    }
+
+    @Test
     func quietNotificationScriptsUseResolvedCLIFeedback() throws {
         let plist = try workflowPlist()
         let objects = try #require(plist["objects"] as? [[String: Any]])
@@ -82,8 +125,28 @@ struct WorkflowRoutingTests {
             "errorNotifications",
             "copyResult",
             "recursiveFolders",
-            "cacheRetention"
+            "readClipboardForKeyword",
+            "cacheRetention",
+            "theKw"
         ]))
+        let clipboardKeyword = try #require(settings.first {
+            $0["variable"] as? String == "readClipboardForKeyword"
+        })
+        let clipboardKeywordConfig = try #require(
+            clipboardKeyword["config"] as? [String: Any]
+        )
+        #expect(clipboardKeywordConfig["default"] as? Bool == true)
+
+        let objects = try #require(plist["objects"] as? [[String: Any]])
+        let scriptFilter = try #require(objects.first {
+            $0["type"] as? String == "alfred.workflow.input.scriptfilter"
+        })
+        let scriptFilterConfig = try #require(
+            scriptFilter["config"] as? [String: Any]
+        )
+        let script = try #require(scriptFilterConfig["script"] as? String)
+        #expect(script.contains("--input-source keywordClipboard"))
+
         let completion = try #require(settings.first {
             $0["variable"] as? String == "completionNotifications"
         })

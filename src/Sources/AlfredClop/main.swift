@@ -289,6 +289,12 @@ enum AlfredClopCommand {
                 context: context
             )
         }
+        if value(after: "--input-source", in: arguments) == "keywordClipboard" {
+            return ActionMenu.keywordResponse(
+                clipboard: SystemClipboardReader(),
+                query: query
+            )
+        }
         if value(after: "--input-source", in: arguments) == "clipboard" {
             return ActionMenu.response(
                 clipboard: SystemClipboardReader(),

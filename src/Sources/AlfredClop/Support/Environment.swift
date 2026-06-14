@@ -53,6 +53,10 @@ struct Environment {
         return min(15, max(1, value))
     }
 
+    var readClipboardForKeyword: Bool {
+        checkbox("readClipboardForKeyword", default: true)
+    }
+
     func executionOptions(
         outputTemplate: String = SettingsDocument.builtInOutputTemplate,
         preserveOriginal override: Bool? = nil
