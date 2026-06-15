@@ -233,7 +233,7 @@ struct SettingsFoundationTests {
             $0.title == "Remove all action presets"
         })
         #expect(reset.mods == nil)
-        #expect(presets.subtitle.contains("1 saved preset"))
+        #expect(presets.subtitle.contains("1 Saved Preset"))
 
         let confirmation = ConfigurationMenu.response(
             stateJSON: try #require(

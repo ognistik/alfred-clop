@@ -44,6 +44,12 @@ only source of truth. A missing file is created with defaults on the first
 user-facing executable invocation, changing the folder switches
 configurations, and no migration or fallback state is maintained.
 
+Script Filter subtitles now share a compact style across the main action
+menu, parameter menus, conversion controls, presets, Configuration, and
+modifier rows. Processing subtitles keep source and folder-count clarity while
+using short effect labels and consistent title-case hints such as `Save
+Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
+
 ## Completed
 
 ### Swift foundation

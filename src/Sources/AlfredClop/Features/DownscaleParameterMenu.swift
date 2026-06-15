@@ -255,10 +255,12 @@ enum DownscaleParameterMenu {
             uid: savedPreset?.stableUID,
             title: "Use \(factor.displayValue)",
             subtitle: [
-                "\(inputDescription(for: request)) · Downscale to \(factor.displayValue)",
+                inputDescription(for: request),
+                "Downscale to \(factor.displayValue)",
                 "Factor \(factor.factorValue)",
-                savedPreset == nil ? nil : "Saved preset"
-            ].compactMap(\.self).joined(separator: " - "),
+                savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset",
+                savedPreset == nil ? nil : Optional("⌃↩ Remove Preset")
+            ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 for: preset,
                 request: request,
@@ -292,7 +294,13 @@ enum DownscaleParameterMenu {
         ScriptFilterItem(
             uid: preset.stableUID,
             title: preset.displayValue,
-            subtitle: "\(inputDescription(for: request)) · Downscale to \(preset.displayValue) - Factor \(preset.stableFactor) - Saved preset",
+            subtitle: [
+                inputDescription(for: request),
+                "Saved Preset",
+                "Downscale to \(preset.displayValue)",
+                "Factor \(preset.stableFactor)",
+                "⌃↩ Remove Preset"
+            ].joined(separator: " · "),
             arg: operationArgument(
                 for: preset,
                 request: request,
@@ -334,8 +342,8 @@ enum DownscaleParameterMenu {
         return ScriptFilterResponse(
             items: [
                 ScriptFilterItem(
-                    title: "Remove saved preset \(presetDisplayValue(action.preset))?",
-                    subtitle: "Press Return to confirm removal. This cannot be undone.",
+                    title: "Remove Preset \(presetDisplayValue(action.preset))?",
+                    subtitle: "Return confirms · Cannot be undone",
                     arg: stateJSON,
                     valid: true,
                     variables: transitionVariables(
@@ -383,8 +391,8 @@ enum DownscaleParameterMenu {
     ) -> ScriptFilterMods {
         let preserve = environment.preserveOriginal
         let preserveText = preserve
-            ? "replace originals for this run"
-            : "preserve originals for this run"
+            ? "Replace Originals"
+            : "Output Template"
 
         func modifier(preserve: Bool, subtitle: String) -> ScriptFilterModifier {
             ScriptFilterModifier(
@@ -426,8 +434,8 @@ enum DownscaleParameterMenu {
         )
         let stateJSON = (try? encodedState(state)) ?? ""
         let subtitle = kind == .save
-            ? "Save \(preset.displayValue) as a preset"
-            : "Remove saved preset \(preset.displayValue)"
+            ? "Save Preset \(preset.displayValue)"
+            : "Remove Preset \(preset.displayValue)"
 
         return ScriptFilterModifier(
             arg: stateJSON,
@@ -472,7 +480,7 @@ enum DownscaleParameterMenu {
     private static var instructionItem: ScriptFilterItem {
         ScriptFilterItem(
             title: "Type a downscale factor",
-            subtitle: "Examples: 50, 50%, 0.5, 75%, 0.75",
+            subtitle: "Examples: 50, 50%, 0.5, 75%, 0.75 · ⌃↩ Save Preset",
             arg: "",
             valid: false
         )

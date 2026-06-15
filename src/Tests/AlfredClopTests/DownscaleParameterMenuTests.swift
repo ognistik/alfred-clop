@@ -50,7 +50,7 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Type a downscale factor")
-        #expect(response.items[0].subtitle == "Examples: 50, 50%, 0.5, 75%, 0.75")
+        #expect(response.items[0].subtitle == "Examples: 50, 50%, 0.5, 75%, 0.75 · ⌃↩ Save Preset")
         #expect(response.items[0].valid == false)
     }
 
@@ -130,7 +130,7 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Use 50%")
-        #expect(response.items[0].subtitle.contains("Saved preset"))
+        #expect(response.items[0].subtitle.contains("Saved Preset"))
         #expect(response.items[0].uid == "downscale.preset.factor.0.5")
     }
 
@@ -151,10 +151,10 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.map(\.title) == ["Use 7%", "75%"])
         #expect(operation.action == .downscale(factor: 0.07))
-        #expect(typedItem.mods?.control?.subtitle == "Save 7% as a preset")
+        #expect(typedItem.mods?.control?.subtitle == "Save Preset 7%")
         #expect(
             response.items[1].mods?.control?.subtitle
-                == "Remove saved preset 75%"
+                == "Remove Preset 75%"
         )
     }
 

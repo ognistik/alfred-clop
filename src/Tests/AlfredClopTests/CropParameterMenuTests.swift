@@ -60,7 +60,7 @@ struct CropParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Type crop or resize parameters")
-        #expect(response.items[0].subtitle == "Examples: 1200x630, 16:9, 1920, w128, h720")
+        #expect(response.items[0].subtitle == "Examples: 1200x630, 16:9, 1920, w128, h720 · ⌃↩ Save Preset")
         #expect(response.items[0].valid == false)
     }
 
@@ -103,13 +103,13 @@ struct CropParameterMenuTests {
     }
 
     @Test(arguments: [
-        ("1200x630", "exact dimensions 1200x630"),
-        ("16:9", "aspect ratio 16:9"),
-        ("1920", "long edge to 1920"),
-        ("w128", "fixed width 128 with calculated height"),
-        ("h720", "fixed height 720 with calculated width"),
-        ("128x0", "fixed width 128 with calculated height"),
-        ("0x720", "fixed height 720 with calculated width")
+        ("1200x630", "Exact 1200x630"),
+        ("16:9", "Crop to aspect ratio 16:9"),
+        ("1920", "Long edge 1920"),
+        ("w128", "Fixed width 128"),
+        ("h720", "Fixed height 720"),
+        ("128x0", "Fixed width 128"),
+        ("0x720", "Fixed height 720")
     ])
     func acceptedSyntaxProducesOneExplanatoryResult(
         input: String,

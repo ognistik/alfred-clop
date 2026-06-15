@@ -20,7 +20,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .optimise,
             title: "Optimize",
-            subtitle: "Compress with Clop",
+            subtitle: "Compress",
             aliases: ["compress", "shrink", "small", "optimise", "optimize"],
             supportedKinds: [.image, .video, .audio, .pdf],
             requiresParameters: false,
@@ -30,7 +30,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .crop,
             title: "Crop / Resize",
-            subtitle: "Crop to dimensions, aspect ratio, or edge size",
+            subtitle: "Dimensions, ratio, or edge size",
             aliases: ["crop", "resize", "dimensions", "ratio", "edge"],
             supportedKinds: [.image, .video, .pdf],
             requiresParameters: true,
@@ -40,7 +40,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .downscale,
             title: "Downscale",
-            subtitle: "Scale images/videos or reduce audio bitrate",
+            subtitle: "Scale media or reduce audio bitrate",
             aliases: ["downscale", "scale", "half", "reduce", "smaller"],
             supportedKinds: [.image, .video, .audio],
             requiresParameters: true,
@@ -50,7 +50,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .convertImage,
             title: "Convert Image",
-            subtitle: "Choose an image format",
+            subtitle: "Image formats",
             aliases: ["convert", "webp", "avif", "heic", "jxl", "jpeg", "png", "format"],
             supportedKinds: [.image],
             requiresParameters: true,
@@ -60,7 +60,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .convertVideo,
             title: "Convert Video",
-            subtitle: "Choose a video format or codec",
+            subtitle: "Video formats and codecs",
             aliases: ["convert", "mp4", "gif", "webm", "hevc", "x265", "av1", "codec"],
             supportedKinds: [.video],
             requiresParameters: true,
@@ -70,7 +70,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .convertAudio,
             title: "Convert Audio",
-            subtitle: "Choose an audio format",
+            subtitle: "Audio formats",
             aliases: ["convert", "mp3", "aac", "m4a", "opus", "ogg", "flac", "wav", "aiff"],
             supportedKinds: [.audio],
             requiresParameters: true,
@@ -80,7 +80,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .cropPDF,
             title: "Crop PDF (Reversible)",
-            subtitle: "Crop PDF pages using Clop's reversible crop box",
+            subtitle: "Reversible crop box",
             aliases: ["pdf", "crop pdf", "ipad", "paper", "device"],
             supportedKinds: [.pdf],
             requiresParameters: true,
@@ -90,7 +90,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .uncropPDF,
             title: "Uncrop PDF",
-            subtitle: "Remove a reversible PDF crop box",
+            subtitle: "Remove reversible crop box",
             aliases: ["uncrop", "restore pdf", "remove crop"],
             supportedKinds: [.pdf],
             requiresParameters: false,
@@ -100,7 +100,7 @@ enum ActionCatalog {
         ActionDefinition(
             action: .stripMetadata,
             title: "Strip Metadata",
-            subtitle: "Remove EXIF and metadata from images/videos",
+            subtitle: "Remove EXIF and metadata",
             aliases: ["metadata", "exif", "privacy", "strip"],
             supportedKinds: [.image, .video],
             requiresParameters: false,
@@ -583,7 +583,8 @@ enum ActionMenu {
                     subtitle: actionSubtitle(
                         definition: definition,
                         selection: selection,
-                        context: context
+                        context: context,
+                        environment: environment
                     ),
                     arg: argument,
                     valid: true,
@@ -798,8 +799,8 @@ enum ActionMenu {
         }
 
         let preservationText = configuredPreserve
-            ? "replace originals for this run"
-            : "preserve originals for this run"
+            ? "Replace Originals"
+            : "Output Template"
         let invertedPreserve = !configuredPreserve
         let shift = modifier(
             aggressive: configuredAggressive,
@@ -814,8 +815,8 @@ enum ActionMenu {
             return ScriptFilterMods(shift: shift)
         }
         let commandText = configuredAggressive
-            ? "use standard optimization"
-            : "use aggressive optimization"
+            ? "Standard"
+            : "Aggressive"
         return ScriptFilterMods(
             command: modifier(
                 aggressive: !configuredAggressive,
@@ -826,7 +827,7 @@ enum ActionMenu {
             commandShift: modifier(
                 aggressive: !configuredAggressive,
                 preserve: invertedPreserve,
-                subtitle: "\(commandText) and \(preservationText)"
+                subtitle: "\(commandText) · \(preservationText)"
             )
         )
     }
@@ -924,13 +925,15 @@ enum ActionMenu {
     private static func actionSubtitle(
         definition: ActionDefinition,
         selection: InputSelection,
-        context: ActionInputContext
+        context: ActionInputContext,
+        environment: Environment
     ) -> String {
         guard !selection.ambiguousKinds.isEmpty else {
             return clearInputSubtitle(
                 definition: definition,
                 selection: selection,
-                context: context
+                context: context,
+                environment: environment
             )
         }
 
@@ -957,15 +960,46 @@ enum ActionMenu {
         if let requirement {
             return "\(inputDescription(for: selection, context: context)) · \(requirement)"
         }
-        return "\(inputDescription(for: selection, context: context)) · \(definition.subtitle)"
+        return clearInputSubtitle(
+            definition: definition,
+            selection: selection,
+            context: context,
+            environment: environment
+        )
     }
 
     private static func clearInputSubtitle(
         definition: ActionDefinition,
         selection: InputSelection,
-        context: ActionInputContext
+        context: ActionInputContext,
+        environment: Environment
     ) -> String {
-        "\(inputDescription(for: selection, context: context)) · \(definition.subtitle)"
+        [
+            inputDescription(for: selection, context: context),
+            definition.subtitle,
+            mainMenuHint(for: definition, environment: environment)
+        ].compactMap(\.self).joined(separator: " · ")
+    }
+
+    private static func mainMenuHint(
+        for definition: ActionDefinition,
+        environment: Environment
+    ) -> String? {
+        let preserveHint = environment.preserveOriginal
+            ? "⇧↩ Replace"
+            : "⇧↩ Output Template"
+        switch definition.action {
+        case .optimise:
+            let aggressiveHint = environment.aggressiveByDefault
+                ? "⌘↩ Standard"
+                : "⌘↩ Aggressive"
+            return "\(aggressiveHint), \(preserveHint)"
+        case .uncropPDF:
+            return preserveHint
+        case .stripMetadata, .crop, .downscale, .convertImage, .convertVideo,
+             .convertAudio, .cropPDF:
+            return nil
+        }
     }
 
     private static func inputDescription(

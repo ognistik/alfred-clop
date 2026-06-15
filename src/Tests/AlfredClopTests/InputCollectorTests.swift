@@ -140,6 +140,15 @@ struct InputCollectorTests {
     }
 
     @Test
+    func slashCommandTextIsNotTreatedAsMissingClipboardPath() {
+        #expect(throws: InputCollectionError.noInputs) {
+            try InputCollector().collect(clipboard: StubClipboard(
+                text: "/user-message"
+            ))
+        }
+    }
+
+    @Test
     func materializedClipboardImagesAreStableAndPrivate() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

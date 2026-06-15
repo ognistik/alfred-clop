@@ -25,10 +25,10 @@ struct ConversionParameterMenuTests {
             format: "webp"
         )))
         #expect(webp.autocomplete == "webp ")
-        #expect(webp.subtitle.contains("⇥ Controls · ⌃↩ Create preset"))
+        #expect(webp.subtitle.contains("⇥ Controls, ⌃↩ Save Preset"))
         #expect(
             webp.mods?.control?.subtitle
-                == "Create a WebP conversion preset"
+                == "Save Preset for WebP"
         )
         #expect(webp.mods?.shift != nil)
     }
@@ -53,9 +53,9 @@ struct ConversionParameterMenuTests {
 
         #expect(
             empty.items.first?.title
-                == "Convert to WebP using Clop default"
+                == "Convert to WebP · Clop Defaults"
         )
-        #expect(empty.items.first?.subtitle.contains("5 (best quality)") == true)
+        #expect(empty.items.first?.subtitle.contains("Compression 5-100") == true)
         #expect(typed.items.first?.title == "Convert to WebP · Compression 70")
         #expect(try decodedOperation(typed.items.first?.arg).action == .convert(
             ConversionChoice(
@@ -66,7 +66,7 @@ struct ConversionParameterMenuTests {
         ))
         #expect(
             typed.items.first?.mods?.control?.subtitle
-                == "Save WebP · Compression 70 as a preset"
+                == "Save Preset WebP · Compression 70"
         )
     }
 
@@ -102,7 +102,7 @@ struct ConversionParameterMenuTests {
         )
         #expect(
             controls.items.first?.title
-                == "Convert to WebP using Clop default"
+                == "Convert to WebP · Clop Defaults"
         )
         #expect(!controls.items.contains {
             $0.title == "Back to conversion formats"
@@ -198,7 +198,7 @@ struct ConversionParameterMenuTests {
             $0.title == "Convert to WebP"
         })
         #expect(!saved.items.contains {
-            $0.title == "Convert to WebP using Clop default"
+            $0.title == "Convert to WebP · Clop Defaults"
         })
         let preset = try #require(saved.items.first {
             $0.title == "WebP · Compression 70"
@@ -210,7 +210,7 @@ struct ConversionParameterMenuTests {
         )
         #expect(
             exact.items.first?.subtitle
-                == "Passed file · Compression 70 · Saved preset"
+                == "Passed file · Saved Preset · ⌃↩ Remove Preset"
         )
         let confirmationState = try #require(
             preset.mods?.control?
@@ -236,7 +236,7 @@ struct ConversionParameterMenuTests {
             $0.title == "Convert to WebP"
         })
         #expect(!removed.items.contains {
-            $0.title == "Convert to WebP using Clop default"
+            $0.title == "Convert to WebP · Clop Defaults"
         })
     }
 

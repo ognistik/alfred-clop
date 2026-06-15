@@ -57,7 +57,7 @@ struct CropPresetMenuTests {
 
         #expect(matchingItems.count == 1)
         #expect(matchingItems[0].title == "Width 128, auto height")
-        #expect(matchingItems[0].subtitle.contains("Saved preset"))
+        #expect(matchingItems[0].subtitle.contains("Saved Preset"))
         #expect(matchingItems[0].autocomplete == "w128")
         #expect(response.items.count == 1)
         #expect(!response.items.contains {
@@ -77,15 +77,15 @@ struct CropPresetMenuTests {
 
         #expect(
             response.items.map(\.title)
-                == ["Use long edge 128", "w128"]
+                == ["Long edge 128", "w128"]
         )
         #expect(response.items.allSatisfy {
             $0.title != "Type crop or resize parameters"
         })
-        #expect(response.items[0].mods?.control?.subtitle == "Save 128 as a preset")
+        #expect(response.items[0].mods?.control?.subtitle == "Save Preset 128")
         #expect(
             response.items[1].mods?.control?.subtitle
-                == "Remove saved preset w128"
+                == "Remove Preset w128"
         )
     }
 
@@ -99,14 +99,14 @@ struct CropPresetMenuTests {
         let typedItem = try #require(response.items.first)
         let operation = try operationRequest(from: typedItem)
 
-        #expect(response.items.map(\.title) == ["Use long edge 19", "1920"])
+        #expect(response.items.map(\.title) == ["Long edge 19", "1920"])
         #expect(typedItem.autocomplete == "19")
         #expect(operation.action == .crop(
             size: "19",
             smartCrop: false,
             longEdge: true
         ))
-        #expect(typedItem.mods?.control?.subtitle == "Save 19 as a preset")
+        #expect(typedItem.mods?.control?.subtitle == "Save Preset 19")
     }
 
     @Test
@@ -116,7 +116,7 @@ struct CropPresetMenuTests {
 
         let response = fixture.response(query: "193")
 
-        #expect(response.items.map(\.title) == ["Use long edge 193"])
+        #expect(response.items.map(\.title) == ["Long edge 193"])
     }
 
     @Test
@@ -168,7 +168,7 @@ struct CropPresetMenuTests {
         let operation = try operationRequest(from: combined)
 
         #expect(saved.items[0].title == "Type crop or resize parameters")
-        #expect(combined.subtitle.contains("Saved preset"))
+        #expect(combined.subtitle.contains("Saved Preset"))
         #expect(operation.inputs == fixture.inputs)
         #expect(try fixture.store.load().presets.count == 1)
     }
@@ -194,7 +194,7 @@ struct CropPresetMenuTests {
             query: ""
         )
         #expect(confirmation.items.count == 1)
-        #expect(confirmation.items[0].title == "Remove saved preset w128?")
+        #expect(confirmation.items[0].title == "Remove Preset w128?")
         #expect(try fixture.store.load().presets.count == 2)
 
         let removeStateJSON = try #require(

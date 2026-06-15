@@ -469,6 +469,9 @@ struct InputCollector {
                     continue
                 }
                 let value = trimTrailingPunctuation(String(text[matchRange]))
+                if pattern == pathPattern, !isPlausibleExtractedPath(value) {
+                    continue
+                }
                 let fullRange = Range(result.range, in: text) ?? matchRange
                 if matches.contains(where: { $0.range.overlaps(fullRange) }) {
                     continue
@@ -509,6 +512,17 @@ struct InputCollector {
         fileManager.fileExists(
             atPath: NSString(string: value).expandingTildeInPath
         )
+    }
+
+    private func isPlausibleExtractedPath(_ value: String) -> Bool {
+        if value.hasPrefix("~/") {
+            return true
+        }
+        guard value.hasPrefix("/") else {
+            return false
+        }
+        let withoutLeadingSlash = value.dropFirst()
+        return withoutLeadingSlash.contains("/") || isExistingPath(value)
     }
 
     private func isURLLike(_ value: String) -> Bool {

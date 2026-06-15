@@ -994,6 +994,44 @@ Do not add a separate Aggressive Optimize action to the menu. Return uses the
 configured Standard or Aggressive default, while Command-Return resolves the
 opposite behavior and states it accurately in the subtitle.
 
+### Subtitle style
+
+Keep Alfred subtitles compact and consistent across every menu. Processing
+rows should generally follow:
+
+```text
+Input · Effect · Hint
+```
+
+The input segment is important and should stay specific: selected, copied, or
+passed files, folders, URLs, mixed batches, and bounded folder file counts
+should remain visible whenever available. Prefer one `·` separator between
+segments; avoid mixing hyphen separators and full explanatory sentences in the
+same row.
+
+Use short, noun-like effect labels when they are clear enough in context:
+`Exact 1200x630`, `Crop to 16:9`, `Long edge 1920`, `Fixed width 128`,
+`Downscale to 50%`, `Compression 70`, or `Clop Defaults`.
+
+Expose keyboard affordances only where they help discover a non-obvious path:
+empty parameter menus, typed parameter rows, saved preset rows, conversion
+format rows with inline controls, and immediate main-menu actions with useful
+modifiers. Do not repeat every possible modifier on every row.
+
+Use consistent title case for named affordances and workflow concepts:
+`Save Preset`, `Remove Preset`, `Smart Crop`, `Clop Defaults`, `Output
+Template`, `Replace Originals`, `Aggressive`, and `Standard`.
+
+Examples:
+
+```text
+Selected folder: 14 files · Compress · ⌘↩ Aggressive, ⇧↩ Output Template
+Copied file · Long edge 1920 · ⌃↩ Save Preset
+Passed file · Crop to 16:9 · ⌥↩ Smart Crop, ⌃↩ Save Preset
+Selected file · Saved Preset · Long edge 1920 · ⌃↩ Remove Preset
+Copied file · Clop Defaults · ⇥ Controls, ⌃↩ Save Preset
+```
+
 For Crop / Resize results that perform an actual crop, Option-Return enables
 Smart Crop, centering the crop around detected visual features.
 Command-Option-Return combines the configured aggressive-default inversion and

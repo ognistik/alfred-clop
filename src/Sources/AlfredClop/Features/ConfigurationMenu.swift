@@ -107,7 +107,7 @@ enum ConfigurationMenu {
             case .configurationResetOutputConfirmation:
                 response = confirmation(
                     title: "Reset output template?",
-                    subtitle: "Restore \(SettingsDocument.builtInOutputTemplate). Presets and Alfred preferences are unchanged.",
+                    subtitle: "Restore \(SettingsDocument.builtInOutputTemplate) · Presets unchanged",
                     nextMode: .configurationResetOutput
                 )
             case .configurationResetOutput:
@@ -126,14 +126,14 @@ enum ConfigurationMenu {
                 let count = try store.load().presets.count
                 response = confirmation(
                     title: "Remove all \(count) saved action presets?",
-                    subtitle: "Press Return to confirm global removal. This cannot be undone.",
+                    subtitle: "Return confirms · Cannot be undone",
                     nextMode: .configurationResetPresets
                 )
             case .configurationResetPresets:
                 let count = try store.removeAllPresets()
                 response = message(
                     title: "Removed \(count) action presets",
-                    subtitle: "The output template and Alfred preferences were unchanged."
+                    subtitle: "Output template and Alfred preferences unchanged"
                 )
             case .configurationCacheCleanupConfirmation:
                 let activeCache = cache ?? ClipboardImageCache(
@@ -143,7 +143,7 @@ enum ConfigurationMenu {
                 let summary = activeCache.summary()
                 response = confirmation(
                     title: "Remove \(summary.fileCount) cached clipboard images?",
-                    subtitle: "Reclaim \(formattedBytes(summary.byteCount)). Press Return to confirm.",
+                    subtitle: "Reclaim \(formattedBytes(summary.byteCount)) · Return confirms",
                     nextMode: .configurationCacheCleanup
                 )
             case .configurationCacheCleanup:
@@ -474,7 +474,7 @@ enum ConfigurationMenu {
         ))
         return ScriptFilterItem(
             title: "Remove all action presets",
-            subtitle: "\(count) saved \(count == 1 ? "preset" : "presets") across all action menus",
+            subtitle: "\(count) Saved \(count == 1 ? "Preset" : "Presets") across all action menus",
             arg: stateJSON,
             valid: true,
             autocomplete: ":remove presets",
@@ -599,7 +599,7 @@ enum ConfigurationMenu {
     ) -> ScriptFilterMods {
         ScriptFilterMods(command: ScriptFilterModifier(
             arg: stateJSON,
-            subtitle: "Apply and return to Configuration",
+            subtitle: "Apply · Return to Configuration",
             valid: true,
             variables: [
                 ActionMenu.requestKindVariable:

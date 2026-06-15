@@ -344,28 +344,34 @@ enum CropParameterMenu {
         switch size.kind {
         case let .exactDimensions(width, height):
             title = "Use \(width)x\(height)"
-            interpretation = "Crop / resize to exact dimensions \(width)x\(height)"
+            interpretation = "Exact \(width)x\(height)"
         case let .aspectRatio(width, height):
             title = "Use \(width):\(height)"
             interpretation = "Crop to aspect ratio \(width):\(height)"
         case let .longEdge(edge):
-            title = "Use long edge \(edge)"
-            interpretation = "Resize the long edge to \(edge)"
+            title = "Long edge \(edge)"
+            interpretation = "Long edge \(edge)"
         case let .fixedWidth(width):
             title = "Width \(width), auto height"
-            interpretation = "Resize to fixed width \(width) with calculated height"
+            interpretation = "Fixed width \(width)"
         case let .fixedHeight(height):
             title = "Height \(height), auto width"
-            interpretation = "Resize to fixed height \(height) with calculated width"
+            interpretation = "Fixed height \(height)"
         }
+        let hints = rowHints(
+            for: preset.cropSize,
+            savedPreset: savedPreset != nil
+        )
 
         return ScriptFilterItem(
             uid: savedPreset?.stableUID,
             title: title,
             subtitle: [
-                "\(inputDescription(for: request)) · \(interpretation)",
-                savedPreset == nil ? nil : "Saved preset"
-            ].compactMap(\.self).joined(separator: " - "),
+                inputDescription(for: request),
+                interpretation,
+                savedPreset == nil ? hints : "Saved Preset",
+                savedPreset == nil ? nil : Optional("⌃↩ Remove Preset")
+            ].compactMap(\.self).joined(separator: " · "),
             arg: argument,
             valid: true,
             autocomplete: preset.displayValue,
@@ -403,7 +409,12 @@ enum CropParameterMenu {
         return ScriptFilterItem(
             uid: preset.stableUID,
             title: preset.displayValue,
-            subtitle: "\(inputDescription(for: request)) · \(interpretation(for: preset.cropSize)) - Saved preset",
+            subtitle: [
+                inputDescription(for: request),
+                "Saved Preset",
+                interpretation(for: preset.cropSize),
+                "⌃↩ Remove Preset"
+            ].joined(separator: " · "),
             arg: argument,
             valid: true,
             autocomplete: preset.displayValue,
@@ -441,8 +452,8 @@ enum CropParameterMenu {
         return ScriptFilterResponse(
             items: [
                 ScriptFilterItem(
-                    title: "Remove saved preset \(presetDisplayValue(action.preset))?",
-                    subtitle: "Press Return to confirm removal. This cannot be undone.",
+                    title: "Remove Preset \(presetDisplayValue(action.preset))?",
+                    subtitle: "Return confirms · Cannot be undone",
                     arg: stateJSON,
                     valid: true,
                     variables: transitionVariables(
@@ -501,11 +512,11 @@ enum CropParameterMenu {
         let aggressive = environment.aggressiveByDefault
         let preserve = environment.preserveOriginal
         let commandText = aggressive
-            ? "use standard optimization"
-            : "use aggressive optimization"
+            ? "Standard"
+            : "Aggressive"
         let preserveText = preserve
-            ? "replace originals for this run"
-            : "preserve originals for this run"
+            ? "Replace Originals"
+            : "Output Template"
         let supportsSmartCrop: Bool
         switch preset.cropSize.kind {
         case .exactDimensions, .aspectRatio:
@@ -565,7 +576,7 @@ enum CropParameterMenu {
             aggressive: aggressive,
             preserve: preserve,
             smartCrop: true,
-            subtitle: "enable Smart Crop"
+            subtitle: "Smart Crop"
         ) : nil
         return ScriptFilterMods(
             command: command,
@@ -576,25 +587,25 @@ enum CropParameterMenu {
                 aggressive: !aggressive,
                 preserve: preserve,
                 smartCrop: true,
-                subtitle: "\(commandText) and enable Smart Crop"
+                subtitle: "\(commandText) · Smart Crop"
             ) : nil,
             commandShift: modifier(
                 aggressive: !aggressive,
                 preserve: !preserve,
                 smartCrop: false,
-                subtitle: "\(commandText) and \(preserveText)"
+                subtitle: "\(commandText) · \(preserveText)"
             ),
             optionShift: supportsSmartCrop ? modifier(
                 aggressive: aggressive,
                 preserve: !preserve,
                 smartCrop: true,
-                subtitle: "enable Smart Crop and \(preserveText)"
+                subtitle: "Smart Crop · \(preserveText)"
             ) : nil,
             commandOptionShift: supportsSmartCrop ? modifier(
                 aggressive: !aggressive,
                 preserve: !preserve,
                 smartCrop: true,
-                subtitle: "\(commandText), enable Smart Crop, and \(preserveText)"
+                subtitle: "\(commandText) · Smart Crop · \(preserveText)"
             ) : nil
         )
     }
@@ -613,8 +624,8 @@ enum CropParameterMenu {
         )
         let stateJSON = (try? encodedState(state)) ?? ""
         let subtitle = kind == .save
-            ? "Save \(preset.displayValue) as a preset"
-            : "Remove saved preset \(preset.displayValue)"
+            ? "Save Preset \(preset.displayValue)"
+            : "Remove Preset \(preset.displayValue)"
 
         return ScriptFilterModifier(
             arg: stateJSON,
@@ -643,7 +654,7 @@ enum CropParameterMenu {
     private static var instructionItem: ScriptFilterItem {
         ScriptFilterItem(
             title: "Type crop or resize parameters",
-            subtitle: "Examples: 1200x630, 16:9, 1920, w128, h720",
+            subtitle: "Examples: 1200x630, 16:9, 1920, w128, h720 · ⌃↩ Save Preset",
             arg: "",
             valid: false
         )
@@ -652,15 +663,30 @@ enum CropParameterMenu {
     private static func interpretation(for size: CropSize) -> String {
         switch size.kind {
         case let .exactDimensions(width, height):
-            return "Crop / resize to exact dimensions \(width)x\(height)"
+            return "Exact \(width)x\(height)"
         case let .aspectRatio(width, height):
             return "Crop to aspect ratio \(width):\(height)"
         case let .longEdge(edge):
-            return "Resize the long edge to \(edge)"
+            return "Long edge \(edge)"
         case let .fixedWidth(width):
-            return "Resize to fixed width \(width) with calculated height"
+            return "Fixed width \(width)"
         case let .fixedHeight(height):
-            return "Resize to fixed height \(height) with calculated width"
+            return "Fixed height \(height)"
+        }
+    }
+
+    private static func rowHints(
+        for size: CropSize,
+        savedPreset: Bool
+    ) -> String {
+        if savedPreset {
+            return "⌃↩ Remove Preset"
+        }
+        switch size.kind {
+        case .exactDimensions, .aspectRatio:
+            return "⌥↩ Smart Crop, ⌃↩ Save Preset"
+        case .longEdge, .fixedWidth, .fixedHeight:
+            return "⌃↩ Save Preset"
         }
     }
 

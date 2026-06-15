@@ -305,9 +305,12 @@ enum ConversionParameterMenu {
             uid: "convert.format.\(choice.media.rawValue).\(choice.format)",
             title: "Convert to \(choice.displayFormat)",
             subtitle: [
-                "\(inputDescription(for: request)) · Use Clop defaults",
-                hasControls ? "⇥ Controls · ⌃↩ Create preset" : nil
-            ].compactMap(\.self).joined(separator: " - "),
+                inputDescription(for: request),
+                "Clop Defaults",
+                hasControls
+                    ? Optional("⇥ Controls, ⌃↩ Save Preset")
+                    : nil
+            ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 choice: choice,
                 request: request,
@@ -337,8 +340,12 @@ enum ConversionParameterMenu {
         fileManager: FileManager
     ) -> ScriptFilterItem {
         ScriptFilterItem(
-            title: "Convert to \(choice.displayFormat) using Clop default",
-            subtitle: "\(inputDescription(for: request)) · \(controlHelp(for: choice))",
+            title: "Convert to \(choice.displayFormat) · Clop Defaults",
+            subtitle: [
+                inputDescription(for: request),
+                "Clop Defaults",
+                controlHelp(for: choice)
+            ].joined(separator: " · "),
             arg: operationArgument(
                 choice: choice,
                 request: request,
@@ -372,8 +379,9 @@ enum ConversionParameterMenu {
                 inputDescription(for: request),
                 savedPreset == nil
                     ? settingDescription(choice.setting)
-                    : conciseSettingDescription(choice.setting),
-                savedPreset == nil ? nil : "Saved preset"
+                    : nil,
+                savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset",
+                savedPreset == nil ? nil : "⌃↩ Remove Preset"
             ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 choice: choice,
@@ -407,7 +415,11 @@ enum ConversionParameterMenu {
         ScriptFilterItem(
             uid: preset.stableUID,
             title: preset.displayValue,
-            subtitle: "\(inputDescription(for: request)) · Saved preset",
+            subtitle: [
+                inputDescription(for: request),
+                "Saved Preset",
+                "⌃↩ Remove Preset"
+            ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 choice: preset.choice,
                 request: request,
@@ -440,8 +452,8 @@ enum ConversionParameterMenu {
     ) -> ScriptFilterMods {
         let preserve = environment.preserveOriginal
         let subtitle = preserve
-            ? "replace originals for this run"
-            : "preserve originals for this run"
+            ? "Replace Originals"
+            : "Output Template"
         return ScriptFilterMods(
             control: control,
             shift: ScriptFilterModifier(
@@ -467,7 +479,7 @@ enum ConversionParameterMenu {
         let stateJSON = encoded(state)
         return ScriptFilterModifier(
             arg: "\(choice.format) ",
-            subtitle: "Create \(indefiniteArticle(for: choice.displayFormat)) \(choice.displayFormat) conversion preset",
+            subtitle: "Save Preset for \(choice.displayFormat)",
             valid: true,
             variables: queryTransitionVariables(
                 stateJSON: stateJSON,
@@ -493,8 +505,8 @@ enum ConversionParameterMenu {
         return ScriptFilterModifier(
             arg: stateJSON,
             subtitle: kind == .save
-                ? "Save \(preset.displayValue) as a preset"
-                : "Remove saved preset \(preset.displayValue)",
+                ? "Save Preset \(preset.displayValue)"
+                : "Remove Preset \(preset.displayValue)",
             valid: true,
             variables: transitionVariables(
                 stateJSON: stateJSON,
@@ -523,8 +535,8 @@ enum ConversionParameterMenu {
         return ScriptFilterResponse(
             items: [
                 ScriptFilterItem(
-                    title: "Remove saved preset \(name)?",
-                    subtitle: "Press Return to confirm removal. This cannot be undone.",
+                    title: "Remove Preset \(name)?",
+                    subtitle: "Return confirms · Cannot be undone",
                     arg: stateJSON,
                     valid: true,
                     variables: transitionVariables(
@@ -595,11 +607,11 @@ enum ConversionParameterMenu {
     private static func controlHelp(for choice: ConversionChoice) -> String {
         switch choice.media {
         case .image:
-            return "Type compression from 5 (best quality) to 100 (smallest file)"
+            return "Compression 5-100"
         case .video:
-            return "Type 5-100 or auto for MP4 compression"
+            return "Compression 5-100 or auto"
         case .audio:
-            return "Type c70 for compression or b128 for bitrate in kbps"
+            return "c70 compression or b128 bitrate"
         }
     }
 
@@ -608,7 +620,7 @@ enum ConversionParameterMenu {
     ) -> String? {
         switch setting {
         case .compression(let value):
-            return "Compression \(value): 5 is best quality, 100 is smallest"
+            return "Compression \(value)"
         case .automaticCompression:
             return "Automatic compression"
         case .bitrate(let value):

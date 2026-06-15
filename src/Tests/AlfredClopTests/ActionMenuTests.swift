@@ -169,7 +169,7 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[0].subtitle == "Passed file · Compress with Clop")
+        #expect(response.items[0].subtitle == "Passed file · Compress · ⌘↩ Aggressive, ⇧↩ Output Template")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.arguments.rawValue
@@ -260,7 +260,7 @@ struct ActionMenuTests {
             context: .clipboard
         )
 
-        #expect(response.items[0].subtitle == "Copied file · Compress with Clop")
+        #expect(response.items[0].subtitle == "Copied file · Compress · ⌘↩ Aggressive, ⇧↩ Output Template")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.clipboard.rawValue
@@ -435,6 +435,19 @@ struct ActionMenuTests {
     }
 
     @Test
+    func slashCommandClipboardTextShowsNoSupportedInput() {
+        let response = ActionMenu.response(
+            clipboard: ActionMenuClipboard(text: "/user-message"),
+            query: ""
+        )
+
+        #expect(response.items.map(\.title) == [
+            "No supported clipboard content"
+        ])
+        #expect(response.items[0].subtitle == "Copy a supported file, folder, URL, or image and try again.")
+    }
+
+    @Test
     func ambiguousClipboardURLShowsURLCapableActions() {
         let response = ActionMenu.response(
             clipboard: ActionMenuClipboard(
@@ -542,7 +555,7 @@ struct ActionMenuTests {
 
         #expect(
             response.items[0].subtitle
-                == "Passed folder: 3 files · Compress with Clop"
+                == "Passed folder: 3 files · Compress · ⌘↩ Aggressive, ⇧↩ Output Template"
         )
     }
 
