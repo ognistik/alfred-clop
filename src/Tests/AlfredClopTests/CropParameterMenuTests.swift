@@ -218,6 +218,40 @@ struct CropParameterMenuTests {
         #expect(response.items[0].valid == false)
     }
 
+    @Test
+    func parameterMenuRowsExposeOriginalInputsToQuickLookAndAlfredActions() throws {
+        let stateJSON = try JSONOutput.string(
+            for: MenuState.crop(ParameterStepRequest(
+                action: .crop,
+                inputs: [
+                    "/tmp/first image.png",
+                    "/tmp/Media Folder",
+                    "https://example.com/photo.png"
+                ],
+                inputContext: .arguments,
+                itemKinds: [.localFile, .folder, .remoteURL]
+            )),
+            prettyPrinted: false
+        )
+
+        let response = try cropResponse(stateJSON: stateJSON, query: "w128")
+        let item = try #require(response.items.first)
+
+        #expect(item.quickLookURL == "/tmp/first image.png")
+        #expect(item.action?.file == .multiple([
+            "/tmp/first image.png",
+            "/tmp/Media Folder"
+        ]))
+        #expect(item.action?.url == .single("https://example.com/photo.png"))
+        #expect(item.text?.largetype == """
+        3 inputs
+
+        /tmp/first image.png
+        /tmp/Media Folder
+        https://example.com/photo.png
+        """)
+    }
+
     private func cropStateJSON(
         context: ActionInputContext
     ) throws -> String {

@@ -160,14 +160,21 @@ enum ActionMenu {
         writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
         guard environment.readClipboardForKeyword else {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: .clipboard,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             let disabledItem = workflowSettingsItem(
                 title: "Clipboard input is disabled",
                 subtitle: "Press Return to enable it in Workflow Configuration."
             ).items[0]
-            return ScriptFilterResponse(items: [
-                disabledItem,
-                ConfigurationMenu.actionItem
-            ])
+            return ScriptFilterResponse(items: [disabledItem])
         }
         return response(
             clipboard: clipboard,
@@ -197,6 +204,16 @@ enum ActionMenu {
             ]
             guard selection.mediaKinds.contains(where: supportedKinds.contains)
                 || !selection.ambiguousKinds.isEmpty else {
+                if isConfigurationQuery(query) {
+                    return configurationResponse(
+                        query: query,
+                        selection: selection,
+                        context: .clipboard,
+                        environment: environment,
+                        fileManager: fileManager,
+                        writer: writer
+                    )
+                }
                 return noSupportedInputResponse(context: .clipboard)
             }
             return response(
@@ -208,8 +225,28 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.noInputs {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: .clipboard,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return noSupportedInputResponse(context: .clipboard)
         } catch InputCollectionError.missingPath(let path) {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: .clipboard,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return responseWithConfiguration(
                 context: .clipboard,
                 title: "Clipboard file was not found",
@@ -247,6 +284,16 @@ enum ActionMenu {
                 writer: writer
             )
         } catch {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return collectionErrorResponse(error, context: context)
         }
     }
@@ -294,7 +341,6 @@ enum ActionMenu {
         case InputCollectionError.recursionDisabledFolder:
             return ScriptFilterResponse(
                 items: [
-                    ConfigurationMenu.actionItem,
                     workflowSettingsItem(
                         title: "Supported media is in subfolders",
                         subtitle: "Press Return to open workflow configuration."
@@ -335,12 +381,32 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.invalidJSON {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return responseWithConfiguration(
                 context: context,
                 title: "Unable to read selected files",
                 subtitle: "The input JSON is invalid."
             )
         } catch InputCollectionError.noInputs {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return responseWithoutInputs(
                 context: context,
                 title: "No files selected",
@@ -350,12 +416,32 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.missingPath(let path) {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return responseWithConfiguration(
                 context: context,
                 title: "Selected file was not found",
                 subtitle: path
             )
         } catch {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return collectionErrorResponse(error, context: context)
         }
     }
@@ -380,6 +466,16 @@ enum ActionMenu {
                 writer: writer
             )
         } catch InputCollectionError.noInputs {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             switch context {
             case .arguments:
                 return responseWithoutInputs(
@@ -401,6 +497,16 @@ enum ActionMenu {
                 )
             }
         } catch InputCollectionError.missingPath(let path) {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return responseWithConfiguration(
                 context: context,
                 title: context == .arguments
@@ -409,6 +515,16 @@ enum ActionMenu {
                 subtitle: path
             )
         } catch {
+            if isConfigurationQuery(query) {
+                return configurationResponse(
+                    query: query,
+                    selection: InputSelection(inputs: [], mediaKinds: []),
+                    context: context,
+                    environment: environment,
+                    fileManager: fileManager,
+                    writer: writer
+                )
+            }
             return collectionErrorResponse(error, context: context)
         }
     }
@@ -421,20 +537,37 @@ enum ActionMenu {
         fileManager: FileManager = .default,
         writer: any AtomicDataWriting = FoundationAtomicDataWriter()
     ) -> ScriptFilterResponse {
+        if isConfigurationQuery(query) {
+            return configurationResponse(
+                query: query,
+                selection: selection,
+                context: context,
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            )
+        }
+        guard !selection.inputs.isEmpty || !selection.ambiguousKinds.isEmpty else {
+            return noSupportedInputResponse(context: context)
+        }
         if selection.mediaKinds.contains(.unknown) {
             return noSupportedInputResponse(context: context)
         }
 
         let validActions = ActionCatalog.validActions(for: selection)
         let filteredActions = ActionMenuSearch.filter(validActions, query: query)
-        let configurationItem = configurationItem(query: query)
 
-        guard !filteredActions.isEmpty || configurationItem != nil else {
+        guard !filteredActions.isEmpty else {
             return errorItem(
                 title: "No matching actions",
                 subtitle: "Try another search term."
             )
         }
+
+        let affordance = ScriptFilterAffordance.processingInputs(
+            selection.inputs,
+            itemKinds: selection.itemKinds
+        )
 
         return ScriptFilterResponse(
             items: filteredActions.map { definition in
@@ -444,7 +577,7 @@ enum ActionMenu {
                     context: context,
                     environment: environment
                 )
-                return ScriptFilterItem(
+                return affordance.apply(to: ScriptFilterItem(
                     uid: "action.\(definition.action.rawValue)",
                     title: definition.title,
                     subtitle: actionSubtitle(
@@ -468,8 +601,8 @@ enum ActionMenu {
                         environment: environment,
                         fileManager: fileManager
                     )
-                )
-            } + [configurationItem].compactMap(\.self),
+                ))
+            },
             variables: inputVariables(
                 for: selection,
                 context: context
@@ -499,7 +632,6 @@ enum ActionMenu {
     ) -> ScriptFilterResponse {
         return ScriptFilterResponse(
             items: [
-                ConfigurationMenu.actionItem,
                 ScriptFilterItem(
                     title: title,
                     subtitle: subtitle,
@@ -585,15 +717,26 @@ enum ActionMenu {
         }
     }
 
-    private static func configurationItem(query: String) -> ScriptFilterItem? {
-        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        guard normalized.isEmpty
-            || "configuration settings output template cache cleanup folder"
-                .contains(normalized) else {
-            return nil
-        }
-        return ConfigurationMenu.actionItem
+    private static func isConfigurationQuery(_ query: String) -> Bool {
+        query.hasPrefix(ConfigurationMenu.namespacePrefix)
+    }
+
+    private static func configurationResponse(
+        query: String,
+        selection: InputSelection,
+        context: ActionInputContext,
+        environment: Environment,
+        fileManager: FileManager,
+        writer: any AtomicDataWriting
+    ) -> ScriptFilterResponse {
+        var response = ConfigurationMenu.namespaceResponse(
+            query: query,
+            environment: environment,
+            fileManager: fileManager,
+            writer: writer
+        )
+        response.variables = inputVariables(for: selection, context: context)
+        return response
     }
 
     private static func operationModifiers(
@@ -742,6 +885,14 @@ enum ActionMenu {
         for selection: InputSelection,
         context: ActionInputContext
     ) -> [String: String]? {
+        guard !selection.inputs.isEmpty || !selection.ambiguousKinds.isEmpty else {
+            return [
+                inputJSONVariable: "",
+                inputContextVariable: context.rawValue,
+                publicRequestVariable: "",
+                menuStateVariable: ""
+            ]
+        }
         guard let json = try? JSONOutput.string(
             for: MenuInput(
                 paths: selection.inputs,

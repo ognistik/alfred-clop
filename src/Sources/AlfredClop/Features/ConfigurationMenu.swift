@@ -1,6 +1,58 @@
 import Foundation
 
 enum ConfigurationMenu {
+    static let namespacePrefix = ":"
+    static let templatePrefix = ":template "
+
+    static func namespaceResponse(
+        query: String,
+        environment: Environment = Environment(),
+        fileManager: FileManager = .default,
+        writer: any AtomicDataWriting = FoundationAtomicDataWriter(),
+        cache: ClipboardImageCache? = nil
+    ) -> ScriptFilterResponse {
+        let namespaceQuery = String(query.dropFirst())
+        do {
+            let store = try PresetStore(
+                environment: environment,
+                fileManager: fileManager,
+                writer: writer
+            )
+            let normalized = namespaceQuery.lowercased()
+            if normalized == "template"
+                || normalized.hasPrefix("template ") {
+                let templateQuery = normalized == "template"
+                    ? ""
+                    : String(namespaceQuery.dropFirst("template ".count))
+                return withSettingsAffordance(
+                    outputTemplateMenu(
+                        query: templateQuery,
+                        store: store
+                    ),
+                    store: store
+                )
+            }
+            return withSettingsAffordance(
+                menu(
+                    store: store,
+                    query: namespaceQuery,
+                    environment: environment,
+                    fileManager: fileManager,
+                    cache: cache ?? ClipboardImageCache(
+                        environment: environment,
+                        fileManager: fileManager
+                    )
+                ),
+                store: store
+            )
+        } catch let caughtError {
+            return error(
+                "Unable to read settings",
+                caughtError.localizedDescription
+            )
+        }
+    }
+
     static func response(
         stateJSON: String,
         query: String,
@@ -22,10 +74,12 @@ enum ConfigurationMenu {
                 fileManager: fileManager,
                 writer: writer
             )
+            let response: ScriptFilterResponse
             switch state.mode {
             case .configuration:
-                return menu(
+                response = menu(
                     store: store,
+                    query: "",
                     environment: environment,
                     fileManager: fileManager,
                     cache: cache ?? ClipboardImageCache(
@@ -34,14 +88,15 @@ enum ConfigurationMenu {
                     )
                 )
             case .configurationOutputTemplate:
-                return outputTemplateMenu(
+                response = outputTemplateMenu(
                     query: query,
                     store: store
                 )
             case .configurationSaveOutput:
                 try store.updateOutputTemplate(state.configurationValue ?? "")
-                return menu(
+                response = menu(
                     store: store,
+                    query: "",
                     environment: environment,
                     fileManager: fileManager,
                     cache: cache ?? ClipboardImageCache(
@@ -50,15 +105,16 @@ enum ConfigurationMenu {
                     )
                 )
             case .configurationResetOutputConfirmation:
-                return confirmation(
+                response = confirmation(
                     title: "Reset output template?",
                     subtitle: "Restore \(SettingsDocument.builtInOutputTemplate). Presets and Alfred preferences are unchanged.",
                     nextMode: .configurationResetOutput
                 )
             case .configurationResetOutput:
                 try store.updateOutputTemplate(SettingsDocument.builtInOutputTemplate)
-                return menu(
+                response = menu(
                     store: store,
+                    query: "",
                     environment: environment,
                     fileManager: fileManager,
                     cache: cache ?? ClipboardImageCache(
@@ -68,14 +124,14 @@ enum ConfigurationMenu {
                 )
             case .configurationResetPresetsConfirmation:
                 let count = try store.load().presets.count
-                return confirmation(
+                response = confirmation(
                     title: "Remove all \(count) saved action presets?",
                     subtitle: "Press Return to confirm global removal. This cannot be undone.",
                     nextMode: .configurationResetPresets
                 )
             case .configurationResetPresets:
                 let count = try store.removeAllPresets()
-                return message(
+                response = message(
                     title: "Removed \(count) action presets",
                     subtitle: "The output template and Alfred preferences were unchanged."
                 )
@@ -85,7 +141,7 @@ enum ConfigurationMenu {
                     fileManager: fileManager
                 )
                 let summary = activeCache.summary()
-                return confirmation(
+                response = confirmation(
                     title: "Remove \(summary.fileCount) cached clipboard images?",
                     subtitle: "Reclaim \(formattedBytes(summary.byteCount)). Press Return to confirm.",
                     nextMode: .configurationCacheCleanup
@@ -95,7 +151,7 @@ enum ConfigurationMenu {
                     environment: environment,
                     fileManager: fileManager
                 )).removeAll()
-                return message(
+                response = message(
                     title: "Removed \(removed.fileCount) cached clipboard images",
                     subtitle: "Reclaimed \(formattedBytes(removed.byteCount))."
                 )
@@ -105,39 +161,13 @@ enum ConfigurationMenu {
                     "The menu state does not belong to Configuration."
                 )
             }
+            return withSettingsAffordance(response, store: store)
         } catch let caughtError {
             return error(
                 "Unable to update settings",
                 caughtError.localizedDescription
             )
         }
-    }
-
-    static var actionItem: ScriptFilterItem {
-        let stateJSON = encoded(.configuration())
-        return ScriptFilterItem(
-            uid: "action.configuration",
-            title: "Configuration",
-            subtitle: "Output template, presets, and maintenance · ⌘⏎ Workflow settings",
-            arg: stateJSON,
-            valid: true,
-            autocomplete: "Configuration",
-            match: "configuration settings output template cache cleanup folder reveal",
-            variables: [
-                ActionMenu.requestKindVariable:
-                    WorkflowRequestKind.parameterStep.rawValue,
-                ActionMenu.menuStateVariable: stateJSON
-            ],
-            mods: ScriptFilterMods(command: ScriptFilterModifier(
-                arg: "",
-                subtitle: "Open workflow settings",
-                valid: true,
-                variables: [
-                    ActionMenu.requestKindVariable:
-                        WorkflowRequestKind.workflowSettings.rawValue
-                ]
-            ))
-        )
     }
 
     static func quietMutationFeedback(
@@ -194,6 +224,7 @@ enum ConfigurationMenu {
 
     private static func menu(
         store: PresetStore,
+        query: String,
         environment: Environment,
         fileManager: FileManager,
         cache: ClipboardImageCache
@@ -208,21 +239,16 @@ enum ConfigurationMenu {
             )
         }
 
-        let outputState = encoded(.configuration(
-            mode: .configurationOutputTemplate
-        ))
         var items = [
             ScriptFilterItem(
                 title: "Output Template",
                 subtitle: templateExample(document.outputTemplate),
-                arg: outputState,
-                valid: true,
-                match: "output template preserve original path filename",
-                variables: transitionVariables(outputState)
+                arg: templatePrefix,
+                valid: false,
+                autocomplete: templatePrefix,
+                match: "output template preserve original path filename"
             ),
-            revealSettingsFolderItem(
-                environment: environment
-            )
+            workflowSettingsItem(store: store)
         ]
 
         if document.outputTemplate != SettingsDocument.builtInOutputTemplate {
@@ -242,28 +268,62 @@ enum ConfigurationMenu {
                 subtitle: "\(summary.fileCount) files · \(formattedBytes(summary.byteCount))",
                 arg: stateJSON,
                 valid: true,
+                autocomplete: ":clear cache",
+                match: "clear cached clipboard images cache cleanup",
                 variables: transitionVariables(stateJSON)
             ))
         }
-        return ScriptFilterResponse(items: items)
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ScriptFilterResponse(items: items)
+        }
+        let search = FuzzySearch<ScriptFilterItem>(
+            query: trimmed,
+            targetText: {
+                [$0.title, $0.match].compactMap(\.self).joined(separator: " ")
+            }
+        )
+        let matches = search.sorted(items)
+        guard !matches.isEmpty else {
+            return error(
+                "No matching Configuration commands",
+                "Try another search term."
+            )
+        }
+        return ScriptFilterResponse(items: matches.map {
+            items[$0.targetIndex]
+        })
     }
 
-    private static func revealSettingsFolderItem(
-        environment: Environment
+    private static func workflowSettingsItem(
+        store: PresetStore
     ) -> ScriptFilterItem {
-        let path = (try? PresetStore.configuredDirectoryPath(
-            environment: environment
-        )) ?? ""
+        let filePath = store.fileURL.path
+        let directoryPath = store.fileURL.deletingLastPathComponent().path
         return ScriptFilterItem(
-            title: "Reveal Settings Folder",
-            subtitle: path,
-            arg: path,
-            valid: !path.isEmpty,
-            match: "reveal show open settings folder finder export copy",
+            type: "file",
+            title: "Workflow Settings",
+            subtitle: "↩ Open Workflow Configuration · ⌘↩ Reveal Settings Folder",
+            arg: filePath,
+            valid: true,
+            autocomplete: ":settings",
+            match: "workflow configuration settings file folder reveal finder",
+            icon: ScriptFilterIcon(path: filePath, type: .fileIcon),
             variables: [
                 ActionMenu.requestKindVariable:
-                    WorkflowRequestKind.revealSettingsFolder.rawValue
-            ]
+                    WorkflowRequestKind.workflowSettings.rawValue
+            ],
+            mods: ScriptFilterMods(command: ScriptFilterModifier(
+                arg: directoryPath,
+                subtitle: "Reveal Settings Folder",
+                valid: true,
+                variables: [
+                    ActionMenu.requestKindVariable:
+                        WorkflowRequestKind.revealSettingsFolder.rawValue
+                ]
+            )),
+            quickLookURL: filePath,
+            action: ScriptFilterAction(file: filePath)
         )
     }
 
@@ -354,7 +414,8 @@ enum ConfigurationMenu {
             subtitle: "\(templateExample(template)) · ⌘L reference",
             arg: stateJSON,
             valid: true,
-            variables: mutationVariables(stateJSON)
+            variables: mutationVariables(stateJSON),
+            mods: stayOpenModifier(stateJSON)
         )
     }
 
@@ -363,7 +424,8 @@ enum ConfigurationMenu {
         subtitle: String,
         arg: String? = "",
         valid: Bool = false,
-        variables: [String: String]? = nil
+        variables: [String: String]? = nil,
+        mods: ScriptFilterMods? = nil
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: title,
@@ -371,6 +433,7 @@ enum ConfigurationMenu {
             arg: arg,
             valid: valid,
             variables: variables,
+            mods: mods,
             text: ScriptFilterText(
                 copy: tokenReference,
                 largetype: tokenReference
@@ -399,6 +462,8 @@ enum ConfigurationMenu {
             subtitle: "Restore \(SettingsDocument.builtInOutputTemplate)",
             arg: resetState,
             valid: true,
+            autocomplete: ":reset output",
+            match: "reset output template restore preserve original",
             variables: transitionVariables(resetState)
         )
     }
@@ -412,6 +477,8 @@ enum ConfigurationMenu {
             subtitle: "\(count) saved \(count == 1 ? "preset" : "presets") across all action menus",
             arg: stateJSON,
             valid: true,
+            autocomplete: ":remove presets",
+            match: "remove reset delete action presets",
             variables: transitionVariables(stateJSON)
         )
     }
@@ -481,7 +548,8 @@ enum ConfigurationMenu {
                 subtitle: subtitle,
                 arg: stateJSON,
                 valid: true,
-                variables: mutationVariables(stateJSON)
+                variables: mutationVariables(stateJSON),
+                mods: stayOpenModifier(stateJSON)
             )
         ])
     }
@@ -494,6 +562,16 @@ enum ConfigurationMenu {
 
     private static func error(_ title: String, _ subtitle: String) -> ScriptFilterResponse {
         message(title: title, subtitle: subtitle)
+    }
+
+    private static func withSettingsAffordance(
+        _ response: ScriptFilterResponse,
+        store: PresetStore
+    ) -> ScriptFilterResponse {
+        let affordance = ScriptFilterAffordance.settingsFile(store.fileURL.path)
+        var response = response
+        response.items = response.items.map(affordance.apply)
+        return response
     }
 
     private static func encoded(_ state: MenuState) -> String {
@@ -514,6 +592,21 @@ enum ConfigurationMenu {
                 WorkflowRequestKind.configurationMutation.rawValue,
             ActionMenu.menuStateVariable: stateJSON
         ]
+    }
+
+    private static func stayOpenModifier(
+        _ stateJSON: String
+    ) -> ScriptFilterMods {
+        ScriptFilterMods(command: ScriptFilterModifier(
+            arg: stateJSON,
+            subtitle: "Apply and return to Configuration",
+            valid: true,
+            variables: [
+                ActionMenu.requestKindVariable:
+                    WorkflowRequestKind.configurationMutationReturn.rawValue,
+                ActionMenu.menuStateVariable: stateJSON
+            ]
+        ))
     }
 
     private static func formattedBytes(_ bytes: Int64) -> String {

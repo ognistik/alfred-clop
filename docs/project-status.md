@@ -30,13 +30,13 @@ path/URL text are available.
 The shared settings and global execution-policy foundation is complete.
 Workflow-owned settings and action presets now share `settings.json`,
 original preservation uses validated Clop output templates, and Configuration
-owns output-template reset, global preset reset confirmation, settings-folder
-reveal, and clipboard-image cache cleanup.
+owns output-template reset, global preset reset confirmation, Workflow
+Settings access, and clipboard-image cache cleanup.
 
 Settings storage now follows one direct rule: the configured folder is the
-only source of truth. A missing file uses defaults until the first write,
-changing the folder switches configurations, and no migration or fallback
-state is maintained.
+only source of truth. A missing file is created with defaults on the first
+user-facing executable invocation, changing the folder switches
+configurations, and no migration or fallback state is maintained.
 
 ## Completed
 
@@ -61,14 +61,26 @@ state is maintained.
 - Path normalization, symlink resolution, validation, and deduplication
 - Media detection for images, video, audio, and PDFs
 - Context-aware action capability intersection for mixed inputs
-- Configuration remains available when selected, copied, or passed input has
-  no processable media, including unsupported-only folders
+- The `:` Configuration namespace remains available when selected, copied, or
+  passed input has no processable media, including unsupported-only folders
+- Returning from Configuration never treats an empty normalized input as
+  compatible with every action; unresolved clipboard, Finder, and passed-input
+  routes return to their original source-aware empty or unsupported state
 - Unsupported clipboard content uses generic, path-free feedback because the
   clipboard contents may be incidental or unexpected
 - One Optimize result in the main menu; aggressive optimization remains
   available to typed execution and Hotkeys pending the planned Command-Return
   modifier
 - Source-aware subtitles for selected, copied, and passed files
+- Processing action rows expose the original selected, copied, or passed input
+  to Quick Look and Alfred Actions while preserving typed Clop requests on
+  Return
+- Processing action rows also expose the original paths and URLs through
+  Alfred Large Type, capped for very large batches
+- Multi-file and mixed file/folder menu inputs are passed to Alfred Actions as
+  their original files and folders; folders are not expanded to inspected
+  children
+- HTTP/HTTPS menu inputs are passed to Alfred Actions as URL actions
 - Visible Alfred errors for missing, unsupported, and invalid inputs
 - Injectable clipboard abstraction with no real clipboard dependency in tests
 - Input context preserved across Script Filter reruns
@@ -104,6 +116,8 @@ state is maintained.
   actions with concise media requirements
 - Typed routes open the main menu, a clean implemented parameter menu, or
   quiet execution
+- `menu: Configuration` and its typed route open the main menu with `:`
+  prefilled while preserving the requested input source
 - Omitted public request versions use the installed workflow's current
   contract; explicit version 1 pins compatibility, while unsupported and
   malformed explicit versions remain errors
@@ -234,7 +248,10 @@ state is maintained.
 - Default storage under `alfred_workflow_data`; optional `settingsPath`
   selects a custom folder
 - Changing `settingsPath` switches to the independent settings in that folder
-- Missing settings files use defaults and are created on the first mutation
+- Missing settings files are atomically created with defaults on the first
+  user-facing executable invocation
+- Newly written settings documents use stable, human-readable JSON for Quick
+  Look and manual inspection
 - Built-in preservation template `%P/%f-clop`
 - Template validation rejects empty values, unsupported tokens, `%e`, literal
   terminal extensions, folder-only values, and unpredictable relative paths
@@ -255,9 +272,9 @@ state is maintained.
   background execution and Configuration mutations follow the default-on
   completion policy
 - Raw clipboard-image expiry follows the configured retention period
-- Discoverable Configuration action remains available without processable
-  input
-- Command-Return on the main Configuration item opens Alfred workflow settings
+- Typing `:` replaces processing actions with Configuration commands; deleting
+  it restores actions for the same normalized input
+- Output Template autocompletes to the query-based `:template ` editor
 - The Output Template editor offers complete prefix and suffix choices for
   plain text, advanced entry for template syntax, immediate validation, and
   raw-template plus example-path subtitles
@@ -269,14 +286,20 @@ state is maintained.
 - The Large Type reference does not advertise `%e` or operation-specific
   advanced tokens
 - `%z`, `%s`, `%x`, and `%q` remain accepted for advanced users
-- Configuration reveals the active settings folder for manual copying or
-  export
+- The file-backed Workflow Settings result opens Alfred configuration with
+  Return, reveals the active settings folder with Command-Return, and supports
+  Quick Look and Alfred file actions for `settings.json`
+- Every Configuration namespace row, including Output Template editor results,
+  confirmations, and mutation feedback, exposes the active `settings.json` to
+  Quick Look and Alfred file actions when settings can be resolved
+- Root Configuration commands provide stable Tab autocomplete values such as
+  `:settings`, `:reset output`, `:remove presets`, and `:clear cache`
 - `Reset output template` appears only for a customized template and restores
   `%P/%f-clop` without changing presets or Alfred preferences
 - Separate global preset removal appears only when presets exist and requires
   confirmation with the preset count
 - Final template saves/resets, global preset removal, and cache cleanup close
-  Alfred and optionally notify instead of returning a redundant result menu
+  Alfred on Return; Command-Return applies the mutation and returns to `:`
 - Conditional clipboard-image cleanup reports file count and space usage,
   requires confirmation, and removes only workflow-owned cache files
 - Return uses configured aggressive and preservation defaults
@@ -375,7 +398,7 @@ execution, and preset patterns without starting conversion or PDF-crop work.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 190 tests.
+- `./scripts/test.sh` passes 193 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

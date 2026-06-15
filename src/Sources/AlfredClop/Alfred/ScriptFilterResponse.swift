@@ -27,6 +27,7 @@ struct ScriptFilterResponse: Codable, Equatable {
 }
 
 struct ScriptFilterItem: Codable, Equatable {
+    var type: String?
     var uid: String?
     var title: String
     var subtitle: String
@@ -38,8 +39,11 @@ struct ScriptFilterItem: Codable, Equatable {
     var variables: [String: String]?
     var mods: ScriptFilterMods?
     var text: ScriptFilterText?
+    var quickLookURL: String?
+    var action: ScriptFilterAction?
 
     init(
+        type: String? = nil,
         uid: String? = nil,
         title: String,
         subtitle: String = "",
@@ -50,8 +54,11 @@ struct ScriptFilterItem: Codable, Equatable {
         icon: ScriptFilterIcon? = nil,
         variables: [String: String]? = nil,
         mods: ScriptFilterMods? = nil,
-        text: ScriptFilterText? = nil
+        text: ScriptFilterText? = nil,
+        quickLookURL: String? = nil,
+        action: ScriptFilterAction? = nil
     ) {
+        self.type = type
         self.uid = uid
         self.title = title
         self.subtitle = subtitle
@@ -63,12 +70,99 @@ struct ScriptFilterItem: Codable, Equatable {
         self.variables = variables
         self.mods = mods
         self.text = text
+        self.quickLookURL = quickLookURL
+        self.action = action
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case uid
+        case title
+        case subtitle
+        case arg
+        case valid
+        case autocomplete
+        case match
+        case icon
+        case variables
+        case mods
+        case text
+        case quickLookURL = "quicklookurl"
+        case action
+    }
+}
+
+enum ScriptFilterActionValue: Codable, Equatable {
+    case single(String)
+    case multiple([String])
+
+    init?(_ values: [String]) {
+        if values.isEmpty {
+            return nil
+        }
+        if values.count == 1, let value = values.first {
+            self = .single(value)
+        } else {
+            self = .multiple(values)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self = .single(value)
+        } else {
+            self = .multiple(try container.decode([String].self))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .single(let value):
+            try container.encode(value)
+        case .multiple(let values):
+            try container.encode(values)
+        }
     }
 }
 
 struct ScriptFilterText: Codable, Equatable {
     var copy: String?
     var largetype: String?
+}
+
+struct ScriptFilterAction: Codable, Equatable {
+    var text: ScriptFilterActionValue?
+    var url: ScriptFilterActionValue?
+    var file: ScriptFilterActionValue?
+    var auto: ScriptFilterActionValue?
+
+    init(
+        text: [String] = [],
+        url: [String] = [],
+        file: [String] = [],
+        auto: [String] = []
+    ) {
+        self.text = ScriptFilterActionValue(text)
+        self.url = ScriptFilterActionValue(url)
+        self.file = ScriptFilterActionValue(file)
+        self.auto = ScriptFilterActionValue(auto)
+    }
+
+    init(
+        text: String? = nil,
+        url: String? = nil,
+        file: String? = nil,
+        auto: String? = nil
+    ) {
+        self.init(
+            text: text.map { [$0] } ?? [],
+            url: url.map { [$0] } ?? [],
+            file: file.map { [$0] } ?? [],
+            auto: auto.map { [$0] } ?? []
+        )
+    }
 }
 
 struct ScriptFilterIcon: Codable, Equatable {

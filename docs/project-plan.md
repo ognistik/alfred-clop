@@ -389,6 +389,10 @@ builds a complete typed action request. Actions whose execution parameter
 model is not implemented must fail clearly rather than accepting speculative
 syntax.
 
+`menu: Configuration` opens the shared Script Filter with the `:`
+Configuration namespace prefilled. It still requires an input source so
+deleting `:` can return to processing actions for that same input.
+
 The shorthand parser immediately produces the same typed request used by the
 rest of the workflow. Input acquisition and routing remain independent typed
 choices:
@@ -397,6 +401,8 @@ choices:
 - `finderSelection`: ask Finder for its selected items;
 - `explicit`: classify the supplied exact `items`;
 - `menu`: open the main action menu or one action's parameter menu;
+- `configuration`: open the main menu with its Configuration namespace
+  prefilled;
 - `execute`: run one complete typed operation without showing Alfred.
 
 Saved and inline Clop pipelines are typed actions within `menu` or `execute`;
@@ -722,8 +728,8 @@ Drive, Dropbox, or other locally available synchronized directory.
 #### Settings location changes
 
 The configured folder is always the only settings source. If it contains a
-valid `settings.json`, use it. If the file is absent, use built-in defaults and
-create the file there on the first settings mutation. Ignore files in every
+valid `settings.json`, use it. If the file is absent, create an atomic default
+document on the first user-facing executable invocation. Ignore files in every
 other location.
 
 Changing `settingsPath` intentionally switches configurations. Never move,
@@ -731,8 +737,10 @@ copy, merge, import, restore, or temporarily read settings from the prior
 folder. A malformed active file remains a visible error and must not be
 silently replaced.
 
-Configuration exposes `Reveal Settings Folder` so users can manually inspect,
-copy, export, or replace `settings.json`.
+Configuration exposes one file-backed `Workflow Settings` result. Return opens
+Alfred's workflow configuration, Command-Return reveals the active settings
+folder, and the real `settings.json` path remains available to Quick Look and
+Alfred file actions.
 
 Do not create a separate workflow recipe system. Clop saved and inline
 pipelines are the multi-step automation feature. Keep pipeline expressions
@@ -740,9 +748,10 @@ opaque until their grammar is stable enough to model safely.
 
 ### Configuration menu
 
-Add a discoverable `Configuration` action to the main menu. It is separate
-from Alfred's static workflow configuration and must remain available without
-files to process.
+Use `:` as a Configuration namespace in the shared action Script Filter.
+Typing it replaces processing actions with administrative commands; deleting
+it restores processing actions for the same normalized input. Do not add a
+separate Configuration result to the normal action list.
 
 Expected responsibilities:
 
@@ -755,7 +764,8 @@ Expected responsibilities:
   without adding a dedicated non-actionable menu row. Advertise source path,
   filename, date, time, random, and incrementing tokens there. Do not advertise
   `%e` or operation-specific advanced tokens;
-- reveal the active settings folder in Finder for manual copying or export;
+- expose a file-backed `Workflow Settings` result with the subtitle
+  `↩ Open Workflow Configuration · ⌘↩ Reveal Settings Folder`;
 - reset the workflow-owned output template to `%P/%f-clop` through explicit
   confirmation while preserving action presets and Alfred's static
   preferences;
@@ -764,11 +774,9 @@ Expected responsibilities:
 - offer a separate confirmed `Remove all action presets` action only when at
   least one preset exists. Never couple global preset removal to output reset;
 - final output-template saves, resets, global preset removal, and cache cleanup
-  leave Alfred immediately instead of returning another result menu. Their
-  concise success notifications follow the Completion notifications setting;
-- expose Command-Return on the main `Configuration` item as a shortcut to
-  Alfred's workflow settings, with the subtitle
-  `Output template, presets, and maintenance · ⌘⏎ Workflow settings`;
+  leave Alfred immediately on Return. Command-Return applies the same mutation
+  and returns to the `:` namespace. Concise success notifications follow the
+  Completion notifications setting;
 - provide an explicit maintenance action to remove workflow-owned materialized
   clipboard images from the workflow cache and temporary fallback directory.
   Show the action only when matching cached images exist, include the image
@@ -781,8 +789,19 @@ number of presets that will be removed. Individual preset removal remains in
 each action menu. Cache cleanup must delete only files created by this
 workflow's clipboard image materializer.
 
+Every Configuration namespace row that represents workflow-owned settings or a
+settings mutation should expose the active `settings.json` path through Quick
+Look and Alfred file actions. This includes the root menu rows, output-template
+editor rows, confirmations, and completion/error feedback where a settings file
+was successfully resolved. The row's normal `arg` remains the typed menu or
+mutation state; Alfred file actions use the Script Filter `action` override.
+
 The output-template editor follows these rules:
 
+- the Output Template result autocompletes to `:template ` and the remainder
+  of the Script Filter query is the live editor input;
+- every root Configuration command provides a stable `:` autocomplete value,
+  such as `:settings`, `:reset output`, `:remove presets`, or `:clear cache`;
 - plain text produces two complete safe choices: a suffix beside the original
   and a prefix beside the original;
 - input containing `%`, `/`, or beginning with `~` is treated only as an
@@ -908,10 +927,24 @@ Modifiers keep one meaning across top-level and parameter menus, but only
 appear where applicable. Unsupported modifiers must not silently acquire a
 different action-specific meaning.
 
-Configuration is an administrative surface rather than an operation menu. Its
-reset item may therefore use Command-Return for the clearly labeled global
-preset-reset confirmation without changing Command's aggressive inversion
-meaning on executable media actions.
+Configuration is an administrative surface rather than an operation menu.
+Command-Return therefore means apply the selected mutation and return to `:`;
+this does not change Command's aggressive inversion meaning on executable
+media actions.
+
+Script Filter rows in processing menus should preserve Alfred-native affordances
+for the original input. Top-level action rows and implemented parameter-menu
+rows expose `quicklookurl` and `action` metadata for the normalized selected,
+copied, or passed inputs while keeping Return wired to the typed Clop request.
+They also expose the original input paths and URLs through Alfred Large Type so
+multi-item operations can be inspected even though Quick Look previews only one
+item. Local files and folders are exposed as file actions, folders stay as
+folders rather than expanding to inspected children, and HTTP/HTTPS inputs are
+exposed as URL actions. When multiple inputs are present, Alfred Actions
+receive the same original input set; Quick Look previews the first input Alfred
+can handle. Configuration namespace rows do not use this processing-input Large
+Type behavior because their Large Type surface is reserved for configuration
+help such as output-template tokens.
 
 Do not add a separate Aggressive Optimize action to the menu. Return uses the
 configured Standard or Aggressive default, while Command-Return resolves the

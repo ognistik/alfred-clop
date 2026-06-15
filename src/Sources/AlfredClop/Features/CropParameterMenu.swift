@@ -243,11 +243,16 @@ enum CropParameterMenu {
         }
 
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let affordance = ScriptFilterAffordance.processingInputs(
+            request.inputs,
+            itemKinds: request.itemKinds
+        )
         guard !trimmedQuery.isEmpty else {
+            let items = ([instructionItem] + presets.compactMap {
+                presetItem(for: $0, request: request, environment: environment)
+            }).map(affordance.apply)
             return ScriptFilterResponse(
-                items: [instructionItem] + presets.compactMap {
-                    presetItem(for: $0, request: request, environment: environment)
-                },
+                items: items,
                 variables: preservedVariables(
                     for: request,
                     stateJSON: stateJSON
@@ -298,7 +303,7 @@ enum CropParameterMenu {
         }
 
         return ScriptFilterResponse(
-            items: items,
+            items: items.map(affordance.apply),
             variables: preservedVariables(for: request, stateJSON: stateJSON),
             skipKnowledge: true
         )

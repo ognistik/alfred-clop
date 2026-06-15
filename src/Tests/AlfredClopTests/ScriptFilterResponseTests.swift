@@ -60,6 +60,56 @@ struct ScriptFilterResponseTests {
     }
 
     @Test
+    func responseSupportsFileActionsAndQuickLook() throws {
+        let response = ScriptFilterResponse(items: [
+            ScriptFilterItem(
+                type: "file",
+                title: "Workflow Settings",
+                arg: "/tmp/settings.json",
+                quickLookURL: "/tmp/settings.json",
+                action: ScriptFilterAction(file: "/tmp/settings.json")
+            )
+        ])
+
+        let data = try JSONOutput.data(for: response)
+        let json = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let items = try #require(json["items"] as? [[String: Any]])
+        let item = try #require(items.first)
+        let action = try #require(item["action"] as? [String: String])
+
+        #expect(item["type"] as? String == "file")
+        #expect(item["quicklookurl"] as? String == "/tmp/settings.json")
+        #expect(action["file"] == "/tmp/settings.json")
+    }
+
+    @Test
+    func responseSupportsMultipleFileAndURLActions() throws {
+        let response = ScriptFilterResponse(items: [
+            ScriptFilterItem(
+                title: "Crop / Resize",
+                arg: "request-json",
+                action: ScriptFilterAction(
+                    url: ["https://example.com/photo.png"],
+                    file: ["/tmp/one.png", "/tmp/Folder"]
+                )
+            )
+        ])
+
+        let data = try JSONOutput.data(for: response)
+        let json = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let items = try #require(json["items"] as? [[String: Any]])
+        let item = try #require(items.first)
+        let action = try #require(item["action"] as? [String: Any])
+
+        #expect(action["file"] as? [String] == ["/tmp/one.png", "/tmp/Folder"])
+        #expect(action["url"] as? String == "https://example.com/photo.png")
+    }
+
+    @Test
     func responseEncodesAlfredSkipKnowledgeKey() throws {
         let data = try JSONOutput.data(for: ScriptFilterResponse(
             items: [],

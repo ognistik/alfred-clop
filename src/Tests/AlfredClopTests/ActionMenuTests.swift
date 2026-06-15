@@ -56,11 +56,8 @@ struct ActionMenuTests {
             query: ""
         )
 
-        #expect(response.items.map(\.title) == [
-            "Configuration",
-            "No supported input"
-        ])
-        #expect(response.items[1].valid == false)
+        #expect(response.items.map(\.title) == ["No supported input"])
+        #expect(response.items[0].valid == false)
     }
 
     @Test
@@ -84,8 +81,7 @@ struct ActionMenuTests {
             "Convert Audio",
             "Crop PDF (Reversible)",
             "Uncrop PDF",
-            "Strip Metadata",
-            "Configuration"
+            "Strip Metadata"
         ])
         #expect(response.items[1].subtitle.contains("Image, video, or PDF only"))
     }
@@ -129,6 +125,37 @@ struct ActionMenuTests {
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.selected.rawValue
         )
+    }
+
+    @Test
+    func mainMenuItemsExposeOriginalFilesFoldersAndURLsToAlfredActions() {
+        let response = ActionMenu.response(
+            for: InputSelection(
+                inputs: [
+                    "/tmp/first image.png",
+                    "/tmp/Media Folder",
+                    "https://example.com/video.mp4"
+                ],
+                mediaKinds: [.video],
+                itemKinds: [.localFile, .folder, .remoteURL]
+            ),
+            query: "optimize"
+        )
+        let item = response.items[0]
+
+        #expect(item.quickLookURL == "/tmp/first image.png")
+        #expect(item.action?.file == .multiple([
+            "/tmp/first image.png",
+            "/tmp/Media Folder"
+        ]))
+        #expect(item.action?.url == .single("https://example.com/video.mp4"))
+        #expect(item.text?.largetype == """
+        3 inputs
+
+        /tmp/first image.png
+        /tmp/Media Folder
+        https://example.com/video.mp4
+        """)
     }
 
     @Test
@@ -189,8 +216,7 @@ struct ActionMenuTests {
         )
 
         #expect(keywordResponse.items.map(\.title) == [
-            "Clipboard input is disabled",
-            "Configuration"
+            "Clipboard input is disabled"
         ])
         #expect(keywordResponse.items[0].title == "Clipboard input is disabled")
         #expect(
@@ -288,10 +314,54 @@ struct ActionMenuTests {
         )
 
         #expect(response.items.map(\.title) == [
-            "Configuration",
             "No supported clipboard content"
         ])
-        #expect(response.items[1].valid == false)
+        #expect(response.items[0].valid == false)
+    }
+
+    @Test
+    func emptyClipboardConfigurationDoesNotCreateNormalizedInput() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+
+        let response = ActionMenu.response(
+            clipboard: ActionMenuClipboard(),
+            query: ":",
+            environment: environment
+        )
+
+        #expect(response.items.first?.title == "Output Template")
+        #expect(response.variables?[ActionMenu.inputJSONVariable] == "")
+        #expect(
+            response.variables?[ActionMenu.inputContextVariable]
+                == ActionInputContext.clipboard.rawValue
+        )
+    }
+
+    @Test
+    func emptyNormalizedClipboardInputDoesNotExposeActions() throws {
+        let input = try JSONOutput.string(
+            for: MenuInput(
+                paths: [],
+                mediaKinds: [],
+                itemKinds: [],
+                ambiguousKinds: []
+            ),
+            prettyPrinted: false
+        )
+
+        let response = ActionMenu.response(
+            inputJSON: input,
+            query: "",
+            context: .clipboard
+        )
+
+        #expect(response.items.map(\.title) == [
+            "No supported clipboard content"
+        ])
     }
 
     @Test
@@ -305,14 +375,47 @@ struct ActionMenuTests {
         )
 
         #expect(response.items.map(\.title) == [
-            "Configuration",
             "No supported clipboard content"
         ])
-        #expect(response.items[1].valid == false)
+        #expect(response.items[0].valid == false)
     }
 
     @Test
-    func unsupportedClipboardFolderStillShowsConfiguration() throws {
+    func unsupportedClipboardCanEnterConfigurationAndReturnToError() throws {
+        let file = try temporaryFile(named: "notes.txt")
+        let settings = try makeTemporaryDirectory()
+        defer {
+            try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: settings)
+        }
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: settings.path
+        ])
+
+        let configuration = ActionMenu.response(
+            clipboard: ActionMenuClipboard(urls: [file]),
+            query: ":",
+            environment: environment
+        )
+        let inputJSON = try #require(
+            configuration.variables?[ActionMenu.inputJSONVariable]
+        )
+        let returned = ActionMenu.response(
+            inputJSON: inputJSON,
+            query: "",
+            context: .clipboard,
+            environment: environment
+        )
+
+        #expect(configuration.items.first?.title == "Output Template")
+        #expect(!inputJSON.isEmpty)
+        #expect(returned.items.map(\.title) == [
+            "No supported clipboard content"
+        ])
+    }
+
+    @Test
+    func unsupportedClipboardFolderShowsVisibleError() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         try Data("notes".utf8).write(
@@ -325,12 +428,10 @@ struct ActionMenuTests {
         )
 
         #expect(response.items.map(\.title) == [
-            "Configuration",
             "No supported clipboard content"
         ])
-        #expect(response.items[1].subtitle == "Copy a supported file, folder, URL, or image and try again.")
-        #expect(response.items[0].valid)
-        #expect(response.items[1].valid == false)
+        #expect(response.items[0].subtitle == "Copy a supported file, folder, URL, or image and try again.")
+        #expect(response.items[0].valid == false)
     }
 
     @Test
@@ -348,8 +449,7 @@ struct ActionMenuTests {
             "Downscale",
             "Convert Image",
             "Convert Video",
-            "Convert Audio",
-            "Configuration"
+            "Convert Audio"
         ])
     }
 
@@ -476,9 +576,7 @@ struct ActionMenuTests {
 
         #expect(response.items[1].subtitle == "Passed input · Image, video, or PDF only")
         #expect(response.items[3].subtitle == "Passed input · Images only")
-        #expect(response.items
-            .filter { $0.uid != "action.configuration" }
-            .allSatisfy { $0.subtitle.count < 60 })
+        #expect(response.items.allSatisfy { $0.subtitle.count < 60 })
     }
 
     @Test
@@ -488,21 +586,20 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[0].title == "Configuration")
-        #expect(response.items[1].title == "Supported media is in subfolders")
+        #expect(response.items[0].title == "Supported media is in subfolders")
         #expect(
-            response.items[1].subtitle
+            response.items[0].subtitle
                 == "Press Return to open workflow configuration."
         )
-        #expect(response.items[1].valid)
+        #expect(response.items[0].valid)
         #expect(
-            response.items[1].variables?[ActionMenu.requestKindVariable]
+            response.items[0].variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.workflowSettings.rawValue
         )
     }
 
     @Test
-    func unsupportedPassedFolderStillShowsConfiguration() throws {
+    func unsupportedPassedFolderShowsVisibleError() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         try Data("notes".utf8).write(
@@ -515,12 +612,9 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items.map(\.title) == [
-            "Configuration",
-            "No supported input"
-        ])
-        #expect(response.items[1].subtitle == "Pass a supported file, folder, or HTTP/HTTPS URL.")
-        #expect(response.items[1].valid == false)
+        #expect(response.items.map(\.title) == ["No supported input"])
+        #expect(response.items[0].subtitle == "Pass a supported file, folder, or HTTP/HTTPS URL.")
+        #expect(response.items[0].valid == false)
     }
 
     @Test

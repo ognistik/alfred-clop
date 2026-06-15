@@ -225,6 +225,11 @@ struct SettingsFoundationTests {
             confirmation.items.first?.variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.configurationMutation.rawValue
         )
+        #expect(
+            confirmation.items.first?.mods?.command?
+                .variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.configurationMutationReturn.rawValue
+        )
         #expect(ConfigurationMenu.quietMutationFeedback(
             stateJSON: try #require(confirmation.items.first?.arg),
             environment: environment
@@ -409,32 +414,165 @@ struct SettingsFoundationTests {
             environment: disabled
         ) == nil)
 
-        let action = ConfigurationMenu.actionItem
-        #expect(
-            action.subtitle
-                == "Output template, presets, and maintenance · ⌘⏎ Workflow settings"
-        )
-        #expect(
-            action.mods?.command?.variables?[ActionMenu.requestKindVariable]
-                == WorkflowRequestKind.workflowSettings.rawValue
-        )
-
-        let menu = ConfigurationMenu.response(
-            stateJSON: try JSONOutput.string(
-                for: MenuState.configuration(),
-                prettyPrinted: false
-            ),
-            query: "",
+        let menu = ConfigurationMenu.namespaceResponse(
+            query: ":",
             environment: enabled
         )
-        let reveal = try #require(menu.items.first {
-            $0.title == "Reveal Settings Folder"
+        let settings = try #require(menu.items.first {
+            $0.title == "Workflow Settings"
         })
-        #expect(reveal.arg == directory.path)
+        let filePath = directory.appendingPathComponent("settings.json").path
         #expect(
-            reveal.variables?[ActionMenu.requestKindVariable]
+            settings.subtitle
+                == "↩ Open Workflow Configuration · ⌘↩ Reveal Settings Folder"
+        )
+        #expect(settings.type == "file")
+        #expect(settings.arg == filePath)
+        #expect(settings.quickLookURL == filePath)
+        #expect(settings.action?.file == .single(filePath))
+        #expect(settings.autocomplete == ":settings")
+        #expect(
+            settings.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.workflowSettings.rawValue
+        )
+        #expect(
+            settings.mods?.command?
+                .variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.revealSettingsFolder.rawValue
         )
+        #expect(settings.mods?.command?.arg == directory.path)
+    }
+
+    @Test
+    func configurationNamespaceFiltersAndOpensTemplateEditor() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+
+        let root = ActionMenu.response(
+            for: InputSelection(
+                inputs: ["/tmp/photo.png"],
+                mediaKinds: [.image]
+            ),
+            query: ":",
+            environment: environment
+        )
+        #expect(Array(root.items.map(\.title).prefix(2)) == [
+            "Output Template",
+            "Workflow Settings"
+        ])
+        #expect(root.items[0].autocomplete == ":template ")
+        #expect(root.items[1].autocomplete == ":settings")
+        #expect(
+            root.variables?[ActionMenu.inputJSONVariable] != nil
+        )
+
+        let filtered = ActionMenu.response(
+            for: InputSelection(
+                inputs: ["/tmp/photo.png"],
+                mediaKinds: [.image]
+            ),
+            query: ":outp",
+            environment: environment
+        )
+        #expect(filtered.items.map(\.title) == ["Output Template"])
+
+        let editor = ActionMenu.response(
+            for: InputSelection(
+                inputs: ["/tmp/photo.png"],
+                mediaKinds: [.image]
+            ),
+            query: ":template optimized",
+            environment: environment
+        )
+        #expect(editor.items.map(\.title) == [
+            "Add “-optimized”",
+            "Add “optimized-”"
+        ])
+        #expect(
+            editor.items.allSatisfy {
+                $0.mods?.command?.variables?[ActionMenu.requestKindVariable]
+                    == WorkflowRequestKind.configurationMutationReturn.rawValue
+            }
+        )
+    }
+
+    @Test
+    func deletingConfigurationNamespaceRestoresProcessingActions() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let selection = InputSelection(
+            inputs: ["/tmp/photo.png"],
+            mediaKinds: [.image]
+        )
+
+        let configuration = ActionMenu.response(
+            for: selection,
+            query: ":",
+            environment: environment
+        )
+        let actions = ActionMenu.response(
+            for: selection,
+            query: "",
+            environment: environment
+        )
+
+        #expect(configuration.items.first?.title == "Output Template")
+        #expect(actions.items.contains { $0.title == "Optimize" })
+        #expect(!actions.items.contains { $0.title == "Workflow Settings" })
+    }
+
+    @Test
+    func configurationRowsExposeSettingsFileForQuickLookAndAlfredActions() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let store = try PresetStore(environment: environment)
+        try store.save(.crop(CropActionPreset(size: try #require(
+            CropSizeParser.parse("w128")
+        ))))
+        try store.updateOutputTemplate("%P/%f-processed")
+
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":",
+            environment: environment
+        )
+        let filePath = directory.appendingPathComponent("settings.json").path
+
+        #expect(response.items.map(\.title).contains("Reset output template"))
+        #expect(response.items.map(\.title).contains("Remove all action presets"))
+        #expect(response.items.allSatisfy {
+            $0.quickLookURL == filePath
+                && $0.action?.file == .single(filePath)
+                && $0.text?.largetype == nil
+        })
+        #expect(response.items.first {
+            $0.title == "Reset output template"
+        }?.autocomplete == ":reset output")
+        #expect(response.items.first {
+            $0.title == "Remove all action presets"
+        }?.autocomplete == ":remove presets")
+    }
+
+    @Test
+    func configurationNamespaceOverridesMissingInputErrors() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+
+        let response = ActionMenu.response(
+            paths: ["/tmp/alfred-clop-definitely-missing.png"],
+            query: ":",
+            environment: environment
+        )
+
+        #expect(response.items.first?.title == "Output Template")
+        #expect(response.items.contains { $0.title == "Workflow Settings" })
     }
 
     @Test
