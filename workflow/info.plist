@@ -1540,16 +1540,16 @@ fi</string>
 				<key>default</key>
 				<string>cl</string>
 				<key>placeholder</key>
-				<string></string>
+				<string>cl</string>
 				<key>required</key>
-				<false/>
+				<true/>
 				<key>trim</key>
 				<true/>
 			</dict>
 			<key>description</key>
 			<string></string>
 			<key>label</key>
-			<string>Keyword</string>
+			<string>Workflow's Keyword</string>
 			<key>type</key>
 			<string>textfield</string>
 			<key>variable</key>
@@ -1568,7 +1568,7 @@ fi</string>
 				<false/>
 			</dict>
 			<key>description</key>
-			<string>Use settings.json from this folder. Changing it switches configurations.</string>
+			<string>Use settings.json from this folder. Changing it switches configurations. Settings keep track of your output template &amp; custom presets.</string>
 			<key>label</key>
 			<string>Settings folder</string>
 			<key>type</key>
@@ -1584,12 +1584,12 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Allow the keyword to inspect the current clipboard.</string>
+				<string>Use clipboard content for keyword</string>
 			</dict>
 			<key>description</key>
-			<string>Explicit clipboard Hotkeys and External Trigger requests remain available.</string>
+			<string>This setting only relates to the Workflow's keyword. Explicit clipboard Hotkeys and External Trigger requests remain available.</string>
 			<key>label</key>
-			<string>Read clipboard for keyword</string>
+			<string>Read Clipboard</string>
 			<key>type</key>
 			<string>checkbox</string>
 			<key>variable</key>
@@ -1603,12 +1603,12 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Write processed files using the configured output template.</string>
+				<string>Use the configured output template</string>
 			</dict>
 			<key>description</key>
 			<string>Shift-Return inverts this for one run.</string>
 			<key>label</key>
-			<string>Preserve original files</string>
+			<string>Preserve originals</string>
 			<key>type</key>
 			<string>checkbox</string>
 			<key>variable</key>
@@ -1648,12 +1648,12 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Show Clop's floating result interface.</string>
+				<string>Processing shows Clop's UI</string>
 			</dict>
 			<key>description</key>
 			<string>Independent from clipboard copying and notifications.</string>
 			<key>label</key>
-			<string>Show Clop UI</string>
+			<string>Floating Result</string>
 			<key>type</key>
 			<string>checkbox</string>
 			<key>variable</key>
@@ -1667,7 +1667,7 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Notify after successful background processing and Configuration updates.</string>
+				<string>Success messages and config updates.</string>
 			</dict>
 			<key>description</key>
 			<string>Successful processing stays quiet when Clop's result UI is shown.</string>
@@ -1686,7 +1686,7 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Notify when an operation fails or is incomplete.</string>
+				<string>Failed or incomplete operations.</string>
 			</dict>
 			<key>description</key>
 			<string>Interactive Alfred errors remain visible.</string>
@@ -1701,16 +1701,16 @@ fi</string>
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<false/>
+				<true/>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Pass Clop's explicit --copy option.</string>
+				<string>Ensure result is copied</string>
 			</dict>
 			<key>description</key>
 			<string>Independent from showing Clop's UI.</string>
 			<key>label</key>
-			<string>Ensure result is copied</string>
+			<string>Copy</string>
 			<key>type</key>
 			<string>checkbox</string>
 			<key>variable</key>
@@ -1720,11 +1720,11 @@ fi</string>
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<false/>
+				<true/>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Process supported files in subfolders.</string>
+				<string>Process files in subfolders.</string>
 			</dict>
 			<key>description</key>
 			<string>Controls both menu inspection and Clop execution.</string>
@@ -1739,7 +1739,7 @@ fi</string>
 			<key>config</key>
 			<dict>
 				<key>defaultvalue</key>
-				<integer>7</integer>
+				<integer>8</integer>
 				<key>markercount</key>
 				<integer>5</integer>
 				<key>maxvalue</key>
