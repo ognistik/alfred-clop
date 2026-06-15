@@ -177,7 +177,7 @@ enum CropParameterMenu {
                     return menuResponse(
                         request: request,
                         stateJSON: try encodedState(.crop(request)),
-                        query: presetDisplayValue(action.preset),
+                        query: "",
                         store: store,
                         environment: environment,
                         fileManager: fileManager

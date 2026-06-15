@@ -144,12 +144,16 @@ struct DownscaleParameterMenuTests {
         )
         let stateJSON = try #require(response.items[0].mods?.control?.arg)
 
-        _ = DownscaleParameterMenu.response(
+        let saved = DownscaleParameterMenu.response(
             stateJSON: stateJSON,
             query: "",
             environment: fixture.environment
         )
 
+        #expect(saved.items.map(\.title) == [
+            "Type a downscale factor",
+            "75%"
+        ])
         #expect(try fixture.store.load().presets == [
             .downscale(DownscaleActionPreset(factor: 0.75))
         ])

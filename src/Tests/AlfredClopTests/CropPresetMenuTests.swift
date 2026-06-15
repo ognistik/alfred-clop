@@ -161,6 +161,7 @@ struct CropPresetMenuTests {
         }))
         let operation = try operationRequest(from: combined)
 
+        #expect(saved.items[0].title == "Type crop or resize parameters")
         #expect(combined.subtitle.contains("Saved preset"))
         #expect(operation.inputs == fixture.inputs)
         #expect(try fixture.store.load().presets.count == 1)

@@ -34,6 +34,10 @@ original preservation uses validated Clop output templates, and Configuration
 owns output-template reset, global preset reset confirmation, Workflow
 Settings access, and clipboard-image cache cleanup.
 
+Crop / Resize and Downscale preset saves now clear the parameter query and
+return directly to the same submenu, restoring the instructional row and full
+preset list while keeping Alfred open.
+
 Settings storage now follows one direct rule: the configured folder is the
 only source of truth. A missing file is created with defaults on the first
 user-facing executable invocation, changing the folder switches

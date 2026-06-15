@@ -305,6 +305,19 @@
 				<false/>
 			</dict>
 		</array>
+		<key>D922B7A2-2433-441D-B70D-4556591E487D</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 		<key>F0F0F0F0-F0F0-40F0-80F0-F0F0F0F0F0F0</key>
 		<array>
 			<dict>
@@ -332,17 +345,13 @@
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>externaltriggerid</key>
-				<string>mainMenu</string>
-				<key>passinputasargument</key>
+				<key>argument</key>
+				<string></string>
+				<key>passthroughargument</key>
 				<false/>
-				<key>passvariables</key>
-				<true/>
-				<key>workflowbundleid</key>
-				<string>com.aft.clop</string>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.output.callexternaltrigger</string>
+			<string>alfred.workflow.utility.argument</string>
 			<key>uid</key>
 			<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
 			<key>version</key>

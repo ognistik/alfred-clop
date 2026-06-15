@@ -118,7 +118,7 @@ enum DownscaleParameterMenu {
                     return menuResponse(
                         request: request,
                         stateJSON: try encodedState(.downscale(request)),
-                        query: presetDisplayValue(action.preset),
+                        query: "",
                         store: store,
                         environment: environment,
                         fileManager: fileManager

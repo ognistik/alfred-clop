@@ -233,6 +233,12 @@ struct WorkflowRoutingTests {
         let triggerConfig = try #require(
             returnTrigger["config"] as? [String: Any]
         )
+        let parameterReturn = try #require(objects.first {
+            $0["uid"] as? String == "D922B7A2-2433-441D-B70D-4556591E487D"
+        })
+        let parameterReturnConfig = try #require(
+            parameterReturn["config"] as? [String: Any]
+        )
 
         #expect(scriptFilterRoutes.contains {
             $0["modifiers"] as? Int == 1_048_576
@@ -246,6 +252,16 @@ struct WorkflowRoutingTests {
         #expect(variables[ActionMenu.publicRequestVariable] == nil)
         #expect(triggerConfig["externaltriggerid"] as? String == "mainMenu")
         #expect(triggerConfig["passinputasargument"] as? Bool == true)
+        #expect(parameterReturn["type"] as? String == "alfred.workflow.utility.argument")
+        #expect(parameterReturnConfig["argument"] as? String == "")
+        #expect(parameterReturnConfig["passthroughargument"] as? Bool == false)
+        #expect(
+            connections["D922B7A2-2433-441D-B70D-4556591E487D"]?
+                .contains {
+                    $0["destinationuid"] as? String
+                        == "A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0"
+                } == true
+        )
 
         let terminalRoutes = try #require(
             connections["B30C287D-7137-4B63-8FA2-95B849C440FA"]
