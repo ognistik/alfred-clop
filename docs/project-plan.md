@@ -714,50 +714,25 @@ Workflow settings storage:
 - create the document when absent and use an existing compatible file when
   present;
 - use a versioned JSON schema and atomic writes;
-- never store user settings in the workflow bundle itself;
-- retain compatibility for the already-supported `presets.json`,
-  `presetsPath`, and location metadata formats until a deliberate compatibility
-  cleanup removes them.
+- never store user settings in the workflow bundle itself.
 
 The custom folder is the simple cross-Mac strategy: users may choose an iCloud
 Drive, Dropbox, or other locally available synchronized directory.
 
 #### Settings location changes
 
-The configured location is authoritative whenever it contains a valid
-`settings.json`. Ignore files in other locations and do not offer merging,
-import, export, or restore workflows. A malformed configured file remains a
-visible error; do not bypass it with older settings.
+The configured folder is always the only settings source. If it contains a
+valid `settings.json`, use it. If the file is absent, use built-in defaults and
+create the file there on the first settings mutation. Ignore files in every
+other location.
 
-When the configured location is empty and a valid previous settings file
-exists:
+Changing `settingsPath` intentionally switches configurations. Never move,
+copy, merge, import, restore, or temporarily read settings from the prior
+folder. A malformed active file remains a visible error and must not be
+silently replaced.
 
-- keep every Clop action available;
-- hide presets from the previous file and show one concise parameter-menu item:
-  `Presets are in the previous location`, with the subtitle
-  `Press Return to move settings here`;
-- allow typed parameter values to execute normally;
-- treat the previous file as read-only and block preset mutations,
-  output-template edits, resets, and other settings writes;
-- use the previous output template temporarily for interactive and headless
-  execution;
-- show Configuration choices to `Move existing settings` or
-  `Start with new settings`;
-- make moving explicit and non-destructive until the destination has been
-  written and validated;
-- make starting fresh create default settings at the configured location
-  without deleting the previous file.
-
-Warn after a successful operation only when the temporary template was
-actually relevant: Preserve Original was active, the previous template differs
-from `%P/%f-clop`, and Error notifications are enabled. Do not warn for
-in-place operations or failed executions. Use concise notification wording:
-`Using previous output settings` and
-`Open Configuration to move settings or start fresh`.
-
-Once either resolution succeeds, stop fallback reads and warnings immediately.
-If neither location contains settings, initialize the configured location
-normally.
+Configuration exposes `Reveal Settings Folder` so users can manually inspect,
+copy, export, or replace `settings.json`.
 
 Do not create a separate workflow recipe system. Clop saved and inline
 pipelines are the multi-step automation feature. Keep pipeline expressions
@@ -780,8 +755,7 @@ Expected responsibilities:
   without adding a dedicated non-actionable menu row. Advertise source path,
   filename, date, time, random, and incrementing tokens there. Do not advertise
   `%e` or operation-specific advanced tokens;
-- resolve an empty configured location through `Move existing settings` or
-  `Start with new settings`;
+- reveal the active settings folder in Finder for manual copying or export;
 - reset the workflow-owned output template to `%P/%f-clop` through explicit
   confirmation while preserving action presets and Alfred's static
   preferences;
@@ -1176,7 +1150,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - every media-specific conversion target
 - saved pipeline browsing and destructive pipeline confirmation
 - missing Clop installation
-- settings location changes, including move and start-fresh resolution
+- switching between independent settings folders
 
 ## Milestones
 
@@ -1205,8 +1179,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Add user-defined action-preset persistence and Control-Return add/remove
   behavior.
 - Add capability-aware modifier requests.
-- Make settings-location changes non-blocking for execution while guarding
-  settings mutations.
+- Treat the configured settings folder as the only source of truth.
 
 ### 4. Typed optimization and conversion
 
@@ -1284,8 +1257,8 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - Store workflow settings and action presets in one versioned
   `settings.json`, using `alfred_workflow_data` by default or the configured
   custom folder.
-- Follow the settings-location contract above; do not add import, export,
-  backup, restore, merge, or automatic-move workflows.
+- Follow the settings-location contract above; expose the folder in Finder
+  instead of adding import, export, backup, restore, merge, or move workflows.
 - Use `%P/%f-clop` as the built-in original-preservation template.
 - Make Preserve Original and aggressive processing configurable defaults;
   Shift-Return and Command-Return invert them for one run.

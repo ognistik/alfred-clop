@@ -19,6 +19,7 @@ enum WorkflowRequestKind: String, Codable {
     case operation
     case parameterStep
     case configurationMutation
+    case revealSettingsFolder
     case workflowSettings
 }
 
@@ -199,10 +200,6 @@ enum MenuMode: String, Codable, Equatable {
     case actions
     case crop
     case cropPresetRemoval
-    case presetMigrationConfirmation
-    case presetMigration
-    case configurationStartFreshConfirmation
-    case configurationStartFresh
     case configuration
     case configurationOutputTemplate
     case configurationSaveOutput
@@ -225,39 +222,21 @@ struct PresetMenuAction: Codable, Equatable {
     var preset: ActionPreset
 }
 
-struct PresetMigrationRequest: Codable, Equatable {
-    var sourcePath: String
-    var destinationPath: String
-    var inputs: [String]
-    var mediaKinds: [MediaKind]
-    var inputContext: ActionInputContext
-    var presetSaveContinuation: PresetSaveContinuation? = nil
-}
-
-struct PresetSaveContinuation: Codable, Equatable {
-    var request: ParameterStepRequest
-    var preset: ActionPreset
-    var query: String
-}
-
 struct MenuState: Codable, Equatable {
     var mode: MenuMode
     var parameterRequest: ParameterStepRequest?
     var presetAction: PresetMenuAction?
-    var presetMigration: PresetMigrationRequest?
     var configurationValue: String?
 
     init(
         mode: MenuMode,
         parameterRequest: ParameterStepRequest? = nil,
         presetAction: PresetMenuAction? = nil,
-        presetMigration: PresetMigrationRequest? = nil,
         configurationValue: String? = nil
     ) {
         self.mode = mode
         self.parameterRequest = parameterRequest
         self.presetAction = presetAction
-        self.presetMigration = presetMigration
         self.configurationValue = configurationValue
     }
 
@@ -282,22 +261,6 @@ struct MenuState: Codable, Equatable {
                 : .crop,
             parameterRequest: request,
             presetAction: action
-        )
-    }
-
-    static func presetMigrationConfirmation(
-        _ request: PresetMigrationRequest
-    ) -> MenuState {
-        MenuState(
-            mode: .presetMigrationConfirmation,
-            presetMigration: request
-        )
-    }
-
-    static func presetMigration(_ request: PresetMigrationRequest) -> MenuState {
-        MenuState(
-            mode: .presetMigration,
-            presetMigration: request
         )
     }
 

@@ -32,7 +32,6 @@ struct FoundationAtomicDataWriter: AtomicDataWriting {
 struct PresetStore {
     static let workflowDataEnvironmentKey = "alfred_workflow_data"
     static let configuredPathEnvironmentKey = "settingsPath"
-    static let legacyConfiguredPathEnvironmentKey = "presetsPath"
 
     var fileURL: URL
     var fileManager: FileManager
@@ -72,24 +71,12 @@ struct PresetStore {
         if let settingsPath, !settingsPath.isEmpty {
             return NSString(string: settingsPath).expandingTildeInPath
         }
-        let legacyPath = environment[legacyConfiguredPathEnvironmentKey]?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if let legacyPath, !legacyPath.isEmpty {
-            return NSString(string: legacyPath).expandingTildeInPath
-        }
         guard let workflowData = environment[workflowDataEnvironmentKey]?
             .trimmingCharacters(in: .whitespacesAndNewlines),
             !workflowData.isEmpty else {
             throw PresetStoreError.missingWorkflowDataDirectory
         }
         return NSString(string: workflowData).expandingTildeInPath
-    }
-
-    static func legacyFileURL(directoryPath: String) -> URL {
-        URL(
-            fileURLWithPath: NSString(string: directoryPath).expandingTildeInPath,
-            isDirectory: true
-        ).appendingPathComponent("presets.json", isDirectory: false)
     }
 
     func load() throws -> SettingsDocument {

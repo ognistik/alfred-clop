@@ -477,89 +477,6 @@ enum ActionMenu {
         )
     }
 
-    static func presetMigrationItem(
-        status: PresetMigrationStatus,
-        selection: InputSelection,
-        context: ActionInputContext,
-        requiresConfirmation: Bool = true
-    ) -> ScriptFilterItem? {
-        switch status {
-        case .none:
-            return nil
-        case .available(let migration):
-            let request = PresetMigrationRequest(
-                sourcePath: migration.sourceURL.path,
-                destinationPath: migration.destinationURL.path,
-                inputs: selection.inputs,
-                mediaKinds: selection.mediaKinds,
-                inputContext: context
-            )
-            let state = requiresConfirmation
-                ? MenuState.presetMigrationConfirmation(request)
-                : MenuState.presetMigration(request)
-            let stateJSON = (try? JSONOutput.string(
-                for: state,
-                prettyPrinted: false
-            )) ?? ""
-            return ScriptFilterItem(
-                uid: "preset.migration",
-                title: "Move existing settings",
-                subtitle: "Move existing settings to the newly configured location",
-                arg: stateJSON,
-                valid: true,
-                autocomplete: "Move existing settings",
-                match: "move migrate existing settings presets recipes location",
-                variables: migrationVariables(
-                    stateJSON: stateJSON,
-                    request: request
-                )
-            )
-        case .conflict:
-            return ScriptFilterItem(
-                title: "Settings location conflict",
-                subtitle: "Settings exist in both locations. Automatic migration is unavailable.",
-                arg: "",
-                valid: false
-            )
-        case .sourceMissing:
-            return ScriptFilterItem(
-                title: "Previous settings file is missing",
-                subtitle: "The previous settings could not be found at the last configured location.",
-                arg: "",
-                valid: false
-            )
-        case .sourceInvalid(_, let error):
-            return ScriptFilterItem(
-                title: "Previous settings cannot be moved",
-                subtitle: migrationErrorDetail(error),
-                arg: "",
-                valid: false
-            )
-        case .metadataInvalid(let error):
-            return ScriptFilterItem(
-                title: "Unable to read settings location",
-                subtitle: migrationErrorDetail(error),
-                arg: "",
-                valid: false
-            )
-        }
-    }
-
-    static func migrationVariables(
-        stateJSON: String,
-        request: PresetMigrationRequest
-    ) -> [String: String] {
-        [
-            requestKindVariable: WorkflowRequestKind.parameterStep.rawValue,
-            menuStateVariable: stateJSON,
-            inputJSONVariable: (try? JSONOutput.string(
-                for: MenuInput(paths: request.inputs),
-                prettyPrinted: false
-            )) ?? "",
-            inputContextVariable: request.inputContext.rawValue
-        ]
-    }
-
     static func responseWithoutInputs(
         context: ActionInputContext,
         title: String,
@@ -620,29 +537,6 @@ enum ActionMenu {
         )
     }
 
-    static func migrationErrorDetail(_ error: PresetMigrationError) -> String {
-        switch error {
-        case .missingWorkflowDataDirectory:
-            return "Alfred did not provide a workflow data directory."
-        case .invalidMetadata:
-            return "The workflow-owned settings location metadata is malformed."
-        case .unsupportedMetadataVersion(let version):
-            return "Settings location metadata version \(version) is unsupported."
-        case .sourceMissing:
-            return "The previous settings file is missing."
-        case .sourceInvalid:
-            return "The settings file is malformed or contains unsupported data."
-        case .sourceUnsupportedVersion(let version):
-            return "Settings schema version \(version) is unsupported."
-        case .destinationConflict:
-            return "The new location already contains settings."
-        case .destinationValidationFailed:
-            return "The destination could not be reloaded and validated."
-        case .locationChanged:
-            return "The configured settings location changed before the move completed."
-        }
-    }
-
     private static func encodedArgument(
         for definition: ActionDefinition,
         inputs: [String],
@@ -695,7 +589,7 @@ enum ActionMenu {
         let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
         guard normalized.isEmpty
-            || "configuration settings output template cache cleanup migration"
+            || "configuration settings output template cache cleanup folder"
                 .contains(normalized) else {
             return nil
         }
@@ -715,10 +609,10 @@ enum ActionMenu {
 
         let configuredAggressive = environment.aggressiveByDefault
         let configuredPreserve = environment.preserveOriginal
-        let template = PresetMigrationCoordinator(
+        let template = (try? PresetStore(
             environment: environment,
             fileManager: fileManager
-        ).resolution().documentForExecution?.outputTemplate
+        ).load().outputTemplate)
             ?? SettingsDocument.builtInOutputTemplate
 
         func modifier(

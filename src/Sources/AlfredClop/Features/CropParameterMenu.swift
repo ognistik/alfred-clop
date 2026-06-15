@@ -164,39 +164,14 @@ enum CropParameterMenu {
                 detail: storageErrorDetail(error)
             )
         }
-        let resolution = PresetMigrationCoordinator(
-            environment: environment,
-            fileManager: fileManager,
-            writer: writer
-        ).resolution()
-        if case .failure(let error) = resolution {
-            return storageErrorResponse(
-                request: request,
-                stateJSON: stateJSON,
-                detail: storageErrorDetail(error)
-            )
-        }
-
         if let action = state.presetAction {
             switch action.kind {
             case .confirmRemoval:
-                if case .fallback = resolution {
-                    return blockedMutationResponse(
-                        request: request,
-                        stateJSON: stateJSON
-                    )
-                }
                 return removalConfirmation(
                     action: action,
                     request: request
                 )
             case .save:
-                if case .fallback = resolution {
-                    return blockedMutationResponse(
-                        request: request,
-                        stateJSON: stateJSON
-                    )
-                }
                 do {
                     _ = try store.save(action.preset)
                     return menuResponse(
@@ -215,12 +190,6 @@ enum CropParameterMenu {
                     )
                 }
             case .remove:
-                if case .fallback = resolution {
-                    return blockedMutationResponse(
-                        request: request,
-                        stateJSON: stateJSON
-                    )
-                }
                 do {
                     _ = try store.remove(action.preset)
                     return menuResponse(
@@ -247,8 +216,7 @@ enum CropParameterMenu {
             query: query,
             store: store,
             environment: environment,
-            fileManager: fileManager,
-            resolution: resolution
+            fileManager: fileManager
         )
     }
 
@@ -258,28 +226,14 @@ enum CropParameterMenu {
         query: String,
         store: PresetStore,
         environment: Environment,
-        fileManager: FileManager,
-        resolution: SettingsLocationResolution? = nil
+        fileManager: FileManager
     ) -> ScriptFilterResponse {
         let presets: [CropActionPreset]
-        let activeResolution = resolution ?? PresetMigrationCoordinator(
-            environment: environment,
-            fileManager: fileManager
-        ).resolution()
         do {
-            switch activeResolution {
-            case .fallback:
-                presets = []
-            case .authoritative(let document):
-                presets = document.presets.compactMap { preset in
-                    guard case let .crop(crop) = preset else { return nil }
-                    return crop
-                }.sorted(by: presetDisplayOrder)
-            case .empty:
-                presets = []
-            case .failure(let error):
-                throw error
-            }
+            presets = try store.load().presets.compactMap { preset in
+                guard case let .crop(crop) = preset else { return nil }
+                return crop
+            }.sorted(by: presetDisplayOrder)
         } catch {
             return storageErrorResponse(
                 request: request,
@@ -290,12 +244,8 @@ enum CropParameterMenu {
 
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else {
-            let locationItems = fallbackLocationItems(
-                resolution: activeResolution,
-                request: request
-            )
             return ScriptFilterResponse(
-                items: locationItems + [instructionItem] + presets.compactMap {
+                items: [instructionItem] + presets.compactMap {
                     presetItem(for: $0, request: request, environment: environment)
                 },
                 variables: preservedVariables(
@@ -348,10 +298,7 @@ enum CropParameterMenu {
         }
 
         return ScriptFilterResponse(
-            items: fallbackLocationItems(
-                resolution: activeResolution,
-                request: request
-            ) + items,
+            items: items,
             variables: preservedVariables(for: request, stateJSON: stateJSON),
             skipKnowledge: true
         )
@@ -517,10 +464,10 @@ enum CropParameterMenu {
         preserveOriginal: Bool? = nil,
         smartCrop: Bool = false
     ) -> String? {
-        let template = PresetMigrationCoordinator(
+        let template = (try? PresetStore(
             environment: environment,
             fileManager: fileManager
-        ).resolution().documentForExecution?.outputTemplate
+        ).load().outputTemplate)
             ?? SettingsDocument.builtInOutputTemplate
         var execution = environment.executionOptions(
             outputTemplate: template,
@@ -775,54 +722,6 @@ enum CropParameterMenu {
                 for: request,
                 stateJSON: stateJSON
             ),
-            skipKnowledge: true
-        )
-    }
-
-    private static func fallbackLocationItems(
-        resolution: SettingsLocationResolution,
-        request: ParameterStepRequest
-    ) -> [ScriptFilterItem] {
-        guard case .fallback(_, let migration) = resolution else {
-            return []
-        }
-        let migrationRequest = PresetMigrationRequest(
-            sourcePath: migration.sourceURL.path,
-            destinationPath: migration.destinationURL.path,
-            inputs: request.inputs,
-            mediaKinds: request.mediaKinds ?? [],
-            inputContext: request.inputContext
-        )
-        let stateJSON = (try? encodedState(.presetMigration(migrationRequest))) ?? ""
-        return [
-            ScriptFilterItem(
-                uid: "preset.previous-location",
-                title: "Presets are in the previous location",
-                subtitle: "Press Return to move settings here",
-                arg: stateJSON,
-                valid: true,
-                variables: ActionMenu.migrationVariables(
-                    stateJSON: stateJSON,
-                    request: migrationRequest
-                )
-            )
-        ]
-    }
-
-    private static func blockedMutationResponse(
-        request: ParameterStepRequest,
-        stateJSON: String
-    ) -> ScriptFilterResponse {
-        ScriptFilterResponse(
-            items: [
-                ScriptFilterItem(
-                    title: "Resolve the settings location first",
-                    subtitle: "Open Configuration to move settings or start fresh.",
-                    arg: "",
-                    valid: false
-                )
-            ],
-            variables: preservedVariables(for: request, stateJSON: stateJSON),
             skipKnowledge: true
         )
     }

@@ -274,10 +274,6 @@ if [[ "$route" == "execute" ]]; then
   if [[ -n "$feedback" ]]; then
     title="Alfred Clop"
     message="$feedback"
-    if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
-      title="Using previous output settings"
-      message="Open Configuration to move settings or start fresh"
-    fi
     /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 2 of argv) with title (item 1 of argv)
@@ -509,7 +505,11 @@ fi</string>
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>if [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
+				<string>if [[ "${alfred_clop_request_kind:-}" == "revealSettingsFolder" ]]; then
+  /bin/mkdir -p -- "${1:-}"
+  /usr/bin/open "${1:-}"
+  exit
+elif [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
   feedback="$(./alfred-clop configure --menu-state "${1:-}")"
 else
   feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
@@ -517,10 +517,6 @@ fi
 if [[ -n "$feedback" ]]; then
   title="Alfred Clop"
   message="$feedback"
-  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
-    title="Using previous output settings"
-    message="Open Configuration to move settings or start fresh"
-  fi
   /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 2 of argv) with title (item 1 of argv)
@@ -698,10 +694,6 @@ fi</string>
 if [[ -n "$feedback" ]]; then
   title="Alfred Clop"
   message="$feedback"
-  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
-    title="Using previous output settings"
-    message="Open Configuration to move settings or start fresh"
-  fi
   /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 2 of argv) with title (item 1 of argv)
@@ -765,10 +757,6 @@ fi</string>
 if [[ -n "$feedback" ]]; then
   title="Alfred Clop"
   message="$feedback"
-  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
-    title="Using previous output settings"
-    message="Open Configuration to move settings or start fresh"
-  fi
   /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 2 of argv) with title (item 1 of argv)
@@ -801,10 +789,6 @@ fi</string>
 if [[ -n "$feedback" ]]; then
   title="Alfred Clop"
   message="$feedback"
-  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
-    title="Using previous output settings"
-    message="Open Configuration to move settings or start fresh"
-  fi
   /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 2 of argv) with title (item 1 of argv)
@@ -899,10 +883,6 @@ fi</string>
 if [[ -n "$feedback" ]]; then
   title="Alfred Clop"
   message="$feedback"
-  if [[ "$feedback" == "Using previous output settings: Open Configuration to move settings or start fresh" ]]; then
-    title="Using previous output settings"
-    message="Open Configuration to move settings or start fresh"
-  fi
   /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
 on run argv
   display notification (item 2 of argv) with title (item 1 of argv)
@@ -1107,7 +1087,7 @@ fi</string>
 				<false/>
 			</dict>
 			<key>description</key>
-			<string>Store portable settings.json in this folder.</string>
+			<string>Use settings.json from this folder. Changing it switches configurations.</string>
 			<key>label</key>
 			<string>Settings folder</string>
 			<key>type</key>

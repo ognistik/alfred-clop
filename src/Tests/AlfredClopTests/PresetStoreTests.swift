@@ -52,6 +52,33 @@ struct PresetStoreTests {
     }
 
     @Test
+    func changingLocationUsesIndependentSettings() throws {
+        let root = try makeTemporaryDirectory()
+        let defaultDirectory = root.appendingPathComponent("Default")
+        let customDirectory = root.appendingPathComponent("Custom")
+        try PresetStore(
+            fileURL: defaultDirectory.appendingPathComponent("settings.json")
+        ).persist(SettingsDocument(outputTemplate: "%P/%f-default"))
+
+        let customEnvironment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: defaultDirectory.path,
+            PresetStore.configuredPathEnvironmentKey: customDirectory.path
+        ])
+        let customStore = try PresetStore(environment: customEnvironment)
+
+        #expect(try customStore.load() == SettingsDocument())
+        #expect(!FileManager.default.fileExists(atPath: customStore.fileURL.path))
+
+        try customStore.updateOutputTemplate("%P/%f-custom")
+        #expect(try customStore.load().outputTemplate == "%P/%f-custom")
+        #expect(
+            try PresetStore(
+                fileURL: defaultDirectory.appendingPathComponent("settings.json")
+            ).load().outputTemplate == "%P/%f-default"
+        )
+    }
+
+    @Test
     func persistenceUsesAtomicWriterAtFinalLocation() throws {
         let directory = try makeTemporaryDirectory()
             .appendingPathComponent("Preset Folder With Spaces")

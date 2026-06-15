@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 14, 2026
+Last updated: June 15, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -30,13 +30,13 @@ path/URL text are available.
 The shared settings and global execution-policy foundation is complete.
 Workflow-owned settings and action presets now share `settings.json`,
 original preservation uses validated Clop output templates, and Configuration
-owns output-template reset, global preset reset confirmation, location moves,
-and clipboard-image cache cleanup.
+owns output-template reset, global preset reset confirmation, settings-folder
+reveal, and clipboard-image cache cleanup.
 
-The revised settings-location behavior is complete. A valid configured
-`settings.json` is authoritative, while an empty configured location may use
-the previous output template read-only until the user explicitly moves the
-settings or starts fresh.
+Settings storage now follows one direct rule: the configured folder is the
+only source of truth. A missing file uses defaults until the first write,
+changing the folder switches configurations, and no migration or fallback
+state is maintained.
 
 ## Completed
 
@@ -233,10 +233,8 @@ settings or starts fresh.
   template together
 - Default storage under `alfred_workflow_data`; optional `settingsPath`
   selects a custom folder
-- Existing compatibility for `presets.json`, `presetsPath`, changed
-  `settingsPath` locations, and legacy location metadata
-- Explicit settings moves use atomic destination writes and validation before
-  source deletion
+- Changing `settingsPath` switches to the independent settings in that folder
+- Missing settings files use defaults and are created on the first mutation
 - Built-in preservation template `%P/%f-clop`
 - Template validation rejects empty values, unsupported tokens, `%e`, literal
   terminal extensions, folder-only values, and unpredictable relative paths
@@ -271,8 +269,8 @@ settings or starts fresh.
 - The Large Type reference does not advertise `%e` or operation-specific
   advanced tokens
 - `%z`, `%s`, `%x`, and `%q` remain accepted for advanced users
-- Pending location moves appear in Configuration and inline blocked preset
-  saves
+- Configuration reveals the active settings folder for manual copying or
+  export
 - `Reset output template` appears only for a customized template and restores
   `%P/%f-clop` without changing presets or Alfred preferences
 - Separate global preset removal appears only when presets exist and requires
@@ -288,19 +286,10 @@ settings or starts fresh.
   forms omit Smart Crop modifiers
 - Pipeline delivery remains owned by Clop; no workflow recipe system or
   pipeline output override was added
-- Configured settings are authoritative and malformed configured files never
-  fall back to another location
-- Pending location changes hide previous presets while keeping every action
-  and typed parameter executable
-- Previous settings remain read-only; preset and output-template writes are
-  blocked until Configuration moves the settings or starts fresh
-- Starting fresh creates defaults at the configured location without deleting
-  the previous file
-- Interactive and headless preserved-output execution use the previous output
-  template during the unresolved state
-- Successful preserved-output execution warns only for a previous customized
-  template when Error notifications are enabled; in-place and failed
-  operations remain unchanged
+- Configured settings are authoritative and malformed active files never fall
+  back to another location
+- No migration metadata, automatic moves, fallback reads, or location-change
+  warnings remain
 
 Alfred was verified directly after implementation. Script Filter knowledge
 sorting is response-wide: after a UID result is learned, Alfred can promote it

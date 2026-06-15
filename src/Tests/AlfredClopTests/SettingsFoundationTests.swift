@@ -418,6 +418,23 @@ struct SettingsFoundationTests {
             action.mods?.command?.variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.workflowSettings.rawValue
         )
+
+        let menu = ConfigurationMenu.response(
+            stateJSON: try JSONOutput.string(
+                for: MenuState.configuration(),
+                prettyPrinted: false
+            ),
+            query: "",
+            environment: enabled
+        )
+        let reveal = try #require(menu.items.first {
+            $0.title == "Reveal Settings Folder"
+        })
+        #expect(reveal.arg == directory.path)
+        #expect(
+            reveal.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.revealSettingsFolder.rawValue
+        )
     }
 
     @Test

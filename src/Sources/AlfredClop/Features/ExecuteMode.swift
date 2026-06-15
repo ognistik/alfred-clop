@@ -150,15 +150,6 @@ enum ExecuteMode {
             OperationRequest.self,
             from: Data(requestJSON.utf8)
         )
-        if isSuccess,
-           request?.execution.output != .inPlace,
-           environment.errorNotifications,
-           PresetMigrationCoordinator(
-               environment: environment,
-               fileManager: fileManager
-           ).resolution().usesPreviousNonDefaultOutputTemplate {
-            return "Using previous output settings: Open Configuration to move settings or start fresh"
-        }
         let showsClopUI = request?.execution.showClopUI ?? false
         if isSuccess && showsClopUI {
             return nil

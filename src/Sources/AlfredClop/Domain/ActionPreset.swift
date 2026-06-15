@@ -81,18 +81,6 @@ enum ActionPreset: Codable, Equatable, Hashable {
     }
 }
 
-struct PresetDocument: Codable, Equatable {
-    static let currentVersion = 1
-
-    var version: Int
-    var presets: [ActionPreset]
-
-    init(version: Int = currentVersion, presets: [ActionPreset] = []) {
-        self.version = version
-        self.presets = presets
-    }
-}
-
 struct SettingsDocument: Codable, Equatable {
     static let currentVersion = 1
     static let builtInOutputTemplate = "%P/%f-clop"

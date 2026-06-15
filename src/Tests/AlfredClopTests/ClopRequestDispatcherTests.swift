@@ -192,17 +192,17 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
-    func headlessExecutionUsesPreviousOutputTemplateUntilResolution() throws {
+    func headlessExecutionUsesOnlyConfiguredSettingsLocation() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
         let root = try makeTemporaryDirectory()
-        let previous = root.appendingPathComponent("Previous")
+        let defaultDirectory = root.appendingPathComponent("Default")
         let configured = root.appendingPathComponent("Configured")
         try PresetStore(
-            fileURL: previous.appendingPathComponent("settings.json")
-        ).persist(SettingsDocument(outputTemplate: "%P/%f-previous"))
+            fileURL: defaultDirectory.appendingPathComponent("settings.json")
+        ).persist(SettingsDocument(outputTemplate: "%P/%f-default"))
         let environment = Environment(values: [
-            PresetStore.workflowDataEnvironmentKey: previous.path,
+            PresetStore.workflowDataEnvironmentKey: defaultDirectory.path,
             PresetStore.configuredPathEnvironmentKey: configured.path,
             "preserveOriginal": "true",
             "showClopUI": "false",
@@ -225,7 +225,8 @@ struct ClopRequestDispatcherTests {
         )
 
         #expect(response.items.first?.title == "Optimization complete")
-        #expect(runner.command?.arguments.contains("%P/%f-previous") == true)
+        #expect(runner.command?.arguments.contains("%P/%f-clop") == true)
+        #expect(runner.command?.arguments.contains("%P/%f-default") == false)
         #expect(ClopRequestDispatcher.quietFeedback(
             requestJSON: json,
             clipboard: DispatcherClipboard(),
@@ -233,7 +234,7 @@ struct ClopRequestDispatcherTests {
             environment: environment,
             builder: dispatcherBuilder(),
             runner: CapturingDispatcherRunner()
-        ) == "Using previous output settings: Open Configuration to move settings or start fresh")
+        ) == "Optimization complete: Clop processed 1 file.")
     }
 
     @Test

@@ -22,47 +22,12 @@ enum ConfigurationMenu {
                 fileManager: fileManager,
                 writer: writer
             )
-            let resolution = PresetMigrationCoordinator(
-                environment: environment,
-                fileManager: fileManager,
-                writer: writer
-            ).resolution()
-            if isSettingsMutation(state.mode),
-               case .fallback = resolution {
-                return error(
-                    "Resolve the settings location first",
-                    "Move existing settings or start with new settings in Configuration."
-                )
-            }
             switch state.mode {
             case .configuration:
                 return menu(
                     store: store,
                     environment: environment,
                     fileManager: fileManager,
-                    writer: writer,
-                    cache: cache ?? ClipboardImageCache(
-                        environment: environment,
-                        fileManager: fileManager
-                    )
-                )
-            case .configurationStartFreshConfirmation:
-                return confirmation(
-                    title: "Start with new settings?",
-                    subtitle: "Create defaults here and leave the previous file unchanged.",
-                    nextMode: .configurationStartFresh
-                )
-            case .configurationStartFresh:
-                try PresetMigrationCoordinator(
-                    environment: environment,
-                    fileManager: fileManager,
-                    writer: writer
-                ).startFresh()
-                return menu(
-                    store: store,
-                    environment: environment,
-                    fileManager: fileManager,
-                    writer: writer,
                     cache: cache ?? ClipboardImageCache(
                         environment: environment,
                         fileManager: fileManager
@@ -79,7 +44,6 @@ enum ConfigurationMenu {
                     store: store,
                     environment: environment,
                     fileManager: fileManager,
-                    writer: writer,
                     cache: cache ?? ClipboardImageCache(
                         environment: environment,
                         fileManager: fileManager
@@ -97,7 +61,6 @@ enum ConfigurationMenu {
                     store: store,
                     environment: environment,
                     fileManager: fileManager,
-                    writer: writer,
                     cache: cache ?? ClipboardImageCache(
                         environment: environment,
                         fileManager: fileManager
@@ -159,7 +122,7 @@ enum ConfigurationMenu {
             arg: stateJSON,
             valid: true,
             autocomplete: "Configuration",
-            match: "configuration settings output template cache cleanup migrate",
+            match: "configuration settings output template cache cleanup folder reveal",
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.parameterStep.rawValue,
@@ -199,26 +162,8 @@ enum ConfigurationMenu {
                 fileManager: fileManager,
                 writer: writer
             )
-            let resolution = PresetMigrationCoordinator(
-                environment: environment,
-                fileManager: fileManager,
-                writer: writer
-            ).resolution()
-            if isSettingsMutation(state.mode),
-               case .fallback = resolution {
-                return environment.errorNotifications
-                    ? "Unable to update settings: Resolve the settings location first."
-                    : nil
-            }
             let message: String
             switch state.mode {
-            case .configurationStartFresh:
-                try PresetMigrationCoordinator(
-                    environment: environment,
-                    fileManager: fileManager,
-                    writer: writer
-                ).startFresh()
-                message = "Started with new settings"
             case .configurationSaveOutput:
                 try store.updateOutputTemplate(state.configurationValue ?? "")
                 message = "Output template updated"
@@ -251,52 +196,16 @@ enum ConfigurationMenu {
         store: PresetStore,
         environment: Environment,
         fileManager: FileManager,
-        writer: any AtomicDataWriting,
         cache: ClipboardImageCache
     ) -> ScriptFilterResponse {
-        let coordinator = PresetMigrationCoordinator(
-            environment: environment,
-            fileManager: fileManager,
-            writer: writer
-        )
-        let resolution = coordinator.resolution()
-        if case .failure(let caughtError) = resolution {
+        let document: SettingsDocument
+        do {
+            document = try store.load()
+        } catch let caughtError {
             return error(
                 "Unable to read settings",
                 caughtError.localizedDescription
             )
-        }
-        let document = resolution.documentForExecution ?? SettingsDocument()
-
-        if case .fallback(_, let migration) = resolution {
-            var items = [
-                moveItem(
-                    migration: migration,
-                    selection: InputSelection(inputs: [], mediaKinds: []),
-                    context: .arguments
-                ),
-                startFreshItem(),
-                ScriptFilterItem(
-                    title: "Output Template",
-                    subtitle: "Using previous settings until this location is resolved",
-                    arg: "",
-                    valid: false
-                )
-            ]
-            let summary = cache.summary()
-            if summary.fileCount > 0 {
-                let stateJSON = encoded(.configuration(
-                    mode: .configurationCacheCleanupConfirmation
-                ))
-                items.append(ScriptFilterItem(
-                    title: "Clear cached clipboard images",
-                    subtitle: "\(summary.fileCount) files · \(formattedBytes(summary.byteCount))",
-                    arg: stateJSON,
-                    valid: true,
-                    variables: transitionVariables(stateJSON)
-                ))
-            }
-            return ScriptFilterResponse(items: items)
         }
 
         let outputState = encoded(.configuration(
@@ -310,6 +219,9 @@ enum ConfigurationMenu {
                 valid: true,
                 match: "output template preserve original path filename",
                 variables: transitionVariables(outputState)
+            ),
+            revealSettingsFolderItem(
+                environment: environment
             )
         ]
 
@@ -336,40 +248,23 @@ enum ConfigurationMenu {
         return ScriptFilterResponse(items: items)
     }
 
-    private static func moveItem(
-        migration: PresetMigration,
-        selection: InputSelection,
-        context: ActionInputContext
+    private static func revealSettingsFolderItem(
+        environment: Environment
     ) -> ScriptFilterItem {
-        ActionMenu.presetMigrationItem(
-            status: .available(migration),
-            selection: selection,
-            context: context,
-            requiresConfirmation: false
-        )!
-    }
-
-    private static func startFreshItem() -> ScriptFilterItem {
-        let stateJSON = encoded(.configuration(
-            mode: .configurationStartFreshConfirmation
-        ))
+        let path = (try? PresetStore.configuredDirectoryPath(
+            environment: environment
+        )) ?? ""
         return ScriptFilterItem(
-            title: "Start with new settings",
-            subtitle: "Create default settings here and keep the previous file",
-            arg: stateJSON,
-            valid: true,
-            variables: transitionVariables(stateJSON)
+            title: "Reveal Settings Folder",
+            subtitle: path,
+            arg: path,
+            valid: !path.isEmpty,
+            match: "reveal show open settings folder finder export copy",
+            variables: [
+                ActionMenu.requestKindVariable:
+                    WorkflowRequestKind.revealSettingsFolder.rawValue
+            ]
         )
-    }
-
-    private static func isSettingsMutation(_ mode: MenuMode) -> Bool {
-        switch mode {
-        case .configurationSaveOutput, .configurationResetOutput,
-             .configurationResetPresets:
-            return true
-        default:
-            return false
-        }
     }
 
     private static func outputTemplateMenu(

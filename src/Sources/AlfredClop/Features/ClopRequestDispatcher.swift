@@ -136,14 +136,6 @@ enum ClopRequestDispatcher {
             return nil
         }
         let isSuccess = isSuccessfulExecution(item.title)
-        if isSuccess,
-           environment.preserveOriginal,
-           environment.errorNotifications,
-           PresetMigrationCoordinator(
-               environment: environment
-           ).resolution().usesPreviousNonDefaultOutputTemplate {
-            return "Using previous output settings: Open Configuration to move settings or start fresh"
-        }
         if isSuccess && environment.executionOptions.showClopUI {
             return nil
         }
