@@ -618,7 +618,7 @@ struct ActionMenuTests {
     }
 
     @Test
-    func unimplementedParameterActionRemainsParameterStep() throws {
+    func downscaleRoutesToTypedDownscaleMenuState() throws {
         let response = ActionMenu.response(
             for: InputSelection(inputs: ["/tmp/image.png"], mediaKinds: [.image]),
             query: "downscale"
@@ -628,8 +628,17 @@ struct ActionMenuTests {
             ParameterStepRequest.self,
             from: Data(try #require(item.arg).utf8)
         )
+        let stateJSON = try #require(
+            item.variables?[ActionMenu.menuStateVariable]
+        )
+        let state = try JSONDecoder().decode(
+            MenuState.self,
+            from: Data(stateJSON.utf8)
+        )
 
         #expect(request.action == .downscale)
+        #expect(state.mode == .downscale)
+        #expect(state.parameterRequest?.action == .downscale)
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
                 == "parameterStep"

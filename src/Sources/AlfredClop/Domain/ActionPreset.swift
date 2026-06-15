@@ -48,17 +48,55 @@ struct CropActionPreset: Codable, Equatable, Hashable {
     }
 }
 
+struct DownscaleActionPreset: Codable, Equatable, Hashable {
+    var factor: Double
+
+    init(factor: Double) {
+        self.factor = factor
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let factor = try container.decode(Double.self, forKey: .factor)
+
+        guard DownscaleFactorParser.isSupported(factor) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .factor,
+                in: container,
+                debugDescription: "Downscale preset factor is not supported."
+            )
+        }
+
+        self.factor = factor
+    }
+
+    var displayValue: String {
+        DownscaleFactorParser.displayValue(for: factor)
+    }
+
+    var stableFactor: String {
+        DownscaleFactorParser.factorValue(for: factor)
+    }
+
+    var stableUID: String {
+        "downscale.preset.factor.\(stableFactor)"
+    }
+}
+
 enum ActionPreset: Codable, Equatable, Hashable {
     case crop(CropActionPreset)
+    case downscale(DownscaleActionPreset)
 
     private enum CodingKeys: String, CodingKey {
         case type
         case size
         case longEdge
+        case factor
     }
 
     private enum PresetType: String, Codable {
         case crop
+        case downscale
     }
 
     func encode(to encoder: Encoder) throws {
@@ -69,6 +107,9 @@ enum ActionPreset: Codable, Equatable, Hashable {
             try container.encode(PresetType.crop, forKey: .type)
             try container.encode(preset.size, forKey: .size)
             try container.encode(preset.longEdge, forKey: .longEdge)
+        case let .downscale(preset):
+            try container.encode(PresetType.downscale, forKey: .type)
+            try container.encode(preset.factor, forKey: .factor)
         }
     }
 
@@ -77,6 +118,8 @@ enum ActionPreset: Codable, Equatable, Hashable {
         switch try container.decode(PresetType.self, forKey: .type) {
         case .crop:
             self = .crop(try CropActionPreset(from: decoder))
+        case .downscale:
+            self = .downscale(try DownscaleActionPreset(from: decoder))
         }
     }
 }

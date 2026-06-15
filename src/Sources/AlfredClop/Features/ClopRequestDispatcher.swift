@@ -208,7 +208,23 @@ enum ClopRequestDispatcher {
                 query: query,
                 environment: environment
             )
-        case .downscale, .convertImage, .convertVideo, .convertAudio, .cropPDF:
+        case .downscale:
+            let state = MenuState.downscale(parameterRequest)
+            guard let stateJSON = try? JSONOutput.string(
+                for: state,
+                prettyPrinted: false
+            ) else {
+                return feedback(
+                    title: "Unable to open Downscale",
+                    subtitle: "The menu state could not be encoded."
+                )
+            }
+            return DownscaleParameterMenu.response(
+                stateJSON: stateJSON,
+                query: query,
+                environment: environment
+            )
+        case .convertImage, .convertVideo, .convertAudio, .cropPDF:
             return feedback(
                 title: "This action needs more information",
                 subtitle: "Its parameter menu is not available yet."

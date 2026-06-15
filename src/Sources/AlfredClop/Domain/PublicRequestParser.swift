@@ -226,13 +226,23 @@ enum PublicRequestParser {
                 ),
                 longEdge: size.longEdge
             )
+        case .downscale:
+            try rejectUnknown(values, allowed: ["factor"])
+            guard let factorValue = values["factor"],
+                  !factorValue.isEmpty else {
+                throw PublicRequestError.missingParameter("factor")
+            }
+            guard let factor = DownscaleFactorParser.parse(factorValue) else {
+                throw PublicRequestError.invalidParameter("factor", factorValue)
+            }
+            return .downscale(factor: factor.factor)
         case .uncropPDF:
             try rejectUnknown(values, allowed: [])
             return .uncropPDF
         case .stripMetadata:
             try rejectUnknown(values, allowed: [])
             return .stripMetadata
-        case .downscale, .convertImage, .convertVideo, .convertAudio, .cropPDF:
+        case .convertImage, .convertVideo, .convertAudio, .cropPDF:
             throw PublicRequestError.unsupportedExecution(title(for: action))
         }
     }

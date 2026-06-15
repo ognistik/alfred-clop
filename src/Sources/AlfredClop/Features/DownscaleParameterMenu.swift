@@ -1,133 +1,76 @@
 import Foundation
 
-enum CropSizeKind: Equatable {
-    case exactDimensions(width: Int, height: Int)
-    case aspectRatio(width: Int, height: Int)
-    case longEdge(Int)
-    case fixedWidth(Int)
-    case fixedHeight(Int)
+struct DownscaleFactor: Equatable {
+    var factor: Double
+    var displayValue: String
+    var factorValue: String
 }
 
-struct CropSize: Equatable {
-    var value: String
-    var longEdge: Bool
-    var kind: CropSizeKind
-}
-
-enum CropSizeParser {
-    static func parse(_ input: String) -> CropSize? {
+enum DownscaleFactorParser {
+    static func parse(_ input: String) -> DownscaleFactor? {
         let value = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else {
             return nil
         }
 
-        if value.allSatisfy(\.isNumber),
-           let edge = Int(value),
-           edge > 0 {
-            return CropSize(
-                value: String(edge),
-                longEdge: true,
-                kind: .longEdge(edge)
-            )
-        }
-
-        if value.first == "w",
-           let width = positiveInteger(String(value.dropFirst())) {
-            return CropSize(
-                value: "\(width)x0",
-                longEdge: false,
-                kind: .fixedWidth(width)
-            )
-        }
-
-        if value.first == "h",
-           let height = positiveInteger(String(value.dropFirst())) {
-            return CropSize(
-                value: "0x\(height)",
-                longEdge: false,
-                kind: .fixedHeight(height)
-            )
-        }
-
-        if let dimensions = components(of: value, separator: "x"),
-           dimensions.count == 2,
-           let width = Int(dimensions[0]),
-           let height = Int(dimensions[1]),
-           width >= 0,
-           height >= 0,
-           width + height > 0 {
-            let kind: CropSizeKind
-            if height == 0 {
-                kind = .fixedWidth(width)
-            } else if width == 0 {
-                kind = .fixedHeight(height)
-            } else {
-                kind = .exactDimensions(width: width, height: height)
+        let factor: Double
+        if value.hasSuffix("%") {
+            let percentText = String(value.dropLast())
+            guard let percent = Double(percentText),
+                  percent > 0,
+                  percent < 100 else {
+                return nil
             }
-            return CropSize(
-                value: "\(width)x\(height)",
-                longEdge: false,
-                kind: kind
-            )
-        }
-
-        if let ratio = components(of: value, separator: ":"),
-           ratio.count == 2,
-           let width = Int(ratio[0]),
-           let height = Int(ratio[1]),
-           width > 0,
-           height > 0 {
-            let divisor = greatestCommonDivisor(width, height)
-            let normalizedWidth = width / divisor
-            let normalizedHeight = height / divisor
-            return CropSize(
-                value: "\(normalizedWidth):\(normalizedHeight)",
-                longEdge: false,
-                kind: .aspectRatio(
-                    width: normalizedWidth,
-                    height: normalizedHeight
-                )
-            )
-        }
-
-        return nil
-    }
-
-    private static func positiveInteger(_ value: String) -> Int? {
-        guard !value.isEmpty,
-              value.allSatisfy(\.isNumber),
-              let number = Int(value),
-              number > 0 else {
+            factor = percent / 100
+        } else if value.allSatisfy(\.isNumber),
+                  let percent = Int(value),
+                  percent > 1,
+                  percent < 100 {
+            factor = Double(percent) / 100
+        } else if value.contains("."),
+                  let parsed = Double(value),
+                  isSupported(parsed) {
+            factor = parsed
+        } else {
             return nil
         }
-        return number
-    }
 
-    private static func components(
-        of value: String,
-        separator: Character
-    ) -> [Substring]? {
-        guard value.allSatisfy({ $0.isNumber || $0 == separator }) else {
+        guard isSupported(factor) else {
             return nil
         }
-        let components = value.split(
-            separator: separator,
-            omittingEmptySubsequences: false
+
+        return DownscaleFactor(
+            factor: factor,
+            displayValue: displayValue(for: factor),
+            factorValue: factorValue(for: factor)
         )
-        return components.allSatisfy({ !$0.isEmpty }) ? components : nil
     }
 
-    private static func greatestCommonDivisor(_ lhs: Int, _ rhs: Int) -> Int {
-        var first = lhs
-        var second = rhs
-        while second != 0 {
-            (first, second) = (second, first % second)
-        }
-        return first
+    static func isSupported(_ factor: Double) -> Bool {
+        factor.isFinite && factor > 0 && factor < 1
+    }
+
+    static func displayValue(for factor: Double) -> String {
+        let percent = factor * 100
+        return "\(trimmed(percent))%"
+    }
+
+    static func factorValue(for factor: Double) -> String {
+        trimmed(factor)
+    }
+
+    private static func trimmed(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.minimumIntegerDigits = 1
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 6
+        formatter.usesGroupingSeparator = false
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 }
 
-enum CropParameterMenu {
+enum DownscaleParameterMenu {
     static func response(
         stateJSON: String,
         query: String,
@@ -139,13 +82,13 @@ enum CropParameterMenu {
             MenuState.self,
             from: Data(stateJSON.utf8)
         ),
-        state.mode == .crop || state.mode == .cropPresetRemoval,
+        state.mode == .downscale || state.mode == .downscalePresetRemoval,
         let request = state.parameterRequest,
         request.step == "parameters",
-        request.action == .crop,
+        request.action == .downscale,
         !request.inputs.isEmpty else {
             return error(
-                title: "Unable to open Crop / Resize",
+                title: "Unable to open Downscale",
                 subtitle: "The parameter menu state is invalid or incomplete."
             )
         }
@@ -164,19 +107,17 @@ enum CropParameterMenu {
                 detail: storageErrorDetail(error)
             )
         }
+
         if let action = state.presetAction {
             switch action.kind {
             case .confirmRemoval:
-                return removalConfirmation(
-                    action: action,
-                    request: request
-                )
+                return removalConfirmation(action: action, request: request)
             case .save:
                 do {
                     _ = try store.save(action.preset)
                     return menuResponse(
                         request: request,
-                        stateJSON: try encodedState(.crop(request)),
+                        stateJSON: try encodedState(.downscale(request)),
                         query: presetDisplayValue(action.preset),
                         store: store,
                         environment: environment,
@@ -194,7 +135,7 @@ enum CropParameterMenu {
                     _ = try store.remove(action.preset)
                     return menuResponse(
                         request: request,
-                        stateJSON: try encodedState(.crop(request)),
+                        stateJSON: try encodedState(.downscale(request)),
                         query: "",
                         store: store,
                         environment: environment,
@@ -228,11 +169,11 @@ enum CropParameterMenu {
         environment: Environment,
         fileManager: FileManager
     ) -> ScriptFilterResponse {
-        let presets: [CropActionPreset]
+        let presets: [DownscaleActionPreset]
         do {
             presets = try store.load().presets.compactMap { preset in
-                guard case let .crop(crop) = preset else { return nil }
-                return crop
+                guard case let .downscale(downscale) = preset else { return nil }
+                return downscale
             }.sorted(by: presetDisplayOrder)
         } catch {
             return storageErrorResponse(
@@ -253,10 +194,7 @@ enum CropParameterMenu {
             }).map(affordance.apply)
             return ScriptFilterResponse(
                 items: items,
-                variables: preservedVariables(
-                    for: request,
-                    stateJSON: stateJSON
-                ),
+                variables: preservedVariables(for: request, stateJSON: stateJSON),
                 skipKnowledge: true
             )
         }
@@ -266,31 +204,27 @@ enum CropParameterMenu {
         }
         var items = [ScriptFilterItem]()
 
-        if let size = CropSizeParser.parse(trimmedQuery) {
-            let candidate = CropActionPreset(size: size)
+        if let factor = DownscaleFactorParser.parse(trimmedQuery) {
+            let candidate = DownscaleActionPreset(factor: factor.factor)
             if let exactPreset = presets.first(where: { $0 == candidate }) {
-                if let item = interpretedItem(
-                    for: size,
+                items.append(interpretedItem(
+                    for: factor,
                     request: request,
                     savedPreset: exactPreset,
                     environment: environment
-                ) {
-                    items.append(item)
-                }
+                ))
             } else if matchingPresets.isEmpty {
-                if let item = interpretedItem(
-                    for: size,
+                items.append(interpretedItem(
+                    for: factor,
                     request: request,
                     savedPreset: nil,
                     environment: environment
-                ) {
-                    items.append(item)
-                }
+                ))
             }
         } else if matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
-                title: "Invalid crop or resize value",
-                subtitle: "Use 1200x630, 16:9, 1920, w128, or h720.",
+                title: "Invalid downscale factor",
+                subtitle: "Use 50, 50%, or 0.5. Values must be greater than 0 and less than 100%.",
                 arg: "",
                 valid: false
             ))
@@ -309,68 +243,29 @@ enum CropParameterMenu {
         )
     }
 
-    private static func presetMatchesQuery(
-        _ preset: CropActionPreset,
-        query: String
-    ) -> Bool {
-        let normalizedQuery = query.folding(
-            options: [.caseInsensitive, .diacriticInsensitive],
-            locale: nil
-        )
-        return [preset.displayValue, preset.size].contains { value in
-            value.folding(
-                options: [.caseInsensitive, .diacriticInsensitive],
-                locale: nil
-            ).contains(normalizedQuery)
-        }
-    }
-
     private static func interpretedItem(
-        for size: CropSize,
+        for factor: DownscaleFactor,
         request: ParameterStepRequest,
-        savedPreset: CropActionPreset?,
+        savedPreset: DownscaleActionPreset?,
         environment: Environment
-    ) -> ScriptFilterItem? {
-        let preset = CropActionPreset(size: size)
-        guard let argument = operationArgument(
-            for: preset,
-            request: request,
-            environment: environment
-        ) else {
-            return nil
-        }
-
-        let title: String
-        let interpretation: String
-        switch size.kind {
-        case let .exactDimensions(width, height):
-            title = "Use \(width)x\(height)"
-            interpretation = "Crop / resize to exact dimensions \(width)x\(height)"
-        case let .aspectRatio(width, height):
-            title = "Use \(width):\(height)"
-            interpretation = "Crop to aspect ratio \(width):\(height)"
-        case let .longEdge(edge):
-            title = "Use long edge \(edge)"
-            interpretation = "Resize the long edge to \(edge)"
-        case let .fixedWidth(width):
-            title = "Width \(width), auto height"
-            interpretation = "Resize to fixed width \(width) with calculated height"
-        case let .fixedHeight(height):
-            title = "Height \(height), auto width"
-            interpretation = "Resize to fixed height \(height) with calculated width"
-        }
-
+    ) -> ScriptFilterItem {
+        let preset = DownscaleActionPreset(factor: factor.factor)
         return ScriptFilterItem(
             uid: savedPreset?.stableUID,
-            title: title,
+            title: "Use \(factor.displayValue)",
             subtitle: [
-                "\(inputDescription(for: request)) · \(interpretation)",
+                "\(inputDescription(for: request)) · Downscale to \(factor.displayValue)",
+                "Factor \(factor.factorValue)",
                 savedPreset == nil ? nil : "Saved preset"
             ].compactMap(\.self).joined(separator: " - "),
-            arg: argument,
+            arg: operationArgument(
+                for: preset,
+                request: request,
+                environment: environment
+            ),
             valid: true,
-            autocomplete: preset.displayValue,
-            match: "\(preset.displayValue) \(preset.size)",
+            autocomplete: factor.displayValue,
+            match: "\(factor.displayValue) \(factor.factorValue)",
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -389,26 +284,22 @@ enum CropParameterMenu {
     }
 
     private static func presetItem(
-        for preset: CropActionPreset,
+        for preset: DownscaleActionPreset,
         request: ParameterStepRequest,
         environment: Environment
-    ) -> ScriptFilterItem? {
-        guard let argument = operationArgument(
-            for: preset,
-            request: request,
-            environment: environment
-        ) else {
-            return nil
-        }
-
-        return ScriptFilterItem(
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
             uid: preset.stableUID,
             title: preset.displayValue,
-            subtitle: "\(inputDescription(for: request)) · \(interpretation(for: preset.cropSize)) - Saved preset",
-            arg: argument,
+            subtitle: "\(inputDescription(for: request)) · Downscale to \(preset.displayValue) - Factor \(preset.stableFactor) - Saved preset",
+            arg: operationArgument(
+                for: preset,
+                request: request,
+                environment: environment
+            ),
             valid: true,
             autocomplete: preset.displayValue,
-            match: "\(preset.displayValue) \(preset.size)",
+            match: "\(preset.displayValue) \(preset.stableFactor)",
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -430,7 +321,7 @@ enum CropParameterMenu {
         action: PresetMenuAction,
         request: ParameterStepRequest
     ) -> ScriptFilterResponse {
-        let state = MenuState.crop(
+        let state = MenuState.downscale(
             request,
             action: PresetMenuAction(
                 kind: .remove,
@@ -452,95 +343,56 @@ enum CropParameterMenu {
                     )
                 )
             ],
-            variables: preservedVariables(
-                for: request,
-                stateJSON: stateJSON
-            ),
+            variables: preservedVariables(for: request, stateJSON: stateJSON),
             skipKnowledge: true
         )
     }
 
     private static func operationArgument(
-        for preset: CropActionPreset,
+        for preset: DownscaleActionPreset,
         request: ParameterStepRequest,
         environment: Environment,
         fileManager: FileManager = .default,
-        aggressive: Bool? = nil,
-        preserveOriginal: Bool? = nil,
-        smartCrop: Bool = false
-    ) -> String? {
+        preserveOriginal: Bool? = nil
+    ) -> String {
         let template = (try? PresetStore(
             environment: environment,
             fileManager: fileManager
         ).load().outputTemplate)
             ?? SettingsDocument.builtInOutputTemplate
-        var execution = environment.executionOptions(
+        let execution = environment.executionOptions(
             outputTemplate: template,
             preserveOriginal: preserveOriginal
         )
-        execution.aggressiveProcessing = aggressive ?? environment.aggressiveByDefault
-        return try? JSONOutput.string(
+        return (try? JSONOutput.string(
             for: OperationRequest(
                 inputs: request.inputs,
-                action: .crop(
-                    size: preset.size,
-                    smartCrop: smartCrop,
-                    longEdge: preset.longEdge
-                ),
+                action: .downscale(factor: preset.factor),
                 execution: execution
             ),
             prettyPrinted: false
-        )
+        )) ?? ""
     }
 
     private static func operationModifiers(
-        for preset: CropActionPreset,
+        for preset: DownscaleActionPreset,
         request: ParameterStepRequest,
         environment: Environment,
         control: ScriptFilterModifier
     ) -> ScriptFilterMods {
-        let aggressive = environment.aggressiveByDefault
         let preserve = environment.preserveOriginal
-        let commandText = aggressive
-            ? "use standard optimization"
-            : "use aggressive optimization"
         let preserveText = preserve
             ? "replace originals for this run"
             : "preserve originals for this run"
-        let supportsSmartCrop: Bool
-        switch preset.cropSize.kind {
-        case .exactDimensions, .aspectRatio:
-            supportsSmartCrop = true
-        case .longEdge, .fixedWidth, .fixedHeight:
-            supportsSmartCrop = false
-        }
 
-        func modifier(
-            aggressive: Bool,
-            preserve: Bool,
-            smartCrop: Bool,
-            subtitle: String
-        ) -> ScriptFilterModifier? {
-            guard let arg = operationArgument(
-                for: preset,
-                request: request,
-                environment: environment,
-                aggressive: aggressive,
-                preserveOriginal: preserve,
-                smartCrop: smartCrop
-            ) else {
-                return nil
-            }
-            var operation = try? JSONDecoder().decode(
-                OperationRequest.self,
-                from: Data(arg.utf8)
-            )
-            operation?.execution.aggressiveProcessing = aggressive
-            let resolvedArg = operation.flatMap {
-                try? JSONOutput.string(for: $0, prettyPrinted: false)
-            } ?? arg
-            return ScriptFilterModifier(
-                arg: resolvedArg,
+        func modifier(preserve: Bool, subtitle: String) -> ScriptFilterModifier {
+            ScriptFilterModifier(
+                arg: operationArgument(
+                    for: preset,
+                    request: request,
+                    environment: environment,
+                    preserveOriginal: preserve
+                ),
                 subtitle: "\(inputDescription(for: request)) · \(subtitle)",
                 valid: true,
                 variables: [
@@ -550,66 +402,25 @@ enum CropParameterMenu {
             )
         }
 
-        let command = modifier(
-            aggressive: !aggressive,
-            preserve: preserve,
-            smartCrop: false,
-            subtitle: commandText
-        )
-        let shift = modifier(
-            aggressive: aggressive,
-            preserve: !preserve,
-            smartCrop: false,
-            subtitle: preserveText
-        )
-        let option = supportsSmartCrop ? modifier(
-            aggressive: aggressive,
-            preserve: preserve,
-            smartCrop: true,
-            subtitle: "enable Smart Crop"
-        ) : nil
         return ScriptFilterMods(
-            command: command,
-            option: option,
             control: control,
-            shift: shift,
-            commandOption: supportsSmartCrop ? modifier(
-                aggressive: !aggressive,
-                preserve: preserve,
-                smartCrop: true,
-                subtitle: "\(commandText) and enable Smart Crop"
-            ) : nil,
-            commandShift: modifier(
-                aggressive: !aggressive,
+            shift: modifier(
                 preserve: !preserve,
-                smartCrop: false,
-                subtitle: "\(commandText) and \(preserveText)"
-            ),
-            optionShift: supportsSmartCrop ? modifier(
-                aggressive: aggressive,
-                preserve: !preserve,
-                smartCrop: true,
-                subtitle: "enable Smart Crop and \(preserveText)"
-            ) : nil,
-            commandOptionShift: supportsSmartCrop ? modifier(
-                aggressive: !aggressive,
-                preserve: !preserve,
-                smartCrop: true,
-                subtitle: "\(commandText), enable Smart Crop, and \(preserveText)"
-            ) : nil
+                subtitle: preserveText
+            )
         )
     }
 
     private static func presetModifier(
         kind: PresetMenuActionKind,
-        preset: CropActionPreset,
+        preset: DownscaleActionPreset,
         request: ParameterStepRequest
     ) -> ScriptFilterModifier {
-        let state = MenuState.crop(
+        let state = MenuState.downscale(
             request,
             action: PresetMenuAction(
                 kind: kind,
-                preset: .crop(preset)
+                preset: .downscale(preset)
             )
         )
         let stateJSON = (try? encodedState(state)) ?? ""
@@ -628,6 +439,22 @@ enum CropParameterMenu {
         )
     }
 
+    private static func presetMatchesQuery(
+        _ preset: DownscaleActionPreset,
+        query: String
+    ) -> Bool {
+        let normalizedQuery = query.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: nil
+        )
+        return [preset.displayValue, preset.stableFactor].contains { value in
+            value.folding(
+                options: [.caseInsensitive, .diacriticInsensitive],
+                locale: nil
+            ).contains(normalizedQuery)
+        }
+    }
+
     private static func transitionVariables(
         stateJSON: String,
         request: ParameterStepRequest
@@ -643,26 +470,11 @@ enum CropParameterMenu {
 
     private static var instructionItem: ScriptFilterItem {
         ScriptFilterItem(
-            title: "Type crop or resize parameters",
-            subtitle: "Examples: 1200x630, 16:9, 1920, w128, h720",
+            title: "Type a downscale factor",
+            subtitle: "Examples: 50, 50%, 0.5, 75%, 0.75",
             arg: "",
             valid: false
         )
-    }
-
-    private static func interpretation(for size: CropSize) -> String {
-        switch size.kind {
-        case let .exactDimensions(width, height):
-            return "Crop / resize to exact dimensions \(width)x\(height)"
-        case let .aspectRatio(width, height):
-            return "Crop to aspect ratio \(width):\(height)"
-        case let .longEdge(edge):
-            return "Resize the long edge to \(edge)"
-        case let .fixedWidth(width):
-            return "Resize to fixed width \(width) with calculated height"
-        case let .fixedHeight(height):
-            return "Resize to fixed height \(height) with calculated width"
-        }
     }
 
     private static func presetDisplayValue(_ preset: ActionPreset) -> String {
@@ -675,16 +487,10 @@ enum CropParameterMenu {
     }
 
     private static func presetDisplayOrder(
-        _ lhs: CropActionPreset,
-        _ rhs: CropActionPreset
+        _ lhs: DownscaleActionPreset,
+        _ rhs: DownscaleActionPreset
     ) -> Bool {
-        let comparison = lhs.displayValue.localizedStandardCompare(
-            rhs.displayValue
-        )
-        if comparison == .orderedSame {
-            return lhs.size < rhs.size
-        }
-        return comparison == .orderedAscending
+        lhs.factor < rhs.factor
     }
 
     private static func encodedState(_ state: MenuState) throws -> String {
@@ -726,10 +532,7 @@ enum CropParameterMenu {
                     valid: false
                 )
             ],
-            variables: preservedVariables(
-                for: request,
-                stateJSON: stateJSON
-            ),
+            variables: preservedVariables(for: request, stateJSON: stateJSON),
             skipKnowledge: true
         )
     }

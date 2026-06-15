@@ -137,6 +137,21 @@ image features. It defaults to `false`, which means Alfred Clop does not pass
 Clop's `--smart-crop` option. Supported size examples include `1200x630`,
 `16:9`, `1920`, `w128`, `h720`, `128x0`, and `0x720`.
 
+Downscale requires `factor`. It accepts the same values as the workflow menu:
+
+```text
+execute: Downscale
+factor: 50
+
+/path/photo.jpg
+/path/audio.m4a
+```
+
+Supported factor examples include `50`, `50%`, `0.5`, `75%`, and `0.75`.
+Whole numbers from `2` through `99` are interpreted as percentages. Values
+must be greater than `0` and less than `100%`; bare `1`, `100%`, and larger
+values are rejected.
+
 ### Current Grammar
 
 This table is the complete shorthand execution grammar currently implemented:
@@ -145,21 +160,22 @@ This table is the complete shorthand execution grammar currently implemented:
 | --- | --- | --- |
 | `Optimize` | `aggressive` (optional boolean) | Standard optimization |
 | `Crop / Resize` | `size` (required), `smart crop` (optional boolean) | Smart Crop disabled |
+| `Downscale` | `factor` (required) | Uses workflow execution settings |
 | `Uncrop PDF` | None | Uses workflow execution settings |
 | `Strip Metadata` | None | Uses workflow execution settings |
 
-The following shortcuts open their existing workflow menus, but their complete
-execution syntax is intentionally unavailable until those parameter menus and
-operations are implemented:
+The following shortcuts open their existing workflow menus, but their execution
+syntax is intentionally unavailable until those parameter menus and operations
+are implemented:
 
-- `downscale:`
 - `convert image:`
 - `convert video:`
 - `convert audio:`
 - `crop pdf:`
 
-Attempting `execute:` with one of those actions produces a visible error rather
-than guessing at an unfinished parameter contract.
+Attempting `execute:` with Convert Image, Convert Video, Convert Audio, or Crop
+PDF produces a visible error rather than guessing at an unfinished parameter
+contract.
 
 ### Defaults And Workflow Settings
 

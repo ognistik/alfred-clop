@@ -5,6 +5,7 @@ enum ExecuteMode {
         "Optimization complete",
         "Aggressive optimization complete",
         "Crop / resize complete",
+        "Downscale complete",
         "PDF uncrop complete",
         "Metadata removed",
         "Clop operation complete"
@@ -58,6 +59,12 @@ enum ExecuteMode {
             return feedback(
                 title: "Invalid crop or resize value",
                 subtitle: "Use dimensions, a ratio, or a positive long-edge size.",
+                valid: false
+            )
+        } catch ClopCommandBuilderError.invalidDownscaleFactor {
+            return feedback(
+                title: "Invalid downscale factor",
+                subtitle: "Use a value greater than 0 and less than 100%.",
                 valid: false
             )
         } catch ClopCommandBuilderError.unsupportedAction {
@@ -198,7 +205,13 @@ enum ExecuteMode {
                 subtitle: "Clop processed \(files).",
                 valid: false
             )
-        case .downscale, .convert, .cropPDF:
+        case .downscale:
+            return feedback(
+                title: "Downscale complete",
+                subtitle: "Clop processed \(files).",
+                valid: false
+            )
+        case .convert, .cropPDF:
             return feedback(
                 title: "Clop operation complete",
                 subtitle: "Clop processed \(files).",

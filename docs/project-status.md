@@ -10,8 +10,9 @@ file whenever a task materially changes what works or what should happen next.
 
 Milestones 1 and 2 are substantially complete. Milestone 3 includes
 parameter-free execution, a guided dynamic parameter step for crop and resize,
-user-defined Crop / Resize action presets, shared settings, and the unified
-input and routing foundation planned for Milestone 6.
+the bounded Downscale parameter step, user-defined Crop / Resize and
+Downscale action presets, shared settings, and the unified input and routing
+foundation planned for Milestone 6.
 
 The public automation surface is now one typed `clop` request with independent
 input and route values. Files, folders, HTTP/HTTPS URLs, clipboard content,
@@ -246,6 +247,29 @@ configurations, and no migration or fallback state is maintained.
   overwritten
 - Configured paths and input filenames containing spaces are covered by tests
 
+### Downscale
+
+- Dedicated Downscale parameter menu follows the Crop / Resize guided-input
+  pattern
+- Empty Downscale queries show one non-executable instructional item instead
+  of workflow-authored presets
+- Typed factors accept `0.5`, `.5`, `50`, `50%`, `75`, `75%`, and similar
+  supported values
+- Whole numbers from `2` through `99` normalize as percentages; `50` becomes
+  the factor `0.5`
+- Values must be greater than zero and less than one; bare `1`, `100%`, zero,
+  negative values, and enlarging values are rejected visibly
+- Downscale results display percentage-first labels such as `50%` with the
+  normalized Clop factor in the subtitle
+- Downscale execution uses
+  `clop downscale --factor VALUE --json --no-progress --skip-errors`
+- Downscale inherits configured Clop UI, copy-result, recursion, and output
+  preservation settings
+- External Trigger execution supports `execute: Downscale` with required
+  `factor:` using the same grammar as the menu
+- Downscale presets are stored in `settings.json`, scoped to the Downscale
+  submenu, and support Control-Return save and confirmation-based removal
+
 ### Shared settings and execution policy
 
 - Versioned `settings.json` stores action presets and the active output
@@ -348,7 +372,7 @@ structure.
 
 ## Not implemented
 
-- Downscale, conversion, and PDF-crop parameter menus and parsing
+- Conversion and PDF-crop parameter menus and parsing
 - Dynamic PDF device and paper-size menus
 - Workflow icons, packaging, and release automation
 
@@ -395,15 +419,15 @@ structure.
 
 ## Next recommended task
 
-Implement the bounded Downscale parameter menu and typed parsing described in
-the product plan, following the established Crop / Resize routing, validation,
-execution, and preset patterns without starting conversion or PDF-crop work.
+Implement the bounded media-specific Convert parameter menus and typed parsing
+described in the product plan, following the established parameter-menu,
+validation, execution, and preset patterns without starting PDF-crop work.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 193 tests.
+- `./scripts/test.sh` passes 206 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

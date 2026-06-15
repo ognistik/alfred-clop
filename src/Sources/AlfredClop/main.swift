@@ -287,6 +287,11 @@ enum AlfredClopCommand {
                     stateJSON: stateJSON,
                     query: query
                 )
+            case .downscale, .downscalePresetRemoval:
+                return DownscaleParameterMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
             case .configuration,
                  .configurationOutputTemplate,
                  .configurationSaveOutput,

@@ -855,7 +855,9 @@ enum ActionMenu {
         switch definition.action {
         case .crop:
             state = .crop(request)
-        case .downscale, .convertImage, .convertVideo, .convertAudio, .cropPDF:
+        case .downscale:
+            state = .downscale(request)
+        case .convertImage, .convertVideo, .convertAudio, .cropPDF:
             state = MenuState(mode: .actions, parameterRequest: request)
         case .optimise, .uncropPDF, .stripMetadata:
             preconditionFailure("Immediate actions do not have parameter state")

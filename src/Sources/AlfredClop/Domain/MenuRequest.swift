@@ -276,6 +276,8 @@ enum MenuMode: String, Codable, Equatable {
     case actions
     case crop
     case cropPresetRemoval
+    case downscale
+    case downscalePresetRemoval
     case configuration
     case configurationOutputTemplate
     case configurationSaveOutput
@@ -335,6 +337,26 @@ struct MenuState: Codable, Equatable {
             mode: action.kind == .confirmRemoval
                 ? .cropPresetRemoval
                 : .crop,
+            parameterRequest: request,
+            presetAction: action
+        )
+    }
+
+    static func downscale(_ request: ParameterStepRequest) -> MenuState {
+        MenuState(
+            mode: .downscale,
+            parameterRequest: request
+        )
+    }
+
+    static func downscale(
+        _ request: ParameterStepRequest,
+        action: PresetMenuAction
+    ) -> MenuState {
+        MenuState(
+            mode: action.kind == .confirmRemoval
+                ? .downscalePresetRemoval
+                : .downscale,
             parameterRequest: request,
             presetAction: action
         )

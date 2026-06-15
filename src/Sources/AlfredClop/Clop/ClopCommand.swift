@@ -16,6 +16,7 @@ enum ClopCommandBuilderError: Error, Equatable {
     case missingCLI([String])
     case missingInputs
     case invalidCropSize
+    case invalidDownscaleFactor
     case unsupportedAction
     case unsupportedBackupBehavior
     case invalidOutputTemplate(OutputTemplateError)
@@ -85,6 +86,15 @@ struct ClopCommandBuilder {
                 longEdge: longEdge
             )
             expectsJSON = true
+        case let .downscale(factor):
+            guard DownscaleFactorParser.isSupported(factor) else {
+                throw ClopCommandBuilderError.invalidDownscaleFactor
+            }
+            arguments = downscaleArguments(
+                for: resolvedRequest,
+                factor: factor
+            )
+            expectsJSON = true
         case .uncropPDF:
             arguments = ["uncrop-pdf"]
                 + recursiveArguments(for: resolvedRequest.execution)
@@ -96,7 +106,7 @@ struct ClopCommandBuilder {
                 + recursiveArguments(for: request.execution)
                 + request.inputs
             expectsJSON = false
-        case .downscale, .convert, .cropPDF:
+        case .convert, .cropPDF:
             throw ClopCommandBuilderError.unsupportedAction
         }
 
@@ -125,6 +135,34 @@ struct ClopCommandBuilder {
         if request.execution.aggressiveProcessing == true {
             arguments.append("--aggressive")
         }
+        if request.execution.showClopUI {
+            arguments.append("--gui")
+        }
+        if request.execution.copyResult {
+            arguments.append("--copy")
+        }
+        if request.execution.recursiveFolders {
+            arguments.append("--recursive")
+        }
+
+        return arguments
+            + outputArguments(for: request.execution.output)
+            + request.inputs
+    }
+
+    private func downscaleArguments(
+        for request: OperationRequest,
+        factor: Double
+    ) -> [String] {
+        var arguments = [
+            "downscale",
+            "--factor",
+            DownscaleFactorParser.factorValue(for: factor),
+            "--json",
+            "--no-progress",
+            "--skip-errors"
+        ]
+
         if request.execution.showClopUI {
             arguments.append("--gui")
         }

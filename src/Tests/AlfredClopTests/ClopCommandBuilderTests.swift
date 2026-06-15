@@ -213,6 +213,11 @@ struct ClopCommandBuilderTests {
             action: .optimise(aggressive: false),
             execution: execution
         ))
+        let downscale = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/media folder"],
+            action: .downscale(factor: 0.5),
+            execution: execution
+        ))
         let uncrop = try makeBuilder().command(for: OperationRequest(
             inputs: ["/tmp/pdf folder"],
             action: .uncropPDF,
@@ -225,6 +230,7 @@ struct ClopCommandBuilderTests {
         ))
 
         #expect(optimise.arguments.contains("--recursive"))
+        #expect(downscale.arguments.contains("--recursive"))
         #expect(uncrop.arguments == [
             "uncrop-pdf", "--recursive", "/tmp/pdf folder"
         ])
@@ -280,11 +286,52 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
-    func parameterActionIsNotExecutableYet() {
+    func downscaleBuildsJSONCommandWithSeparatePaths() throws {
+        var execution = makeExecutionOptions(
+            output: .sameFolder(template: "%P/%f-small")
+        )
+        execution.copyResult = true
+
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/first image.png", "/tmp/second audio.m4a"],
+            action: .downscale(factor: 0.75),
+            execution: execution
+        ))
+
+        #expect(command.arguments == [
+            "downscale",
+            "--factor",
+            "0.75",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--gui",
+            "--copy",
+            "--output",
+            "%P/%f-small",
+            "/tmp/first image.png",
+            "/tmp/second audio.m4a"
+        ])
+        #expect(command.expectsJSON)
+    }
+
+    @Test(arguments: [0, 1, 1.2])
+    func downscaleRejectsUnsupportedFactors(factor: Double) {
+        #expect(throws: ClopCommandBuilderError.invalidDownscaleFactor) {
+            try makeBuilder().command(for: OperationRequest(
+                inputs: ["/tmp/photo.jpg"],
+                action: .downscale(factor: factor),
+                execution: makeExecutionOptions()
+            ))
+        }
+    }
+
+    @Test
+    func unfinishedParameterActionsAreNotExecutableYet() {
         #expect(throws: ClopCommandBuilderError.unsupportedAction) {
             try makeBuilder().command(for: OperationRequest(
                 inputs: ["/tmp/photo.jpg"],
-                action: .downscale(factor: 0.5),
+                action: .convert(format: "webp", quality: 75),
                 execution: makeExecutionOptions()
             ))
         }

@@ -179,6 +179,35 @@ struct PublicRequestParserTests {
     }
 
     @Test(arguments: [
+        ("50", 0.5),
+        ("50%", 0.5),
+        ("0.5", 0.5)
+    ])
+    func downscaleExecutionAcceptsMenuFactorGrammar(
+        value: String,
+        factor: Double
+    ) throws {
+        let request = try PublicRequestParser.parse("""
+        execute: Downscale
+        factor: \(value)
+
+        /tmp/first image.jpg
+        /tmp/second audio.m4a
+        """)
+
+        #expect(request == ClopRequest(
+            input: .explicit(
+                items: [
+                    "/tmp/first image.jpg",
+                    "/tmp/second audio.m4a"
+                ],
+                extractText: false
+            ),
+            route: .execute(action: .downscale(factor: factor))
+        ))
+    }
+
+    @Test(arguments: [
         "execute: Uncrop PDF",
         "execute: Strip Metadata"
     ])
@@ -217,6 +246,14 @@ struct PublicRequestParserTests {
         (
             "execute: Optimize\naggressive: maybe\n\nclipboard",
             PublicRequestError.invalidParameter("aggressive", "maybe")
+        ),
+        (
+            "execute: Downscale\n\n/tmp/image.jpg",
+            PublicRequestError.missingParameter("factor")
+        ),
+        (
+            "execute: Downscale\nfactor: 100%\n\n/tmp/image.jpg",
+            PublicRequestError.invalidParameter("factor", "100%")
         ),
         (
             "execute: Convert Image\nformat: WebP\n\n/tmp/image.jpg",
