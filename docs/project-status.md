@@ -72,6 +72,8 @@ configurations, and no migration or fallback state is maintained.
   available to typed execution and Hotkeys pending the planned Command-Return
   modifier
 - Source-aware subtitles for selected, copied, and passed files
+- Compact source/object subtitles distinguish selected, copied, and passed
+  files, folders, URLs, and mixed batches without the generic "input" wording
 - Processing action rows expose the original selected, copied, or passed input
   to Quick Look and Alfred Actions while preserving typed Clop requests on
   Return

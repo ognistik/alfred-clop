@@ -364,7 +364,7 @@ enum CropParameterMenu {
             uid: savedPreset?.stableUID,
             title: title,
             subtitle: [
-                "\(request.inputContext.subtitlePrefix): \(interpretation)",
+                "\(inputDescription(for: request)) · \(interpretation)",
                 savedPreset == nil ? nil : "Saved preset"
             ].compactMap(\.self).joined(separator: " - "),
             arg: argument,
@@ -404,7 +404,7 @@ enum CropParameterMenu {
         return ScriptFilterItem(
             uid: preset.stableUID,
             title: preset.displayValue,
-            subtitle: "\(request.inputContext.subtitlePrefix): \(interpretation(for: preset.cropSize)) - Saved preset",
+            subtitle: "\(inputDescription(for: request)) · \(interpretation(for: preset.cropSize)) - Saved preset",
             arg: argument,
             valid: true,
             autocomplete: preset.displayValue,
@@ -541,7 +541,7 @@ enum CropParameterMenu {
             } ?? arg
             return ScriptFilterModifier(
                 arg: resolvedArg,
-                subtitle: "\(request.inputContext.subtitlePrefix): \(subtitle)",
+                subtitle: "\(inputDescription(for: request)) · \(subtitle)",
                 valid: true,
                 variables: [
                     ActionMenu.requestKindVariable:
@@ -699,7 +699,8 @@ enum CropParameterMenu {
                     paths: request.inputs,
                     mediaKinds: request.mediaKinds,
                     itemKinds: request.itemKinds,
-                    ambiguousKinds: request.ambiguousKinds
+                    ambiguousKinds: request.ambiguousKinds,
+                    processableItemCount: request.processableItemCount
                 ),
                 prettyPrinted: false
             )) ?? "",
@@ -756,5 +757,16 @@ enum CropParameterMenu {
                 valid: false
             )
         ])
+    }
+
+    private static func inputDescription(
+        for request: ParameterStepRequest
+    ) -> String {
+        request.inputContext.inputDescription(
+            inputs: request.inputs,
+            itemKinds: request.itemKinds,
+            ambiguousKinds: request.ambiguousKinds ?? [],
+            processableItemCount: request.processableItemCount
+        )
     }
 }

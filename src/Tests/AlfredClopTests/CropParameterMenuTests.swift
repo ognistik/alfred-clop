@@ -65,9 +65,9 @@ struct CropParameterMenuTests {
     }
 
     @Test(arguments: [
-        (ActionInputContext.selected, "Selected input"),
-        (ActionInputContext.clipboard, "Copied input"),
-        (ActionInputContext.arguments, "Passed input")
+        (ActionInputContext.selected, "Selected 2 files"),
+        (ActionInputContext.clipboard, "Copied 2 files"),
+        (ActionInputContext.arguments, "Passed 2 files")
     ])
     func queryRerunsPreservePathsAndContext(
         context: ActionInputContext,
@@ -82,7 +82,7 @@ struct CropParameterMenuTests {
         let operation = try operationRequest(from: item)
 
         #expect(response.items.count == 1)
-        #expect(item.subtitle.hasPrefix("\(subtitlePrefix):"))
+        #expect(item.subtitle.hasPrefix("\(subtitlePrefix) ·"))
         #expect(operation.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
         #expect(
             response.variables?[ActionMenu.menuStateVariable]
@@ -125,7 +125,7 @@ struct CropParameterMenuTests {
         #expect(response.items.count == 1)
         #expect(item.subtitle.contains(explanation))
         #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
-        #expect(item.subtitle.hasPrefix("Passed input:"))
+        #expect(item.subtitle.hasPrefix("Passed 2 files ·"))
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
                 == "operation"

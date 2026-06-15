@@ -156,6 +156,14 @@ enum PublicRequestParser {
             guard !first.value.isEmpty else {
                 return .menu(action: nil)
             }
+            if normalizedName(first.value) == "configuration" {
+                guard directives.count == 1 else {
+                    throw PublicRequestError.unexpectedParameter(
+                        directives[1].key
+                    )
+                }
+                return .configuration
+            }
             guard let action = action(for: first.value) else {
                 throw PublicRequestError.unknownAction(first.value)
             }

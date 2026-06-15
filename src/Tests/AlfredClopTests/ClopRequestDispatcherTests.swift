@@ -56,7 +56,7 @@ struct ClopRequestDispatcherTests {
         )
 
         #expect(response.items.map(\.title).contains("Optimize"))
-        #expect(response.items.first?.subtitle.hasPrefix("Passed input:") == true)
+        #expect(response.items.first?.subtitle.hasPrefix("Passed file ·") == true)
     }
 
     @Test
@@ -105,6 +105,65 @@ struct ClopRequestDispatcherTests {
         #expect(workflow["arg"] as? String == "")
         #expect(variables[ActionMenu.publicRequestVariable] == publicRequest)
         #expect(variables["alfred_clop_public_route"] == "menu")
+    }
+
+    @Test
+    func configurationHandoffPrefillsNamespaceAndPreservesRequest() throws {
+        let publicRequest = """
+        menu: Configuration
+
+        clipboard
+        """
+        let handoffJSON = try #require(
+            AlfredClopCommand.menuHandoffJSON(publicRequest: publicRequest)
+        )
+        let root = try #require(
+            JSONSerialization.jsonObject(with: Data(handoffJSON.utf8))
+                as? [String: Any]
+        )
+        let workflow = try #require(
+            root["alfredworkflow"] as? [String: Any]
+        )
+        let variables = try #require(
+            workflow["variables"] as? [String: String]
+        )
+
+        #expect(workflow["arg"] as? String == ":")
+        #expect(variables[ActionMenu.publicRequestVariable] == publicRequest)
+    }
+
+    @Test
+    func configurationRouteUsesQueryNamespaceAndCanReturnToActions() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer {
+            try? FileManager.default.removeItem(
+                at: file.deletingLastPathComponent()
+            )
+        }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .configuration
+        )
+        let requestJSON = try JSONOutput.string(
+            for: request,
+            prettyPrinted: false
+        )
+
+        let configuration = ClopRequestDispatcher.response(
+            requestJSON: requestJSON,
+            query: ":",
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder()
+        )
+        let actions = ClopRequestDispatcher.response(
+            requestJSON: requestJSON,
+            query: "",
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder()
+        )
+
+        #expect(configuration.items.first?.title == "Output Template")
+        #expect(actions.items.contains { $0.title == "Optimize" })
     }
 
     @Test(arguments: [
@@ -280,14 +339,11 @@ struct ClopRequestDispatcherTests {
             finder: DispatcherFinder()
         )
 
-        #expect(response.items.map(\.title) == [
-            "Configuration",
-            "No Finder selection"
-        ])
+        #expect(response.items.map(\.title) == ["No Finder selection"])
     }
 
     @Test
-    func clipboardFolderWithoutSupportedContentStillShowsConfiguration() throws {
+    func clipboardFolderWithoutSupportedContentShowsVisibleError() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         try Data("notes".utf8).write(
@@ -308,10 +364,9 @@ struct ClopRequestDispatcherTests {
         )
 
         #expect(response.items.map(\.title) == [
-            "Configuration",
             "No supported clipboard content"
         ])
-        #expect(response.items[1].subtitle == "Copy a supported file, folder, URL, or image and try again.")
+        #expect(response.items[0].subtitle == "Copy a supported file, folder, URL, or image and try again.")
     }
 
     @Test
@@ -423,8 +478,7 @@ struct ClopRequestDispatcherTests {
             "Downscale",
             "Convert Image",
             "Convert Video",
-            "Convert Audio",
-            "Configuration"
+            "Convert Audio"
         ])
         #expect(response.items[1].subtitle.contains("Image, video, or PDF only"))
     }

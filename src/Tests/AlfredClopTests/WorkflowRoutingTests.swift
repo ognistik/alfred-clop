@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import AlfredClop
 
 struct WorkflowRoutingTests {
     @Test
@@ -97,7 +98,7 @@ struct WorkflowRoutingTests {
             return script
         }
 
-        #expect(notificationScripts.count == 6)
+        #expect(notificationScripts.count == 7)
         #expect(notificationScripts.allSatisfy {
             $0.contains("if [[ -n \"$feedback\" ]]")
                 && !$0.contains("${dnd")
@@ -195,6 +196,74 @@ struct WorkflowRoutingTests {
                 && $0["sourceoutputuid"] as? String
                 == "498E7A69-76E2-48E1-89F4-1C6FC647BA23"
         })
+    }
+
+    @Test
+    func commandReturnCanApplyConfigurationAndReturnToNamespace() throws {
+        let plist = try workflowPlist()
+        let objects = try #require(plist["objects"] as? [[String: Any]])
+        let connections = try #require(
+            plist["connections"] as? [String: [[String: Any]]]
+        )
+        let scriptFilterRoutes = try #require(
+            connections["086222E0-0634-41BB-8795-059C6B8AF42C"]
+        )
+        let conditional = try #require(objects.first {
+            $0["uid"] as? String == "C81E575B-0A6B-45AE-B968-6A2313FB84A7"
+        })
+        let conditionalConfig = try #require(
+            conditional["config"] as? [String: Any]
+        )
+        let conditions = try #require(
+            conditionalConfig["conditions"] as? [[String: Any]]
+        )
+        let returnVariables = try #require(objects.first {
+            $0["uid"] as? String == "C0C0C0C0-C0C0-40C0-80C0-C0C0C0C0C0C0"
+        })
+        let variableConfig = try #require(
+            returnVariables["config"] as? [String: Any]
+        )
+        #expect(returnVariables["version"] as? Int == 1)
+        let variables = try #require(
+            variableConfig["variables"] as? [String: String]
+        )
+        let returnTrigger = try #require(objects.first {
+            $0["uid"] as? String == "A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0"
+        })
+        let triggerConfig = try #require(
+            returnTrigger["config"] as? [String: Any]
+        )
+
+        #expect(scriptFilterRoutes.contains {
+            $0["modifiers"] as? Int == 1_048_576
+                && $0["vitoclose"] as? Bool == true
+        })
+        #expect(conditions.contains {
+            $0["matchstring"] as? String == "configurationMutationReturn"
+        })
+        #expect(variableConfig["argument"] as? String == ":")
+        #expect(variables[ActionMenu.menuStateVariable] == "")
+        #expect(variables[ActionMenu.publicRequestVariable] == nil)
+        #expect(triggerConfig["externaltriggerid"] as? String == "mainMenu")
+        #expect(triggerConfig["passinputasargument"] as? Bool == true)
+
+        let terminalRoutes = try #require(
+            connections["B30C287D-7137-4B63-8FA2-95B849C440FA"]
+        )
+        #expect(terminalRoutes.contains {
+            $0["destinationuid"] as? String
+                == "D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0"
+        })
+    }
+
+    @Test
+    func workflowKeepsSixUserConfigurableHotkeys() throws {
+        let plist = try workflowPlist()
+        let objects = try #require(plist["objects"] as? [[String: Any]])
+
+        #expect(objects.filter {
+            $0["type"] as? String == "alfred.workflow.trigger.hotkey"
+        }.count == 6)
     }
 
     private func workflowPlist() throws -> [String: Any] {

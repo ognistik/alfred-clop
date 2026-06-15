@@ -2,6 +2,24 @@ import Foundation
 
 enum AlfredClopCommand {
     static func run(arguments: [String] = Array(CommandLine.arguments.dropFirst())) {
+        if let command = arguments.first,
+           ["menu", "execute", "configure", "request", "automate"].contains(command) {
+            do {
+                try PresetStore().ensureExists()
+            } catch {
+                let message = "Unable to initialize settings: \(error.localizedDescription)"
+                if arguments.contains("--quiet")
+                    || ["configure", "automate"].contains(command) {
+                    printText(message)
+                } else {
+                    JSONOutput.print(errorResponse(
+                        title: "Unable to initialize settings",
+                        subtitle: error.localizedDescription
+                    ))
+                }
+                return
+            }
+        }
         switch arguments.first {
         case "probe":
             JSONOutput.print(ProbeMode.response())
@@ -100,7 +118,7 @@ enum AlfredClopCommand {
             return
         }
         switch request.route {
-        case .menu:
+        case .menu, .configuration:
             printText("menu")
         case .execute:
             printText("execute")
@@ -117,9 +135,16 @@ enum AlfredClopCommand {
     }
 
     static func menuHandoffJSON(publicRequest: String) -> String? {
+        let argument: String
+        if let request = try? PublicRequestParser.parse(publicRequest),
+           request.route == .configuration {
+            argument = ConfigurationMenu.namespacePrefix
+        } else {
+            argument = ""
+        }
         let output: [String: Any] = [
             "alfredworkflow": [
-                "arg": "",
+                "arg": argument,
                 "variables": [
                     ActionMenu.publicRequestVariable: publicRequest,
                     "alfred_clop_public_route": "menu"

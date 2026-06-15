@@ -189,10 +189,9 @@ struct InputCollectorTests {
         let response = ActionMenu.response(inputJSON: "{bad json", query: "")
 
         #expect(response.items.map(\.title) == [
-            "Configuration",
             "Unable to read selected files"
         ])
-        #expect(response.items[1].valid == false)
+        #expect(response.items[0].valid == false)
     }
 
     @Test

@@ -81,7 +81,9 @@ struct PresetStore {
 
     func load() throws -> SettingsDocument {
         guard fileManager.fileExists(atPath: fileURL.path) else {
-            return SettingsDocument()
+            let document = SettingsDocument()
+            try persist(document)
+            return document
         }
 
         do {
@@ -154,8 +156,14 @@ struct PresetStore {
             at: directory,
             withIntermediateDirectories: true
         )
-        let data = try JSONEncoder().encode(document)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(document)
         try writer.writeAtomically(data, to: fileURL)
+    }
+
+    func ensureExists() throws {
+        _ = try load()
     }
 
     private func uniquePresets(_ presets: [ActionPreset]) -> [ActionPreset] {

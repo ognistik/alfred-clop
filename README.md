@@ -15,21 +15,25 @@ executable will:
 
 ## Status
 
-The Swift executable accepts files from Alfred's Universal Actions, the
-clipboard, and the `paths` External Trigger. It normalizes and validates those
-inputs, detects supported media types, and returns a source-aware,
-fuzzy-searchable action menu. Optimize, Aggressive Optimize, Uncrop PDF, and
-Strip Metadata now execute through the discovered Clop CLI. Successful
-immediate actions rely on Clop's own UI; Alfred shows a notification only when
-execution fails.
+The Swift executable accepts files from Alfred Universal Actions, Finder, the
+clipboard, Hotkeys, explicit paths and URLs, and the public `clop` External
+Trigger. It normalizes those inputs into one context-aware action menu.
+Optimize, Crop / Resize, Uncrop PDF, and Strip Metadata execute through the
+discovered Clop CLI, and Crop / Resize supports reusable presets.
 
-Parameter menus and their related actions are not implemented yet. See the
-[project status](docs/project-status.md) for the current checkpoint and next
-recommended task.
+Type `:` in the action menu to replace processing actions with workflow
+Configuration. `:template ` opens the live output-template editor; deleting
+the namespace returns to the processing actions for the same input. Final
+Configuration changes normally close Alfred, while Command-Return applies the
+change and returns to `:`.
+
+See the [project status](docs/project-status.md) for the current checkpoint and
+next recommended task.
 
 ## Documentation
 
 - [Clop CLI reference](docs/clop-cli-reference.md)
+- [External Trigger reference](docs/external-trigger.md)
 - [Workflow implementation plan](docs/project-plan.md)
 - [Current project status](docs/project-status.md)
 

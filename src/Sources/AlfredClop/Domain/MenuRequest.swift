@@ -4,14 +4,74 @@ enum ActionInputContext: String, Codable {
     case arguments
 
     var subtitlePrefix: String {
+        "\(sourceLabel) input"
+    }
+
+    var sourceLabel: String {
         switch self {
         case .selected:
-            return "Selected input"
+            return "Selected"
         case .clipboard:
-            return "Copied input"
+            return "Copied"
         case .arguments:
-            return "Passed input"
+            return "Passed"
         }
+    }
+
+    func inputDescription(
+        inputs: [String],
+        itemKinds: [InputItemKind]? = nil,
+        ambiguousKinds: [AmbiguousInputKind] = [],
+        processableItemCount: Int? = nil
+    ) -> String {
+        let kinds = itemKinds ?? Array(repeating: .localFile, count: inputs.count)
+        let localCount = kinds.filter { $0 == .localFile }.count
+        let folderCount = kinds.filter { $0 == .folder }.count
+        let urlCount = kinds.filter { $0 == .remoteURL }.count
+        let totalCount = max(inputs.count, kinds.count)
+
+        if totalCount == 0 {
+            if ambiguousKinds.contains(.folder) {
+                return "\(sourceLabel) folder"
+            }
+            if ambiguousKinds.contains(.remoteURL) {
+                return "\(sourceLabel) URL"
+            }
+            return subtitlePrefix
+        }
+
+        if folderCount == totalCount {
+            if folderCount == 1 {
+                if let processableItemCount {
+                    return "\(sourceLabel) folder: \(processableItemCount) \(fileNoun(processableItemCount))"
+                }
+                return "\(sourceLabel) folder"
+            }
+            if let processableItemCount {
+                return "\(sourceLabel) \(folderCount) folders: \(processableItemCount) \(fileNoun(processableItemCount))"
+            }
+            return "\(sourceLabel) \(folderCount) folders"
+        }
+
+        if urlCount == totalCount {
+            return totalCount == 1
+                ? "\(sourceLabel) URL"
+                : "\(sourceLabel) \(totalCount) URLs"
+        }
+
+        if localCount == totalCount {
+            return totalCount == 1
+                ? "\(sourceLabel) file"
+                : "\(sourceLabel) \(totalCount) files"
+        }
+
+        return totalCount == 1
+            ? "\(sourceLabel) item"
+            : "\(sourceLabel) \(totalCount) items"
+    }
+
+    private func fileNoun(_ count: Int) -> String {
+        count == 1 ? "file" : "files"
     }
 }
 
@@ -19,6 +79,7 @@ enum WorkflowRequestKind: String, Codable {
     case operation
     case parameterStep
     case configurationMutation
+    case configurationMutationReturn
     case revealSettingsFolder
     case workflowSettings
 }
@@ -130,11 +191,13 @@ enum ClopInputRequest: Codable, Equatable {
 
 enum ClopRouteRequest: Codable, Equatable {
     case menu(action: ClopAction?)
+    case configuration
     case execute(action: ActionRequest)
 
     private enum CodingKeys: String, CodingKey {
         case type
         case action
+        case destination
     }
 
     private enum RouteType: String, Codable {
@@ -148,6 +211,9 @@ enum ClopRouteRequest: Codable, Equatable {
         case let .menu(action):
             try container.encode(RouteType.menu, forKey: .type)
             try container.encodeIfPresent(action, forKey: .action)
+        case .configuration:
+            try container.encode(RouteType.menu, forKey: .type)
+            try container.encode("configuration", forKey: .destination)
         case let .execute(action):
             try container.encode(RouteType.execute, forKey: .type)
             try container.encode(action, forKey: .action)
@@ -158,6 +224,13 @@ enum ClopRouteRequest: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         switch try container.decode(RouteType.self, forKey: .type) {
         case .menu:
+            if try container.decodeIfPresent(
+                String.self,
+                forKey: .destination
+            ) == "configuration" {
+                self = .configuration
+                return
+            }
             self = .menu(
                 action: try? container.decode(ClopAction.self, forKey: .action)
             )
@@ -177,6 +250,7 @@ struct ParameterStepRequest: Codable, Equatable {
     var mediaKinds: [MediaKind]?
     var itemKinds: [InputItemKind]?
     var ambiguousKinds: [AmbiguousInputKind]?
+    var processableItemCount: Int?
 
     init(
         action: ClopAction,
@@ -184,7 +258,8 @@ struct ParameterStepRequest: Codable, Equatable {
         inputContext: ActionInputContext = .selected,
         mediaKinds: [MediaKind]? = nil,
         itemKinds: [InputItemKind]? = nil,
-        ambiguousKinds: [AmbiguousInputKind]? = nil
+        ambiguousKinds: [AmbiguousInputKind]? = nil,
+        processableItemCount: Int? = nil
     ) {
         self.step = "parameters"
         self.action = action
@@ -193,6 +268,7 @@ struct ParameterStepRequest: Codable, Equatable {
         self.mediaKinds = mediaKinds
         self.itemKinds = itemKinds
         self.ambiguousKinds = ambiguousKinds
+        self.processableItemCount = processableItemCount
     }
 }
 

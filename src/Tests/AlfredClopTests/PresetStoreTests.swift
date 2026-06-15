@@ -67,7 +67,7 @@ struct PresetStoreTests {
         let customStore = try PresetStore(environment: customEnvironment)
 
         #expect(try customStore.load() == SettingsDocument())
-        #expect(!FileManager.default.fileExists(atPath: customStore.fileURL.path))
+        #expect(FileManager.default.fileExists(atPath: customStore.fileURL.path))
 
         try customStore.updateOutputTemplate("%P/%f-custom")
         #expect(try customStore.load().outputTemplate == "%P/%f-custom")
@@ -90,10 +90,25 @@ struct PresetStoreTests {
             size: try #require(CropSizeParser.parse("1200x630"))
         )))
 
-        #expect(writer.urls == [fileURL])
+        #expect(writer.urls == [fileURL, fileURL])
         let data = try #require(writer.data)
         let document = try JSONDecoder().decode(SettingsDocument.self, from: data)
         #expect(document.presets.count == 1)
+    }
+
+    @Test
+    func firstLoadCreatesDefaultSettingsDocument() throws {
+        let fileURL = try makeTemporaryDirectory()
+            .appendingPathComponent("nested/settings.json")
+        let store = PresetStore(fileURL: fileURL)
+
+        #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+        #expect(try store.load() == SettingsDocument())
+        #expect(FileManager.default.fileExists(atPath: fileURL.path))
+
+        let data = try Data(contentsOf: fileURL)
+        #expect(try JSONDecoder().decode(SettingsDocument.self, from: data)
+            == SettingsDocument())
     }
 
     @Test

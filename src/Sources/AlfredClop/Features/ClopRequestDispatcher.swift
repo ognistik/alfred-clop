@@ -52,6 +52,13 @@ enum ClopRequestDispatcher {
                 recursiveFolders: environment.checkbox("recursiveFolders")
             )
         } catch {
+            if request.route == .configuration,
+               query.hasPrefix(ConfigurationMenu.namespacePrefix) {
+                return ConfigurationMenu.namespaceResponse(
+                    query: query,
+                    environment: environment
+                )
+            }
             return ActionMenu.collectionErrorResponse(
                 error,
                 context: contextOverride ?? context(for: request.input)
@@ -74,6 +81,13 @@ enum ClopRequestDispatcher {
                 selection: selection,
                 context: context,
                 query: query,
+                environment: environment
+            )
+        case .configuration:
+            return ActionMenu.response(
+                for: selection,
+                query: query,
+                context: context,
                 environment: environment
             )
         case let .execute(action):

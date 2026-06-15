@@ -596,7 +596,7 @@ enum ActionMenu {
                     ),
                     mods: operationModifiers(
                         for: definition,
-                        inputs: selection.inputs,
+                        selection: selection,
                         context: context,
                         environment: environment,
                         fileManager: fileManager
@@ -741,7 +741,7 @@ enum ActionMenu {
 
     private static func operationModifiers(
         for definition: ActionDefinition,
-        inputs: [String],
+        selection: InputSelection,
         context: ActionInputContext,
         environment: Environment,
         fileManager: FileManager
@@ -776,7 +776,7 @@ enum ActionMenu {
             }
             guard let arg = try? JSONOutput.string(
                 for: OperationRequest(
-                    inputs: inputs,
+                    inputs: selection.inputs,
                     action: action,
                     execution: environment.executionOptions(
                         outputTemplate: template,
@@ -789,7 +789,7 @@ enum ActionMenu {
             }
             return ScriptFilterModifier(
                 arg: arg,
-                subtitle: "\(context.subtitlePrefix): \(subtitle)",
+                subtitle: "\(inputDescription(for: selection, context: context)) · \(subtitle)",
                 valid: true,
                 variables: [
                     requestKindVariable: WorkflowRequestKind.operation.rawValue
@@ -848,7 +848,8 @@ enum ActionMenu {
             inputContext: context,
             mediaKinds: selection.mediaKinds,
             itemKinds: selection.itemKinds,
-            ambiguousKinds: selection.ambiguousKinds
+            ambiguousKinds: selection.ambiguousKinds,
+            processableItemCount: selection.processableItemCount
         )
         let state: MenuState
         switch definition.action {
@@ -950,9 +951,9 @@ enum ActionMenu {
         }
 
         if let requirement {
-            return "\(context.subtitlePrefix) · \(requirement)"
+            return "\(inputDescription(for: selection, context: context)) · \(requirement)"
         }
-        return "\(context.subtitlePrefix): \(definition.subtitle)"
+        return "\(inputDescription(for: selection, context: context)) · \(definition.subtitle)"
     }
 
     private static func clearInputSubtitle(
@@ -960,19 +961,19 @@ enum ActionMenu {
         selection: InputSelection,
         context: ActionInputContext
     ) -> String {
-        let includesFolder = selection.itemKinds.contains(.folder)
-        let count = selection.processableItemCount
-        let inputDescription: String
-        if includesFolder, let count, count > 1 {
-            inputDescription = "\(context.subtitlePrefix), folder: \(count) items"
-        } else if includesFolder {
-            inputDescription = "\(context.subtitlePrefix), folder"
-        } else if let count, count > 1 {
-            inputDescription = "\(context.subtitlePrefix): \(count) items"
-        } else {
-            inputDescription = context.subtitlePrefix
-        }
-        return "\(inputDescription): \(definition.subtitle)"
+        "\(inputDescription(for: selection, context: context)) · \(definition.subtitle)"
+    }
+
+    private static func inputDescription(
+        for selection: InputSelection,
+        context: ActionInputContext
+    ) -> String {
+        context.inputDescription(
+            inputs: selection.inputs,
+            itemKinds: selection.itemKinds,
+            ambiguousKinds: selection.ambiguousKinds,
+            processableItemCount: selection.processableItemCount
+        )
     }
 
     private static func errorItem(

@@ -90,6 +90,20 @@ struct PublicRequestParserTests {
     }
 
     @Test
+    func configurationDirectiveOpensConfigurationNamespace() throws {
+        let request = try PublicRequestParser.parse("""
+        menu: Configuration
+
+        clipboard
+        """)
+
+        #expect(request == ClopRequest(
+            input: .clipboard,
+            route: .configuration
+        ))
+    }
+
+    @Test
     func optimizeExecutionDefaultsAggressiveToFalse() throws {
         let request = try PublicRequestParser.parse("""
         execute: Optimize

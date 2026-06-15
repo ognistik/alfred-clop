@@ -119,7 +119,7 @@ struct ActionMenuTests {
         let response = ActionMenu.response(paths: [file.path], query: "exif")
 
         #expect(response.items.map(\.title) == ["Strip Metadata"])
-        #expect(response.items[0].subtitle.hasPrefix("Selected input:"))
+        #expect(response.items[0].subtitle.hasPrefix("Selected file ·"))
         #expect(response.variables?[ActionMenu.inputJSONVariable] != nil)
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
@@ -169,7 +169,7 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[0].subtitle == "Passed input: Compress with Clop")
+        #expect(response.items[0].subtitle == "Passed file · Compress with Clop")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.arguments.rawValue
@@ -187,7 +187,7 @@ struct ActionMenuTests {
         )
 
         #expect(response.items.map(\.title) == ["Strip Metadata"])
-        #expect(response.items[0].subtitle.hasPrefix("Copied input:"))
+        #expect(response.items[0].subtitle.hasPrefix("Copied file ·"))
         #expect(response.variables?[ActionMenu.inputJSONVariable] != nil)
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
@@ -260,7 +260,7 @@ struct ActionMenuTests {
             context: .clipboard
         )
 
-        #expect(response.items[0].subtitle == "Copied input: Compress with Clop")
+        #expect(response.items[0].subtitle == "Copied file · Compress with Clop")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.clipboard.rawValue
@@ -542,7 +542,7 @@ struct ActionMenuTests {
 
         #expect(
             response.items[0].subtitle
-                == "Passed input, folder: 3 items: Compress with Clop"
+                == "Passed folder: 3 files · Compress with Clop"
         )
     }
 
@@ -574,8 +574,8 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[1].subtitle == "Passed input · Image, video, or PDF only")
-        #expect(response.items[3].subtitle == "Passed input · Images only")
+        #expect(response.items[1].subtitle == "Passed URL · Image, video, or PDF only")
+        #expect(response.items[3].subtitle == "Passed URL · Images only")
         #expect(response.items.allSatisfy { $0.subtitle.count < 60 })
     }
 

@@ -75,6 +75,31 @@ menu: Crop / Resize
 Action and parameter names are case-insensitive. The blank line between
 directives and input is required.
 
+## Configuration
+
+Open Configuration directly while preserving an input source:
+
+```text
+menu: Configuration
+
+clipboard
+```
+
+```text
+menu: Configuration
+
+finder
+```
+
+The menu opens with `:` in Alfred. Removing the colon returns to the processing
+actions for the same collected input. Type or autocomplete `:template ` to
+edit the output template.
+
+The Workflow Settings result opens Alfred's workflow configuration with
+Return and reveals the active settings folder with Command-Return. It also
+represents the real `settings.json` file, so Alfred Quick Look and file actions
+remain available.
+
 ## Execution
 
 Use `execute:` with a visible workflow action name:
@@ -146,7 +171,7 @@ requiring shorthand fields:
 
 - `copyResult`
 - `recursiveFolders`
-- `dnd` for quiet error notifications
+- completion and error notification preferences
 
 Those settings are resolved by the same typed execution path used by workflow
 menus and JSON requests. They are not duplicated as shorthand parameters.
@@ -203,6 +228,20 @@ separate execution implementation:
   "route": {
     "type": "menu",
     "action": "crop"
+  }
+}
+```
+
+Configuration uses an explicit menu destination:
+
+```json
+{
+  "input": {
+    "source": "clipboard"
+  },
+  "route": {
+    "type": "menu",
+    "destination": "configuration"
   }
 }
 ```
