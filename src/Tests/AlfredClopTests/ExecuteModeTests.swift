@@ -63,6 +63,34 @@ struct ExecuteModeTests {
     }
 
     @Test
+    func conversionSuccessUsesQuietSuccessPolicy() throws {
+        let json = try requestJSON(action: .convert(ConversionChoice(
+            media: .image,
+            format: "webp",
+            setting: .compression(70)
+        )))
+        let runner = StubProcessRunner(result: ClopProcessResult(
+            terminationStatus: 0,
+            standardOutput: Data(#"{"results":[]}"#.utf8),
+            standardError: Data()
+        ))
+
+        let response = ExecuteMode.response(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+        let quiet = ExecuteMode.quietFeedback(
+            requestJSON: json,
+            builder: builder(),
+            runner: runner
+        )
+
+        #expect(response.items[0].title == "Conversion complete")
+        #expect(quiet == nil)
+    }
+
+    @Test
     func cropRejectsInvalidJSONResult() throws {
         let response = ExecuteMode.response(
             requestJSON: try requestJSON(action: .crop(

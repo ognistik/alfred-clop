@@ -242,9 +242,85 @@ enum PublicRequestParser {
         case .stripMetadata:
             try rejectUnknown(values, allowed: [])
             return .stripMetadata
-        case .convertImage, .convertVideo, .convertAudio, .cropPDF:
+        case .convertImage, .convertVideo, .convertAudio:
+            return try conversionExecution(
+                for: action,
+                values: values
+            )
+        case .cropPDF:
             throw PublicRequestError.unsupportedExecution(title(for: action))
         }
+    }
+
+    private static func conversionExecution(
+        for action: ClopAction,
+        values: [String: String]
+    ) throws -> ActionRequest {
+        try rejectUnknown(
+            values,
+            allowed: ["format", "compression", "bitrate"]
+        )
+        let media: ConversionMediaKind
+        switch action {
+        case .convertImage:
+            media = .image
+        case .convertVideo:
+            media = .video
+        case .convertAudio:
+            media = .audio
+        default:
+            throw PublicRequestError.unsupportedExecution(title(for: action))
+        }
+        guard let formatValue = values["format"], !formatValue.isEmpty else {
+            throw PublicRequestError.missingParameter("format")
+        }
+        guard let format = ConversionCatalog.normalizedFormat(
+            formatValue,
+            media: media
+        ) else {
+            throw PublicRequestError.invalidParameter("format", formatValue)
+        }
+        guard values["compression"] == nil || values["bitrate"] == nil else {
+            throw PublicRequestError.invalidParameter(
+                "conversion controls",
+                "use compression or bitrate, not both"
+            )
+        }
+
+        let setting: ConversionSetting?
+        if let compression = values["compression"] {
+            if normalizedName(compression) == "auto" {
+                setting = .automaticCompression
+            } else if let value = Int(compression), (5...100).contains(value) {
+                setting = .compression(value)
+            } else {
+                throw PublicRequestError.invalidParameter(
+                    "compression",
+                    compression
+                )
+            }
+        } else if let bitrate = values["bitrate"] {
+            guard let value = Int(bitrate), value > 0 else {
+                throw PublicRequestError.invalidParameter("bitrate", bitrate)
+            }
+            setting = .bitrate(value)
+        } else {
+            setting = nil
+        }
+
+        let choice = ConversionChoice(
+            media: media,
+            format: format,
+            setting: setting
+        )
+        guard ConversionCatalog.isSupported(choice) else {
+            let value = values["compression"] ?? values["bitrate"] ?? format
+            throw PublicRequestError.invalidParameter(
+                "conversion controls",
+                value
+            )
+        }
+        return .convert(choice)
     }
 
     private static func parameterDictionary(

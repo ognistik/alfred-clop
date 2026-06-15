@@ -292,6 +292,11 @@ enum AlfredClopCommand {
                     stateJSON: stateJSON,
                     query: query
                 )
+            case .conversion, .conversionPresetRemoval:
+                return ConversionParameterMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
             case .configuration,
                  .configurationOutputTemplate,
                  .configurationSaveOutput,

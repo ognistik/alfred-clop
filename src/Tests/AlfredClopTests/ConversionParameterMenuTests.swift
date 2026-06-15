@@ -1,0 +1,317 @@
+import Foundation
+import Testing
+@testable import AlfredClop
+
+struct ConversionParameterMenuTests {
+    @Test
+    func rootFormatsExecuteImmediatelyAndExposeShallowControls() throws {
+        let fixture = try fixture(
+            action: .convertImage,
+            input: "/tmp/photo.png"
+        )
+
+        let response = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "",
+            environment: fixture.environment
+        )
+        let webp = try #require(response.items.first {
+            $0.title == "Convert to WebP"
+        })
+        let decoded = try decodedOperation(webp.arg)
+
+        #expect(decoded.action == .convert(ConversionChoice(
+            media: .image,
+            format: "webp"
+        )))
+        #expect(webp.autocomplete == "webp ")
+        #expect(
+            webp.mods?.control?.subtitle
+                == "Create a WebP conversion preset"
+        )
+        #expect(webp.mods?.shift != nil)
+    }
+
+    @Test
+    func tabStyleQueryAcceptsDirectCompressionInput() throws {
+        let fixture = try fixture(
+            action: .convertImage,
+            input: "/tmp/photo.png"
+        )
+
+        let empty = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "webp ",
+            environment: fixture.environment
+        )
+        let typed = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "webp 70",
+            environment: fixture.environment
+        )
+
+        #expect(
+            empty.items.first?.title
+                == "Convert to WebP using Clop default"
+        )
+        #expect(empty.items.first?.subtitle.contains("5 (best quality)") == true)
+        #expect(typed.items.first?.title == "Convert to WebP · Compression 70")
+        #expect(try decodedOperation(typed.items.first?.arg).action == .convert(
+            ConversionChoice(
+                media: .image,
+                format: "webp",
+                setting: .compression(70)
+            )
+        ))
+        #expect(
+            typed.items.first?.mods?.control?.subtitle
+                == "Save WebP · Compression 70 as a preset"
+        )
+    }
+
+    @Test
+    func controlEntryUsesSameEditorAndProvidesBackAction() throws {
+        let fixture = try fixture(
+            action: .convertImage,
+            input: "/tmp/photo.png"
+        )
+        let root = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "",
+            environment: fixture.environment
+        )
+        let webp = try #require(root.items.first {
+            $0.title == "Convert to WebP"
+        })
+        let controlState = try #require(
+            webp.mods?.control?.variables?[ActionMenu.menuStateVariable]
+        )
+
+        let controls = ConversionParameterMenu.response(
+            stateJSON: controlState,
+            query: "",
+            environment: fixture.environment
+        )
+
+        #expect(
+            controls.items.first?.title
+                == "Convert to WebP using Clop default"
+        )
+        #expect(
+            controls.items.last?.title
+                == "Back to conversion formats"
+        )
+    }
+
+    @Test
+    func audioControlsRequireExplicitCompressionOrBitratePrefix() throws {
+        let fixture = try fixture(
+            action: .convertAudio,
+            input: "/tmp/audio.wav"
+        )
+
+        let ambiguous = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "mp3 128",
+            environment: fixture.environment
+        )
+        let compression = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "mp3 c70",
+            environment: fixture.environment
+        )
+        let bitrate = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "mp3 b128",
+            environment: fixture.environment
+        )
+
+        #expect(ambiguous.items.first?.title == "Invalid conversion control")
+        #expect(try decodedOperation(compression.items.first?.arg).action == .convert(
+            ConversionChoice(
+                media: .audio,
+                format: "mp3",
+                setting: .compression(70)
+            )
+        ))
+        #expect(try decodedOperation(bitrate.items.first?.arg).action == .convert(
+            ConversionChoice(
+                media: .audio,
+                format: "mp3",
+                setting: .bitrate(128)
+            )
+        ))
+    }
+
+    @Test
+    func onlyMP4OffersVideoCompressionControls() throws {
+        let fixture = try fixture(
+            action: .convertVideo,
+            input: "/tmp/video.mov"
+        )
+        let response = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "",
+            environment: fixture.environment
+        )
+        let mp4 = try #require(response.items.first {
+            $0.title == "Convert to MP4 / H.264"
+        })
+        let gif = try #require(response.items.first {
+            $0.title == "Convert to GIF"
+        })
+
+        #expect(mp4.autocomplete == "mp4 ")
+        #expect(mp4.mods?.control != nil)
+        #expect(gif.autocomplete == "gif")
+        #expect(gif.mods?.control == nil)
+    }
+
+    @Test
+    func presetCanBeSavedExecutedAndRemoved() throws {
+        let fixture = try fixture(
+            action: .convertImage,
+            input: "/tmp/photo.png"
+        )
+        let typed = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "webp 70",
+            environment: fixture.environment
+        )
+        let saveState = try #require(
+            typed.items.first?.mods?.control?
+                .variables?[ActionMenu.menuStateVariable]
+        )
+
+        let saved = ConversionParameterMenu.response(
+            stateJSON: saveState,
+            query: "",
+            environment: fixture.environment
+        )
+        let preset = try #require(saved.items.first {
+            $0.title == "WebP · Compression 70"
+                || $0.title == "Convert to WebP · Compression 70"
+        })
+        let confirmationState = try #require(
+            preset.mods?.control?
+                .variables?[ActionMenu.menuStateVariable]
+        )
+        let confirmation = ConversionParameterMenu.response(
+            stateJSON: confirmationState,
+            query: "",
+            environment: fixture.environment
+        )
+        let removalState = try #require(
+            confirmation.items.first?
+                .variables?[ActionMenu.menuStateVariable]
+        )
+        _ = ConversionParameterMenu.response(
+            stateJSON: removalState,
+            query: "",
+            environment: fixture.environment
+        )
+
+        #expect(try fixture.store.load().presets.isEmpty)
+    }
+
+    @Test
+    func matchingImageFormatIsHiddenButSavedRecompressionRemains() throws {
+        let fixture = try fixture(
+            action: .convertImage,
+            input: "/tmp/photo.jpg"
+        )
+        _ = try fixture.store.save(.conversion(ConversionActionPreset(
+            choice: ConversionChoice(
+                media: .image,
+                format: "jpeg",
+                setting: .compression(80)
+            )
+        )))
+
+        let response = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "",
+            environment: fixture.environment
+        )
+
+        #expect(!response.items.contains {
+            $0.title == "Convert to JPEG"
+        })
+        #expect(response.items.contains {
+            $0.title == "JPEG · Compression 80"
+        })
+    }
+
+    @Test
+    func mixedExtensionsAndFoldersKeepAllFormatsVisible() throws {
+        let mixed = try fixture(
+            action: .convertImage,
+            inputs: ["/tmp/photo.png", "/tmp/photo.jpg"],
+            itemKinds: [.localFile, .localFile]
+        )
+        let folder = try fixture(
+            action: .convertImage,
+            inputs: ["/tmp/Images"],
+            itemKinds: [.folder]
+        )
+
+        for fixture in [mixed, folder] {
+            let response = ConversionParameterMenu.response(
+                stateJSON: fixture.stateJSON,
+                query: "",
+                environment: fixture.environment
+            )
+            #expect(response.items.contains { $0.title == "Convert to PNG" })
+            #expect(response.items.contains { $0.title == "Convert to JPEG" })
+        }
+    }
+
+    private func fixture(
+        action: ClopAction,
+        input: String
+    ) throws -> ConversionMenuFixture {
+        try fixture(
+            action: action,
+            inputs: [input],
+            itemKinds: [.localFile]
+        )
+    }
+
+    private func fixture(
+        action: ClopAction,
+        inputs: [String],
+        itemKinds: [InputItemKind]
+    ) throws -> ConversionMenuFixture {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let request = ParameterStepRequest(
+            action: action,
+            inputs: inputs,
+            inputContext: .arguments,
+            itemKinds: itemKinds
+        )
+        return ConversionMenuFixture(
+            environment: environment,
+            store: try PresetStore(environment: environment),
+            stateJSON: try JSONOutput.string(
+                for: MenuState.conversion(request),
+                prettyPrinted: false
+            )
+        )
+    }
+
+    private func decodedOperation(_ value: String?) throws -> OperationRequest {
+        try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data(try #require(value).utf8)
+        )
+    }
+}
+
+private struct ConversionMenuFixture {
+    var environment: Environment
+    var store: PresetStore
+    var stateJSON: String
+}

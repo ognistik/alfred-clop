@@ -278,6 +278,8 @@ enum MenuMode: String, Codable, Equatable {
     case cropPresetRemoval
     case downscale
     case downscalePresetRemoval
+    case conversion
+    case conversionPresetRemoval
     case configuration
     case configurationOutputTemplate
     case configurationSaveOutput
@@ -359,6 +361,32 @@ struct MenuState: Codable, Equatable {
                 : .downscale,
             parameterRequest: request,
             presetAction: action
+        )
+    }
+
+    static func conversion(
+        _ request: ParameterStepRequest,
+        format: String? = nil
+    ) -> MenuState {
+        MenuState(
+            mode: .conversion,
+            parameterRequest: request,
+            configurationValue: format
+        )
+    }
+
+    static func conversion(
+        _ request: ParameterStepRequest,
+        format: String?,
+        action: PresetMenuAction
+    ) -> MenuState {
+        MenuState(
+            mode: action.kind == .confirmRemoval
+                ? .conversionPresetRemoval
+                : .conversion,
+            parameterRequest: request,
+            presetAction: action,
+            configurationValue: format
         )
     }
 

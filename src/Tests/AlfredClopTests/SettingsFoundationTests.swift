@@ -88,6 +88,27 @@ struct SettingsFoundationTests {
     }
 
     @Test
+    func conversionOutputPlanningUsesTheTargetExtension() throws {
+        let directory = try makeTemporaryDirectory()
+        let source = directory.appendingPathComponent("photo.png")
+        try Data().write(to: source)
+        try Data().write(
+            to: directory.appendingPathComponent("photo-clop.webp")
+        )
+
+        let plan = try OutputTemplateValidator.plan(
+            template: "%P/%f-clop",
+            inputs: [source.path],
+            outputExtension: "webp"
+        )
+
+        #expect(plan.template == "%P/%f-clop-2")
+        #expect(plan.outputPaths == [
+            directory.appendingPathComponent("photo-clop-2.webp").path
+        ])
+    }
+
+    @Test
     func tildeExpandsForPreviewAndPlanning() throws {
         let directory = try makeTemporaryDirectory()
         let source = directory.appendingPathComponent("photo.png")

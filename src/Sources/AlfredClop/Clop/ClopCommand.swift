@@ -17,6 +17,7 @@ enum ClopCommandBuilderError: Error, Equatable {
     case missingInputs
     case invalidCropSize
     case invalidDownscaleFactor
+    case invalidConversion
     case unsupportedAction
     case unsupportedBackupBehavior
     case invalidOutputTemplate(OutputTemplateError)
@@ -45,9 +46,16 @@ struct ClopCommandBuilder {
         var resolvedRequest = request
         if let template = request.execution.output.template {
             do {
+                let outputExtension: String?
+                if case .convert(let choice) = request.action {
+                    outputExtension = choice.outputExtension
+                } else {
+                    outputExtension = nil
+                }
                 let plan = try OutputTemplateValidator.plan(
                     template: template,
                     inputs: request.inputs,
+                    outputExtension: outputExtension,
                     fileManager: fileManager
                 )
                 resolvedRequest.execution.output = outputBehavior(
@@ -95,6 +103,15 @@ struct ClopCommandBuilder {
                 factor: factor
             )
             expectsJSON = true
+        case .convert(let choice):
+            guard ConversionCatalog.isSupported(choice) else {
+                throw ClopCommandBuilderError.invalidConversion
+            }
+            arguments = conversionArguments(
+                for: resolvedRequest,
+                choice: choice
+            )
+            expectsJSON = true
         case .uncropPDF:
             arguments = ["uncrop-pdf"]
                 + recursiveArguments(for: resolvedRequest.execution)
@@ -106,7 +123,7 @@ struct ClopCommandBuilder {
                 + recursiveArguments(for: request.execution)
                 + request.inputs
             expectsJSON = false
-        case .convert, .cropPDF:
+        case .cropPDF:
             throw ClopCommandBuilderError.unsupportedAction
         }
 
@@ -163,6 +180,45 @@ struct ClopCommandBuilder {
             "--skip-errors"
         ]
 
+        if request.execution.showClopUI {
+            arguments.append("--gui")
+        }
+        if request.execution.copyResult {
+            arguments.append("--copy")
+        }
+        if request.execution.recursiveFolders {
+            arguments.append("--recursive")
+        }
+
+        return arguments
+            + outputArguments(for: request.execution.output)
+            + request.inputs
+    }
+
+    private func conversionArguments(
+        for request: OperationRequest,
+        choice: ConversionChoice
+    ) -> [String] {
+        var arguments = [
+            "convert",
+            choice.media.rawValue,
+            "--to",
+            choice.format,
+            "--json",
+            "--no-progress",
+            "--skip-errors"
+        ]
+
+        switch choice.setting {
+        case .compression(let value):
+            arguments += ["--compression", String(value)]
+        case .automaticCompression:
+            arguments += ["--compression", "auto"]
+        case .bitrate(let value):
+            arguments += ["--bitrate", String(value)]
+        case nil:
+            break
+        }
         if request.execution.showClopUI {
             arguments.append("--gui")
         }

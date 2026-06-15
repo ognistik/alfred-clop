@@ -857,7 +857,9 @@ enum ActionMenu {
             state = .crop(request)
         case .downscale:
             state = .downscale(request)
-        case .convertImage, .convertVideo, .convertAudio, .cropPDF:
+        case .convertImage, .convertVideo, .convertAudio:
+            state = .conversion(request)
+        case .cropPDF:
             state = MenuState(mode: .actions, parameterRequest: request)
         case .optimise, .uncropPDF, .stripMetadata:
             preconditionFailure("Immediate actions do not have parameter state")

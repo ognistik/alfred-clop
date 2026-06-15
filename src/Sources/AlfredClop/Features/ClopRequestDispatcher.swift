@@ -6,6 +6,8 @@ enum ClopRequestDispatcher {
             "Optimization complete",
             "Aggressive optimization complete",
             "Crop / resize complete",
+            "Downscale complete",
+            "Conversion complete",
             "PDF uncrop complete",
             "Metadata removed",
             "Clop operation complete"
@@ -224,7 +226,23 @@ enum ClopRequestDispatcher {
                 query: query,
                 environment: environment
             )
-        case .convertImage, .convertVideo, .convertAudio, .cropPDF:
+        case .convertImage, .convertVideo, .convertAudio:
+            let state = MenuState.conversion(parameterRequest)
+            guard let stateJSON = try? JSONOutput.string(
+                for: state,
+                prettyPrinted: false
+            ) else {
+                return feedback(
+                    title: "Unable to open Convert",
+                    subtitle: "The menu state could not be encoded."
+                )
+            }
+            return ConversionParameterMenu.response(
+                stateJSON: stateJSON,
+                query: query,
+                environment: environment
+            )
+        case .cropPDF:
             return feedback(
                 title: "This action needs more information",
                 subtitle: "Its parameter menu is not available yet."
@@ -251,14 +269,9 @@ enum ClopRequestDispatcher {
             menuAction = .crop
         case .downscale:
             menuAction = .downscale
-        case .convert:
-            if selection.mediaKinds == [.image] {
-                menuAction = .convertImage
-            } else if selection.mediaKinds == [.video] {
-                menuAction = .convertVideo
-            } else if selection.mediaKinds == [.audio] {
-                menuAction = .convertAudio
-            } else {
+        case .convert(let choice):
+            menuAction = choice.media.action
+            guard ConversionCatalog.isSupported(choice) else {
                 return false
             }
         case .cropPDF:

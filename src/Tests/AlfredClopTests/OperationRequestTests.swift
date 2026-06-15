@@ -17,7 +17,11 @@ struct OperationRequestTests {
     func convertRequestRoundTrips() throws {
         let request = OperationRequest(
             inputs: ["/tmp/image.png"],
-            action: .convert(format: "webp", quality: 75),
+            action: .convert(ConversionChoice(
+                media: .image,
+                format: "webp",
+                setting: .compression(75)
+            )),
             execution: makeExecutionOptions(
                 output: .sameFolder(template: "%P/%f-converted")
             )

@@ -844,8 +844,42 @@ First choose a target valid for the selected media kind:
 - videos: MP4/H.264, GIF, WebM/VP9, HEVC, x265, or AV1/MKV;
 - audio: MP3, AAC, M4A, Opus, Ogg, FLAC, WAV, or AIFF.
 
-Then offer compression or bitrate controls supported by that target. A
-user-configured media-specific default can make conversion a one-step action.
+Return on a built-in target executes immediately with Clop's app default so
+ordinary conversion remains one step. Shift-Return inverts Preserve Original
+for that run.
+
+Targets with meaningful conversion controls expose one shallow inline editor:
+
+- Tab autocompletes the target plus a trailing space in the current Script
+  Filter query. Deleting the value returns to the target list without closing
+  Alfred.
+- Control-Return on the built-in target enters the same editor with the intent
+  of creating a preset. Because Alfred's parameter transition clears the
+  visible query, this route includes an explicit Back to conversion formats
+  result.
+- The empty editor keeps conversion with Clop's default executable and shows
+  concise typing guidance. Users type the control value directly; do not add a
+  separate Set Compression submenu.
+- Image and MP4 controls accept compression `5...100`; MP4 also accepts
+  `auto`. Audio uses `c70` for compression and `b128` for bitrate so a bare
+  number is never ambiguous.
+- GIF, WebM, HEVC, x265, and AV1 use Clop's tuned fixed settings and therefore
+  do not expose an empty controls editor or format-only preset creation.
+
+Control-Return on a complete typed conversion saves the full media, target,
+and control combination. Control-Return on an existing conversion preset opens
+the same confirmed removal flow used by Crop / Resize and Downscale. Built-in
+format-only rows are not presets.
+
+Saved conversion presets appear both in the media-specific target list and in
+their target's inline editor. This keeps reusable conversions one step away and
+keeps same-format recompression presets available for removal.
+
+Hide a built-in image target when every concrete input is already that exact
+format, treating JPG and JPEG as equivalent. Keep all built-in targets for
+folders, ambiguous input, mixed image extensions, video, and audio. Never hide
+a saved same-format preset because its explicit compression represents
+intentional recompression.
 
 Offer legacy local conversion as a clearly labeled image-only alternative for
 AVIF, HEIC, and WebP. Its 0-100 quality scale and overwrite behavior are
@@ -925,7 +959,7 @@ Recommended defaults:
 | Option-Return | Enable the action's documented alternate processing mode where one exists |
 | Command-Option-Return | Combine the aggressive-default inversion with the alternate mode when both are supported |
 | Shift-Return | Invert the configured Preserve Original behavior |
-| Control-Return | Save a typed value as a preset, or request removal of an existing preset |
+| Control-Return | Continue creating or save a complete preset, or request removal of an existing preset |
 
 Do not hard-code "Command means aggressive" at execution time. Encode the
 modifier's resolved `OperationRequest` directly in that Alfred item's `mods`
@@ -983,9 +1017,12 @@ effects. Each combined modifier needs an accurate subtitle and a fully
 resolved request. Unsupported combinations must be omitted rather than
 silently dropping one effect.
 
-Control-Return is valid only when the selected item contains complete
-parameters that can be saved and replayed. On an existing preset it must route
-to a confirmation step before removal.
+Control-Return normally requires complete parameters that can be saved and
+replayed. A built-in conversion target is the one deliberate incomplete case:
+Control-Return continues into that target's inline controls editor because the
+action remains explicitly about creating a preset. On a complete typed value
+it saves the preset, and on an existing preset it routes to a confirmation step
+before removal.
 
 Do not reserve modifiers for width/height syntax. Use `w128` and `h720` in the
 query grammar so modifier keys remain available for consistent workflow-wide

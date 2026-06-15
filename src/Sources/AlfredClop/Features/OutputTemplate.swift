@@ -97,6 +97,7 @@ enum OutputTemplateValidator {
     static func plan(
         template: String,
         inputs: [String],
+        outputExtension: String? = nil,
         fileManager: FileManager = .default,
         now: Date = Date()
     ) throws -> OutputTemplatePlan {
@@ -108,6 +109,7 @@ enum OutputTemplateValidator {
         let basePlan = try plannedPaths(
             template: expanded,
             inputs: inputs,
+            outputExtension: outputExtension,
             fileManager: fileManager,
             now: now
         )
@@ -129,6 +131,7 @@ enum OutputTemplateValidator {
             let outputPaths = try plannedPaths(
                 template: candidate,
                 inputs: inputs,
+                outputExtension: outputExtension,
                 fileManager: fileManager,
                 now: now
             )
@@ -182,7 +185,8 @@ enum OutputTemplateValidator {
         template: String,
         source: URL,
         index: Int,
-        now: Date
+        now: Date,
+        outputExtension: String? = nil
     ) -> URL {
         let calendar = Calendar.current
         let replacements: [String: String] = [
@@ -207,8 +211,9 @@ enum OutputTemplateValidator {
         }
 
         var output = URL(fileURLWithPath: path)
-        if output.pathExtension.isEmpty, !source.pathExtension.isEmpty {
-            output.appendPathExtension(source.pathExtension)
+        let resolvedExtension = outputExtension ?? source.pathExtension
+        if output.pathExtension.isEmpty, !resolvedExtension.isEmpty {
+            output.appendPathExtension(resolvedExtension)
         }
         return output
     }
@@ -216,6 +221,7 @@ enum OutputTemplateValidator {
     private static func plannedPaths(
         template: String,
         inputs: [String],
+        outputExtension: String?,
         fileManager: FileManager,
         now: Date
     ) throws -> [String] {
@@ -238,7 +244,8 @@ enum OutputTemplateValidator {
                 template: template,
                 source: source,
                 index: offset + 1,
-                now: now
+                now: now,
+                outputExtension: outputExtension
             ).standardizedFileURL
             if output == source {
                 throw OutputTemplateError.sourceCollision(output.path)

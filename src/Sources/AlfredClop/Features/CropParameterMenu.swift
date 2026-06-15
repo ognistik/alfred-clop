@@ -670,6 +670,8 @@ enum CropParameterMenu {
             return crop.displayValue
         case let .downscale(downscale):
             return downscale.displayValue
+        case let .conversion(conversion):
+            return conversion.displayValue
         }
     }
 

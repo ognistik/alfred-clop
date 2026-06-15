@@ -11,8 +11,9 @@ file whenever a task materially changes what works or what should happen next.
 Milestones 1 and 2 are substantially complete. Milestone 3 includes
 parameter-free execution, a guided dynamic parameter step for crop and resize,
 the bounded Downscale parameter step, user-defined Crop / Resize and
-Downscale action presets, shared settings, and the unified input and routing
-foundation planned for Milestone 6.
+Downscale action presets, media-specific conversion with inline controls and
+presets, shared settings, and the unified input and routing foundation planned
+for Milestone 6.
 
 The public automation surface is now one typed `clop` request with independent
 input and route values. Files, folders, HTTP/HTTPS URLs, clipboard content,
@@ -275,6 +276,38 @@ configurations, and no migration or fallback state is maintained.
 - Downscale presets are stored in `settings.json`, scoped to the Downscale
   submenu, and support Control-Return save and confirmation-based removal
 
+### Media-specific conversion
+
+- Image, video, and audio conversion menus execute built-in targets immediately
+  with Clop's app defaults
+- Image targets: WebP, AVIF, HEIC, JXL, JPEG, and PNG
+- Video targets: MP4/H.264, GIF, WebM/VP9, HEVC, x265, and AV1/MKV
+- Audio targets: MP3, AAC, M4A, Opus, Ogg, FLAC, WAV, and AIFF
+- Tab opens a reversible inline controls editor by autocompleting the target in
+  the current query; deleting the value returns to the target list
+- Control-Return on a controllable built-in target enters the same editor for
+  preset creation, with an explicit Back result for the parameter-transition
+  route
+- Image conversion accepts compression `5...100`
+- MP4 conversion accepts compression `5...100` or `auto`; fixed-setting video
+  targets do not expose meaningless controls
+- Audio conversion uses explicit `c70` compression and `b128` bitrate grammar
+- Empty controls editors retain an executable Clop-default result rather than
+  requiring another step
+- Complete target-and-control combinations can be saved with Control-Return;
+  existing presets use confirmation-based Control-Return removal
+- Saved conversion presets appear in both the media target list and the
+  target-specific controls editor
+- Built-in same-format image targets are hidden only for clear homogeneous
+  inputs, with JPG and JPEG treated as equivalent
+- Saved same-format recompression presets remain visible and executable
+- Typed External Trigger execution supports format plus optional compression
+  or bitrate parameters
+- App-backed conversion uses JSON result inspection and inherits Clop UI,
+  copy-result, recursion, and preservation settings
+- Preservation preflight predicts the converted extension before checking
+  collisions and choosing numeric suffixes
+
 ### Shared settings and execution policy
 
 - Versioned `settings.json` stores action presets and the active output
@@ -368,8 +401,8 @@ structure.
   optimization, conversion, PDF controls, folders, URLs, shared switches, and
   pipeline management
 - Main-menu conversion discovery is media-specific for homogeneous image,
-  video, and audio input; ambiguous broad input shows separate honest,
-  non-executable conversion routes until their parameter menus are built
+  video, and audio input; ambiguous broad input shows separate honest routes
+  into the implemented media-specific target menus
 - Disposable-file output probes verified in-place behavior, automatic
   extension appending, directory-template requirements, silent collision
   overwrites, empty-output failure, literal unknown tokens, multi-file
@@ -377,7 +410,7 @@ structure.
 
 ## Not implemented
 
-- Conversion and PDF-crop parameter menus and parsing
+- PDF-crop parameter menus and parsing
 - Dynamic PDF device and paper-size menus
 - Workflow icons, packaging, and release automation
 
@@ -424,15 +457,15 @@ structure.
 
 ## Next recommended task
 
-Implement the bounded media-specific Convert parameter menus and typed parsing
-described in the product plan, following the established parameter-menu,
-validation, execution, and preset patterns without starting PDF-crop work.
+Implement the bounded reversible PDF Crop parameter menus and typed parsing,
+starting with aspect ratio and custom resolution before adding dynamic device
+and paper-size discovery.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 206 tests.
+- `./scripts/test.sh` passes 220 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

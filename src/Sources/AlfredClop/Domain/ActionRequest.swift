@@ -2,7 +2,7 @@ enum ActionRequest: Codable, Equatable {
     case optimise(aggressive: Bool)
     case crop(size: String, smartCrop: Bool, longEdge: Bool)
     case downscale(factor: Double)
-    case convert(format: String, quality: Int)
+    case convert(ConversionChoice)
     case cropPDF(mode: String, value: String, pageLayout: String?)
     case uncropPDF
     case stripMetadata
@@ -15,7 +15,8 @@ enum ActionRequest: Codable, Equatable {
         case longEdge
         case factor
         case format
-        case quality
+        case media
+        case setting
         case mode
         case value
         case pageLayout
@@ -46,10 +47,11 @@ enum ActionRequest: Codable, Equatable {
         case let .downscale(factor):
             try container.encode(ActionType.downscale, forKey: .type)
             try container.encode(factor, forKey: .factor)
-        case let .convert(format, quality):
+        case let .convert(choice):
             try container.encode(ActionType.convert, forKey: .type)
-            try container.encode(format, forKey: .format)
-            try container.encode(quality, forKey: .quality)
+            try container.encode(choice.media, forKey: .media)
+            try container.encode(choice.format, forKey: .format)
+            try container.encodeIfPresent(choice.setting, forKey: .setting)
         case let .cropPDF(mode, value, pageLayout):
             try container.encode(ActionType.cropPDF, forKey: .type)
             try container.encode(mode, forKey: .mode)
@@ -78,10 +80,17 @@ enum ActionRequest: Codable, Equatable {
         case .downscale:
             self = .downscale(factor: try container.decode(Double.self, forKey: .factor))
         case .convert:
-            self = .convert(
+            self = .convert(ConversionChoice(
+                media: try container.decode(
+                    ConversionMediaKind.self,
+                    forKey: .media
+                ),
                 format: try container.decode(String.self, forKey: .format),
-                quality: try container.decode(Int.self, forKey: .quality)
-            )
+                setting: try container.decodeIfPresent(
+                    ConversionSetting.self,
+                    forKey: .setting
+                )
+            ))
         case .cropPDF:
             self = .cropPDF(
                 mode: try container.decode(String.self, forKey: .mode),

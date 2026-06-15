@@ -83,20 +83,66 @@ struct DownscaleActionPreset: Codable, Equatable, Hashable {
     }
 }
 
+struct ConversionActionPreset: Codable, Equatable, Hashable {
+    var choice: ConversionChoice
+
+    init(choice: ConversionChoice) {
+        self.choice = choice
+    }
+
+    init(from decoder: Decoder) throws {
+        let choice = try ConversionChoice(from: decoder)
+        guard choice.setting != nil, ConversionCatalog.isSupported(choice) else {
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: decoder.codingPath,
+                    debugDescription:
+                        "Conversion preset is incomplete or unsupported."
+                )
+            )
+        }
+        self.choice = choice
+    }
+
+    var displayValue: String {
+        choice.displayValue
+    }
+
+    var stableUID: String {
+        let setting: String
+        switch choice.setting {
+        case .compression(let value):
+            setting = "compression.\(value)"
+        case .automaticCompression:
+            setting = "compression.auto"
+        case .bitrate(let value):
+            setting = "bitrate.\(value)"
+        case nil:
+            setting = "default"
+        }
+        return "convert.preset.\(choice.media.rawValue).\(choice.format).\(setting)"
+    }
+}
+
 enum ActionPreset: Codable, Equatable, Hashable {
     case crop(CropActionPreset)
     case downscale(DownscaleActionPreset)
+    case conversion(ConversionActionPreset)
 
     private enum CodingKeys: String, CodingKey {
         case type
         case size
         case longEdge
         case factor
+        case media
+        case format
+        case setting
     }
 
     private enum PresetType: String, Codable {
         case crop
         case downscale
+        case conversion
     }
 
     func encode(to encoder: Encoder) throws {
@@ -110,6 +156,11 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case let .downscale(preset):
             try container.encode(PresetType.downscale, forKey: .type)
             try container.encode(preset.factor, forKey: .factor)
+        case let .conversion(preset):
+            try container.encode(PresetType.conversion, forKey: .type)
+            try container.encode(preset.choice.media, forKey: .media)
+            try container.encode(preset.choice.format, forKey: .format)
+            try container.encode(preset.choice.setting, forKey: .setting)
         }
     }
 
@@ -120,6 +171,8 @@ enum ActionPreset: Codable, Equatable, Hashable {
             self = .crop(try CropActionPreset(from: decoder))
         case .downscale:
             self = .downscale(try DownscaleActionPreset(from: decoder))
+        case .conversion:
+            self = .conversion(try ConversionActionPreset(from: decoder))
         }
     }
 }

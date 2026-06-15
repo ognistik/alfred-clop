@@ -171,7 +171,7 @@ struct ClopRequestDispatcherTests {
         ("video.mp4", ClopAction.convertVideo),
         ("audio.mp3", ClopAction.convertAudio)
     ])
-    func mediaSpecificConversionRoutesRemainHonestAndNonExecutable(
+    func mediaSpecificConversionRoutesOpenTheirFormatMenus(
         filename: String,
         action: ClopAction
     ) throws {
@@ -191,8 +191,8 @@ struct ClopRequestDispatcherTests {
             finder: DispatcherFinder()
         )
 
-        #expect(response.items.first?.title == "This action needs more information")
-        #expect(response.items.first?.valid == false)
+        #expect(response.items.first?.title.hasPrefix("Convert to ") == true)
+        #expect(response.items.first?.valid == true)
     }
 
     @Test

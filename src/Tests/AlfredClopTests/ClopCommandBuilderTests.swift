@@ -327,11 +327,70 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
-    func unfinishedParameterActionsAreNotExecutableYet() {
-        #expect(throws: ClopCommandBuilderError.unsupportedAction) {
+    func conversionBuildsTypedAppBackedCommand() throws {
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/photo.jpg"],
+            action: .convert(ConversionChoice(
+                media: .image,
+                format: "webp",
+                setting: .compression(75)
+            )),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(command.arguments == [
+            "convert",
+            "image",
+            "--to",
+            "webp",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--compression",
+            "75",
+            "--gui",
+            "/tmp/photo.jpg"
+        ])
+        #expect(command.expectsJSON)
+    }
+
+    @Test
+    func videoAndAudioConversionControlsUseTheirTypedFlags() throws {
+        let video = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/video.mov"],
+            action: .convert(ConversionChoice(
+                media: .video,
+                format: "mp4",
+                setting: .automaticCompression
+            )),
+            execution: makeExecutionOptions()
+        ))
+        let audio = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/audio.wav"],
+            action: .convert(ConversionChoice(
+                media: .audio,
+                format: "mp3",
+                setting: .bitrate(128)
+            )),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(video.arguments.contains("--compression"))
+        #expect(video.arguments.contains("auto"))
+        #expect(audio.arguments.contains("--bitrate"))
+        #expect(audio.arguments.contains("128"))
+    }
+
+    @Test
+    func conversionRejectsControlsUnsupportedByTheTarget() {
+        #expect(throws: ClopCommandBuilderError.invalidConversion) {
             try makeBuilder().command(for: OperationRequest(
-                inputs: ["/tmp/photo.jpg"],
-                action: .convert(format: "webp", quality: 75),
+                inputs: ["/tmp/video.mov"],
+                action: .convert(ConversionChoice(
+                    media: .video,
+                    format: "gif",
+                    setting: .compression(70)
+                )),
                 execution: makeExecutionOptions()
             ))
         }

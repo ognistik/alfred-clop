@@ -207,6 +207,35 @@ struct PublicRequestParserTests {
         ))
     }
 
+    @Test
+    func conversionExecutionAcceptsDefaultsCompressionAndBitrate() throws {
+        let image = try PublicRequestParser.parse("""
+        execute: Convert Image
+        format: jpg
+        compression: 75
+
+        /tmp/image.png
+        """)
+        let audio = try PublicRequestParser.parse("""
+        execute: Convert Audio
+        format: mp3
+        bitrate: 128
+
+        /tmp/audio.wav
+        """)
+
+        #expect(image.route == .execute(action: .convert(ConversionChoice(
+            media: .image,
+            format: "jpeg",
+            setting: .compression(75)
+        ))))
+        #expect(audio.route == .execute(action: .convert(ConversionChoice(
+            media: .audio,
+            format: "mp3",
+            setting: .bitrate(128)
+        ))))
+    }
+
     @Test(arguments: [
         "execute: Uncrop PDF",
         "execute: Strip Metadata"
@@ -256,8 +285,8 @@ struct PublicRequestParserTests {
             PublicRequestError.invalidParameter("factor", "100%")
         ),
         (
-            "execute: Convert Image\nformat: WebP\n\n/tmp/image.jpg",
-            PublicRequestError.unsupportedExecution("Convert Image")
+            "execute: Convert Image\ncompression: 70\n\n/tmp/image.jpg",
+            PublicRequestError.missingParameter("format")
         ),
         (
             "menu: Crop / Resize\n\nfinder\n/tmp/image.jpg",
