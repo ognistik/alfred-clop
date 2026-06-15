@@ -21,7 +21,8 @@ enum ClopRequestDispatcher {
         collector: InputCollector = InputCollector(),
         environment: Environment = Environment(),
         builder: ClopCommandBuilder = ClopCommandBuilder(),
-        runner: any ClopProcessRunning = FoundationClopProcessRunner()
+        runner: any ClopProcessRunning = FoundationClopProcessRunner(),
+        preserveOriginalOverride: Bool? = nil
     ) -> ScriptFilterResponse {
         let request: ClopRequest
         do {
@@ -99,7 +100,9 @@ enum ClopRequestDispatcher {
             }
             let execution: ExecutionOptions
             do {
-                execution = try environment.resolvedExecutionOptions()
+                execution = try environment.resolvedExecutionOptions(
+                    preserveOriginal: preserveOriginalOverride
+                )
             } catch {
                 return feedback(
                     title: "Unable to read settings",
@@ -135,7 +138,8 @@ enum ClopRequestDispatcher {
         collector: InputCollector = InputCollector(),
         environment: Environment = Environment(),
         builder: ClopCommandBuilder = ClopCommandBuilder(),
-        runner: any ClopProcessRunning = FoundationClopProcessRunner()
+        runner: any ClopProcessRunning = FoundationClopProcessRunner(),
+        preserveOriginalOverride: Bool? = nil
     ) -> String? {
         let response = response(
             requestJSON: requestJSON,
@@ -144,7 +148,8 @@ enum ClopRequestDispatcher {
             collector: collector,
             environment: environment,
             builder: builder,
-            runner: runner
+            runner: runner,
+            preserveOriginalOverride: preserveOriginalOverride
         )
         guard let item = response.items.first else {
             return nil

@@ -173,6 +173,9 @@ configurations, and no migration or fallback state is maintained.
 - `recursiveFolders` controls both folder inspection and supported Clop
   command arguments
 - Universal Action accepts files, URLs, text, and multiple items
+- Universal Action exposes one Optimize entry; Command-Return inverts the
+  configured aggressive default, Shift-Return inverts Preserve Original, and
+  Command-Shift combines both
 - Six configurable Hotkeys: menu, optimize, and aggressive optimize for
   clipboard or Alfred-selected input
 

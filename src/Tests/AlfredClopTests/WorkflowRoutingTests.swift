@@ -98,7 +98,7 @@ struct WorkflowRoutingTests {
             return script
         }
 
-        #expect(notificationScripts.count == 7)
+        #expect(notificationScripts.count == 11)
         #expect(notificationScripts.allSatisfy {
             $0.contains("if [[ -n \"$feedback\" ]]")
                 && !$0.contains("${dnd")
@@ -264,6 +264,58 @@ struct WorkflowRoutingTests {
         #expect(objects.filter {
             $0["type"] as? String == "alfred.workflow.trigger.hotkey"
         }.count == 6)
+    }
+
+    @Test
+    func optimizeUniversalActionUsesModifiersInsteadOfDuplicateAggressiveAction() throws {
+        let plist = try workflowPlist()
+        let objects = try #require(plist["objects"] as? [[String: Any]])
+        let connections = try #require(
+            plist["connections"] as? [String: [[String: Any]]]
+        )
+        let universalActions = objects.filter {
+            $0["type"] as? String == "alfred.workflow.trigger.universalaction"
+        }
+        let names = universalActions.compactMap {
+            ($0["config"] as? [String: Any])?["name"] as? String
+        }
+        let routes = try #require(
+            connections["03E954FC-A80B-44A5-8A25-1E3A1A676063"]
+        )
+        let scriptsByUID: [String: String] = Dictionary(
+            uniqueKeysWithValues: objects.compactMap { object in
+                guard object["type"] as? String == "alfred.workflow.action.script",
+                      let uid = object["uid"] as? String,
+                      let script = (object["config"] as? [String: Any])?["script"]
+                        as? String else {
+                    return nil
+                }
+                return (uid, script)
+            }
+        )
+
+        #expect(names.contains("Clop Optimize"))
+        #expect(!names.contains("Clop Optimize (Aggressive)"))
+        #expect(Set(routes.compactMap { $0["modifiers"] as? Int }) == [
+            0,
+            131_072,
+            1_048_576,
+            1_179_648
+        ])
+
+        func script(for modifiers: Int) throws -> String {
+            let route = try #require(routes.first {
+                $0["modifiers"] as? Int == modifiers
+            })
+            let uid = try #require(route["destinationuid"] as? String)
+            return try #require(scriptsByUID[uid])
+        }
+
+        #expect(try !script(for: 0).contains("--standard"))
+        #expect(try script(for: 1_048_576).contains("--invert-aggressive"))
+        #expect(try script(for: 131_072).contains("--invert-preserve"))
+        #expect(try script(for: 1_179_648).contains("--invert-aggressive"))
+        #expect(try script(for: 1_179_648).contains("--invert-preserve"))
     }
 
     private func workflowPlist() throws -> [String: Any] {

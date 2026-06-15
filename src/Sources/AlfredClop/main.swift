@@ -197,7 +197,20 @@ enum AlfredClopCommand {
             return
         }
 
-        let aggressive = arguments.contains("--aggressive")
+        let environment = Environment()
+        let aggressive: Bool
+        if arguments.contains("--aggressive") {
+            aggressive = true
+        } else if arguments.contains("--standard") {
+            aggressive = false
+        } else if arguments.contains("--invert-aggressive") {
+            aggressive = !environment.aggressiveByDefault
+        } else {
+            aggressive = environment.aggressiveByDefault
+        }
+        let preserveOriginal = arguments.contains("--invert-preserve")
+            ? !environment.preserveOriginal
+            : nil
         let request = ClopRequest(
             input: input,
             route: .execute(action: .optimise(aggressive: aggressive))
@@ -209,7 +222,10 @@ enum AlfredClopCommand {
             printText("Unable to encode Clop request.")
             return
         }
-        if let feedback = ClopRequestDispatcher.quietFeedback(requestJSON: json) {
+        if let feedback = ClopRequestDispatcher.quietFeedback(
+            requestJSON: json,
+            preserveOriginalOverride: preserveOriginal
+        ) {
             printText(feedback)
         }
     }

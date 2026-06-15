@@ -251,6 +251,36 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func executeRouteCanOverridePreservationForHeadlessModifiers() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(action: .optimise(aggressive: false))
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: Environment(values: [
+                "preserveOriginal": "true"
+            ]),
+            builder: dispatcherBuilder(),
+            runner: runner,
+            preserveOriginalOverride: false
+        )
+
+        #expect(response.items.first?.title == "Optimization complete")
+        #expect(runner.command?.arguments.contains("--output") == false)
+        #expect(runner.command?.arguments.contains("%P/%f-clop") == false)
+    }
+
+    @Test
     func headlessExecutionUsesOnlyConfiguredSettingsLocation() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
