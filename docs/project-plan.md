@@ -854,9 +854,8 @@ Targets with meaningful conversion controls expose one shallow inline editor:
   Filter query. Deleting the value returns to the target list without closing
   Alfred.
 - Control-Return on the built-in target enters the same editor with the intent
-  of creating a preset. Because Alfred's parameter transition clears the
-  visible query, this route includes an explicit Back to conversion formats
-  result.
+  of creating a preset. It passes the same visible target query as Tab, so
+  deleting the value returns to the target list in exactly the same way.
 - The empty editor keeps conversion with Clop's default executable and shows
   concise typing guidance. Users type the control value directly; do not add a
   separate Set Compression submenu.
@@ -867,13 +866,16 @@ Targets with meaningful conversion controls expose one shallow inline editor:
   do not expose an empty controls editor or format-only preset creation.
 
 Control-Return on a complete typed conversion saves the full media, target,
-and control combination. Control-Return on an existing conversion preset opens
-the same confirmed removal flow used by Crop / Resize and Downscale. Built-in
-format-only rows are not presets.
+and control combination, then returns to the full media-specific target list
+instead of staying inside the target controls editor. Control-Return on an
+existing conversion preset opens the same confirmed removal flow used by Crop
+/ Resize and Downscale; confirming removal also returns to the full target
+list. Built-in format-only rows are not presets.
 
 Saved conversion presets appear both in the media-specific target list and in
 their target's inline editor. This keeps reusable conversions one step away and
-keeps same-format recompression presets available for removal.
+keeps same-format recompression presets available for removal. Saved preset
+rows use concise subtitles and do not repeat the full compression-scale help.
 
 Hide a built-in image target when every concrete input is already that exact
 format, treating JPG and JPEG as equivalent. Keep all built-in targets for

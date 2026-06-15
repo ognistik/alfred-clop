@@ -285,9 +285,8 @@ configurations, and no migration or fallback state is maintained.
 - Audio targets: MP3, AAC, M4A, Opus, Ogg, FLAC, WAV, and AIFF
 - Tab opens a reversible inline controls editor by autocompleting the target in
   the current query; deleting the value returns to the target list
-- Control-Return on a controllable built-in target enters the same editor for
-  preset creation, with an explicit Back result for the parameter-transition
-  route
+- Control-Return on a controllable built-in target enters the same visible
+  target query as Tab, so Backspace returns to the format list identically
 - Image conversion accepts compression `5...100`
 - MP4 conversion accepts compression `5...100` or `auto`; fixed-setting video
   targets do not expose meaningless controls
@@ -295,9 +294,10 @@ configurations, and no migration or fallback state is maintained.
 - Empty controls editors retain an executable Clop-default result rather than
   requiring another step
 - Complete target-and-control combinations can be saved with Control-Return;
+  saves and confirmed removals return to the full media target list, while
   existing presets use confirmation-based Control-Return removal
 - Saved conversion presets appear in both the media target list and the
-  target-specific controls editor
+  target-specific controls editor with concise saved-preset subtitles
 - Built-in same-format image targets are hidden only for clear homogeneous
   inputs, with JPG and JPEG treated as equivalent
 - Saved same-format recompression presets remain visible and executable
@@ -465,7 +465,7 @@ and paper-size discovery.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 220 tests.
+- `./scripts/test.sh` passes 221 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

@@ -25,6 +25,7 @@ struct ConversionParameterMenuTests {
             format: "webp"
         )))
         #expect(webp.autocomplete == "webp ")
+        #expect(webp.subtitle.contains("⇥ Controls · ⌃↩ Create preset"))
         #expect(
             webp.mods?.control?.subtitle
                 == "Create a WebP conversion preset"
@@ -70,7 +71,7 @@ struct ConversionParameterMenuTests {
     }
 
     @Test
-    func controlEntryUsesSameEditorAndProvidesBackAction() throws {
+    func controlEntryUsesSameVisibleQueryAsTab() throws {
         let fixture = try fixture(
             action: .convertImage,
             input: "/tmp/photo.png"
@@ -83,24 +84,29 @@ struct ConversionParameterMenuTests {
         let webp = try #require(root.items.first {
             $0.title == "Convert to WebP"
         })
+        let control = try #require(webp.mods?.control)
         let controlState = try #require(
             webp.mods?.control?.variables?[ActionMenu.menuStateVariable]
         )
 
         let controls = ConversionParameterMenu.response(
             stateJSON: controlState,
-            query: "",
+            query: try #require(control.arg),
             environment: fixture.environment
         )
 
+        #expect(control.arg == "webp ")
+        #expect(
+            control.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.parameterStepQuery.rawValue
+        )
         #expect(
             controls.items.first?.title
                 == "Convert to WebP using Clop default"
         )
-        #expect(
-            controls.items.last?.title
-                == "Back to conversion formats"
-        )
+        #expect(!controls.items.contains {
+            $0.title == "Back to conversion formats"
+        })
     }
 
     @Test
@@ -188,10 +194,24 @@ struct ConversionParameterMenuTests {
             query: "",
             environment: fixture.environment
         )
+        #expect(saved.items.contains {
+            $0.title == "Convert to WebP"
+        })
+        #expect(!saved.items.contains {
+            $0.title == "Convert to WebP using Clop default"
+        })
         let preset = try #require(saved.items.first {
             $0.title == "WebP · Compression 70"
-                || $0.title == "Convert to WebP · Compression 70"
         })
+        let exact = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "webp 70",
+            environment: fixture.environment
+        )
+        #expect(
+            exact.items.first?.subtitle
+                == "Passed file · Compression 70 · Saved preset"
+        )
         let confirmationState = try #require(
             preset.mods?.control?
                 .variables?[ActionMenu.menuStateVariable]
@@ -205,13 +225,19 @@ struct ConversionParameterMenuTests {
             confirmation.items.first?
                 .variables?[ActionMenu.menuStateVariable]
         )
-        _ = ConversionParameterMenu.response(
+        let removed = ConversionParameterMenu.response(
             stateJSON: removalState,
             query: "",
             environment: fixture.environment
         )
 
         #expect(try fixture.store.load().presets.isEmpty)
+        #expect(removed.items.contains {
+            $0.title == "Convert to WebP"
+        })
+        #expect(!removed.items.contains {
+            $0.title == "Convert to WebP using Clop default"
+        })
     }
 
     @Test

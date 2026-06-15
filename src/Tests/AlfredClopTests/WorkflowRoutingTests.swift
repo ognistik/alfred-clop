@@ -273,6 +273,39 @@ struct WorkflowRoutingTests {
     }
 
     @Test
+    func parameterQueryRoutePreservesTheVisibleAlfredQuery() throws {
+        let plist = try workflowPlist()
+        let objects = try #require(plist["objects"] as? [[String: Any]])
+        let connections = try #require(
+            plist["connections"] as? [String: [[String: Any]]]
+        )
+        let conditional = try #require(objects.first {
+            $0["uid"] as? String == "C81E575B-0A6B-45AE-B968-6A2313FB84A7"
+        })
+        let config = try #require(
+            conditional["config"] as? [String: Any]
+        )
+        let conditions = try #require(
+            config["conditions"] as? [[String: Any]]
+        )
+        let queryOutput = try #require(conditions.first {
+            $0["matchstring"] as? String
+                == WorkflowRequestKind.parameterStepQuery.rawValue
+        })
+        let outputUID = try #require(queryOutput["uid"] as? String)
+        let routes = try #require(
+            connections["C81E575B-0A6B-45AE-B968-6A2313FB84A7"]
+        )
+
+        #expect(routes.contains {
+            $0["sourceoutputuid"] as? String == outputUID
+                && $0["destinationuid"] as? String
+                    == "A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0"
+                && $0["vitoclose"] as? Bool == false
+        })
+    }
+
+    @Test
     func workflowKeepsSixUserConfigurableHotkeys() throws {
         let plist = try workflowPlist()
         let objects = try #require(plist["objects"] as? [[String: Any]])

@@ -117,7 +117,6 @@ enum ConversionParameterMenu {
                 ),
                 query: query,
                 presets: presets,
-                enteredByControl: true,
                 environment: environment,
                 fileManager: fileManager
             )
@@ -142,7 +141,6 @@ enum ConversionParameterMenu {
                 choice: ConversionChoice(media: media, format: format),
                 query: editorQuery,
                 presets: presets,
-                enteredByControl: false,
                 environment: environment,
                 fileManager: fileManager
             )
@@ -203,7 +201,6 @@ enum ConversionParameterMenu {
         choice: ConversionChoice,
         query: String,
         presets: [ConversionActionPreset],
-        enteredByControl: Bool,
         environment: Environment,
         fileManager: FileManager
     ) -> ScriptFilterResponse {
@@ -290,27 +287,10 @@ enum ConversionParameterMenu {
             }
         }
 
-        if enteredByControl {
-            let rootState = MenuState.conversion(request)
-            let rootJSON = encoded(rootState)
-            items.append(ScriptFilterItem(
-                title: "Back to conversion formats",
-                subtitle: "Return to the \(choice.media.rawValue) format list",
-                arg: rootJSON,
-                valid: true,
-                variables: transitionVariables(
-                    stateJSON: rootJSON,
-                    request: request
-                )
-            ))
-        }
         return response(
             items: items,
             request: request,
-            state: .conversion(
-                request,
-                format: enteredByControl ? choice.format : nil
-            )
+            state: .conversion(request)
         )
     }
 
@@ -326,7 +306,7 @@ enum ConversionParameterMenu {
             title: "Convert to \(choice.displayFormat)",
             subtitle: [
                 "\(inputDescription(for: request)) · Use Clop defaults",
-                hasControls ? "Tab for controls · Control-Return to create a preset" : nil
+                hasControls ? "⇥ Controls · ⌃↩ Create preset" : nil
             ].compactMap(\.self).joined(separator: " - "),
             arg: operationArgument(
                 choice: choice,
@@ -390,7 +370,9 @@ enum ConversionParameterMenu {
             title: "Convert to \(choice.displayValue)",
             subtitle: [
                 inputDescription(for: request),
-                settingDescription(choice.setting),
+                savedPreset == nil
+                    ? settingDescription(choice.setting)
+                    : conciseSettingDescription(choice.setting),
                 savedPreset == nil ? nil : "Saved preset"
             ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
@@ -481,13 +463,13 @@ enum ConversionParameterMenu {
         choice: ConversionChoice,
         request: ParameterStepRequest
     ) -> ScriptFilterModifier {
-        let state = MenuState.conversion(request, format: choice.format)
+        let state = MenuState.conversion(request)
         let stateJSON = encoded(state)
         return ScriptFilterModifier(
-            arg: stateJSON,
+            arg: "\(choice.format) ",
             subtitle: "Create \(indefiniteArticle(for: choice.displayFormat)) \(choice.displayFormat) conversion preset",
             valid: true,
-            variables: transitionVariables(
+            variables: queryTransitionVariables(
                 stateJSON: stateJSON,
                 request: request
             )
@@ -499,14 +481,14 @@ enum ConversionParameterMenu {
         preset: ConversionActionPreset,
         request: ParameterStepRequest
     ) -> ScriptFilterModifier {
-        let state = MenuState.conversion(
-            request,
-            format: preset.choice.format,
-            action: PresetMenuAction(
-                kind: kind,
-                preset: .conversion(preset)
+        let action = PresetMenuAction(kind: kind, preset: .conversion(preset))
+        let state = kind == .save
+            ? MenuState.conversion(request, format: nil, action: action)
+            : MenuState.conversion(
+                request,
+                format: preset.choice.format,
+                action: action
             )
-        )
         let stateJSON = encoded(state)
         return ScriptFilterModifier(
             arg: stateJSON,
@@ -528,7 +510,7 @@ enum ConversionParameterMenu {
     ) -> ScriptFilterResponse {
         let state = MenuState.conversion(
             request,
-            format: format,
+            format: nil,
             action: PresetMenuAction(kind: .remove, preset: action.preset)
         )
         let stateJSON = encoded(state)
@@ -631,6 +613,21 @@ enum ConversionParameterMenu {
             return "Automatic compression"
         case .bitrate(let value):
             return "Target bitrate \(value) kbps"
+        case nil:
+            return nil
+        }
+    }
+
+    private static func conciseSettingDescription(
+        _ setting: ConversionSetting?
+    ) -> String? {
+        switch setting {
+        case .compression(let value):
+            return "Compression \(value)"
+        case .automaticCompression:
+            return "Automatic compression"
+        case .bitrate(let value):
+            return "\(value) kbps"
         case nil:
             return nil
         }
@@ -754,6 +751,19 @@ enum ConversionParameterMenu {
         )
         variables[ActionMenu.requestKindVariable] =
             WorkflowRequestKind.parameterStep.rawValue
+        return variables
+    }
+
+    private static func queryTransitionVariables(
+        stateJSON: String,
+        request: ParameterStepRequest
+    ) -> [String: String] {
+        var variables = preservedVariables(
+            request: request,
+            stateJSON: stateJSON
+        )
+        variables[ActionMenu.requestKindVariable] =
+            WorkflowRequestKind.parameterStepQuery.rawValue
         return variables
     }
 

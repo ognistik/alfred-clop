@@ -245,6 +245,18 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
+				<string>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>71717171-7171-4171-8171-717171717171</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
 				<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
 				<key>modifiers</key>
 				<integer>0</integer>
@@ -252,6 +264,18 @@
 				<string></string>
 				<key>sourceoutputuid</key>
 				<string>F32D25CA-0BC0-4196-B7EB-CBAA6EECF33A</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>498E7A69-76E2-48E1-89F4-1C6FC647BA23</string>
 				<key>vitoclose</key>
 				<false/>
 			</dict>
@@ -266,18 +290,6 @@
 				<string>E0E0E0E0-E0E0-40E0-80E0-E0E0E0E0E0E0</string>
 				<key>vitoclose</key>
 				<true/>
-			</dict>
-			<dict>
-				<key>destinationuid</key>
-				<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
-				<key>modifiers</key>
-				<integer>0</integer>
-				<key>modifiersubtext</key>
-				<string></string>
-				<key>sourceoutputuid</key>
-				<string>498E7A69-76E2-48E1-89F4-1C6FC647BA23</string>
-				<key>vitoclose</key>
-				<false/>
 			</dict>
 			<dict>
 				<key>destinationuid</key>
@@ -345,15 +357,19 @@
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>argument</key>
-				<string></string>
-				<key>passthroughargument</key>
-				<false/>
+				<key>externaltriggerid</key>
+				<string>mainMenu</string>
+				<key>passinputasargument</key>
+				<true/>
+				<key>passvariables</key>
+				<true/>
+				<key>workflowbundleid</key>
+				<string>com.aft.clop</string>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.utility.argument</string>
+			<string>alfred.workflow.output.callexternaltrigger</string>
 			<key>uid</key>
-			<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
+			<string>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
@@ -413,6 +429,21 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>argument</key>
+				<string></string>
+				<key>passthroughargument</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.argument</string>
+			<key>uid</key>
+			<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>conditions</key>
 				<array>
 					<dict>
@@ -441,6 +472,103 @@ fi</string>
 			<string>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</string>
 			<key>version</key>
 			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>conditions</key>
+				<array>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_request_kind}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>parameterStep</string>
+						<key>outputlabel</key>
+						<string>Parameter step</string>
+						<key>uid</key>
+						<string>F32D25CA-0BC0-4196-B7EB-CBAA6EECF33A</string>
+					</dict>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_request_kind}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>parameterStepQuery</string>
+						<key>outputlabel</key>
+						<string>Parameter step with query</string>
+						<key>uid</key>
+						<string>71717171-7171-4171-8171-717171717171</string>
+					</dict>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_request_kind}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>workflowSettings</string>
+						<key>outputlabel</key>
+						<string>Workflow settings</string>
+						<key>uid</key>
+						<string>498E7A69-76E2-48E1-89F4-1C6FC647BA23</string>
+					</dict>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_request_kind}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>configurationMutationReturn</string>
+						<key>outputlabel</key>
+						<string>Update and return</string>
+						<key>uid</key>
+						<string>E0E0E0E0-E0E0-40E0-80E0-E0E0E0E0E0E0</string>
+					</dict>
+				</array>
+				<key>elselabel</key>
+				<string>Execute operation</string>
+				<key>hideelse</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.conditional</string>
+			<key>uid</key>
+			<string>C81E575B-0A6B-45AE-B968-6A2313FB84A7</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>68</integer>
+				<key>script</key>
+				<string>tell application id "com.runningwithcrayons.Alfred" to reveal workflow (system attribute "alfred_workflow_bundleid") with configuration</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>6</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
+			<key>version</key>
+			<integer>2</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -577,25 +705,6 @@ printf ':'</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>externaltriggerid</key>
-				<string>mainMenu</string>
-				<key>passinputasargument</key>
-				<true/>
-				<key>passvariables</key>
-				<true/>
-				<key>workflowbundleid</key>
-				<string>com.aft.clop</string>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.output.callexternaltrigger</string>
-			<key>uid</key>
-			<string>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</string>
-			<key>version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
 				<key>argument</key>
 				<string></string>
 				<key>passthroughargument</key>
@@ -650,29 +759,6 @@ printf ':'</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>68</integer>
-				<key>script</key>
-				<string>tell application id "com.runningwithcrayons.Alfred" to reveal workflow (system attribute "alfred_workflow_bundleid") with configuration</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>6</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
 				<key>acceptsfiles</key>
 				<true/>
 				<key>acceptsmulti</key>
@@ -721,66 +807,6 @@ printf ':'</string>
 			<string>22222222-2222-4222-8222-222222222222</string>
 			<key>version</key>
 			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>conditions</key>
-				<array>
-					<dict>
-						<key>inputstring</key>
-						<string>{var:alfred_clop_request_kind}</string>
-						<key>matchcasesensitive</key>
-						<false/>
-						<key>matchmode</key>
-						<integer>0</integer>
-						<key>matchstring</key>
-						<string>parameterStep</string>
-						<key>outputlabel</key>
-						<string>Parameter step</string>
-						<key>uid</key>
-						<string>F32D25CA-0BC0-4196-B7EB-CBAA6EECF33A</string>
-					</dict>
-					<dict>
-						<key>inputstring</key>
-						<string>{var:alfred_clop_request_kind}</string>
-						<key>matchcasesensitive</key>
-						<false/>
-						<key>matchmode</key>
-						<integer>0</integer>
-						<key>matchstring</key>
-						<string>workflowSettings</string>
-						<key>outputlabel</key>
-						<string>Workflow settings</string>
-						<key>uid</key>
-						<string>498E7A69-76E2-48E1-89F4-1C6FC647BA23</string>
-					</dict>
-					<dict>
-						<key>inputstring</key>
-						<string>{var:alfred_clop_request_kind}</string>
-						<key>matchcasesensitive</key>
-						<false/>
-						<key>matchmode</key>
-						<integer>0</integer>
-						<key>matchstring</key>
-						<string>configurationMutationReturn</string>
-						<key>outputlabel</key>
-						<string>Update and return</string>
-						<key>uid</key>
-						<string>E0E0E0E0-E0E0-40E0-80E0-E0E0E0E0E0E0</string>
-					</dict>
-				</array>
-				<key>elselabel</key>
-				<string>Execute operation</string>
-				<key>hideelse</key>
-				<false/>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.utility.conditional</string>
-			<key>uid</key>
-			<string>C81E575B-0A6B-45AE-B968-6A2313FB84A7</string>
-			<key>version</key>
-			<integer>1</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -855,6 +881,19 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>unstackview</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.hidealfred</string>
+			<key>uid</key>
+			<string>D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>concurrently</key>
 				<false/>
 				<key>escaping</key>
@@ -883,19 +922,6 @@ fi</string>
 			<string>B1111111-1111-4111-8111-111111111111</string>
 			<key>version</key>
 			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>unstackview</key>
-				<false/>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.utility.hidealfred</string>
-			<key>uid</key>
-			<string>D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0</string>
-			<key>version</key>
-			<integer>1</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -1395,7 +1421,7 @@ fi</string>
 			<key>xpos</key>
 			<real>1510</real>
 			<key>ypos</key>
-			<real>210</real>
+			<real>65</real>
 		</dict>
 		<key>AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA</key>
 		<dict>
@@ -1421,9 +1447,9 @@ fi</string>
 		<key>B30C287D-7137-4B63-8FA2-95B849C440FA</key>
 		<dict>
 			<key>xpos</key>
-			<real>1150</real>
+			<real>1205</real>
 			<key>ypos</key>
-			<real>410</real>
+			<real>405</real>
 		</dict>
 		<key>B3333333-3333-4333-8333-333333333333</key>
 		<dict>
@@ -1455,23 +1481,23 @@ fi</string>
 			<key>xpos</key>
 			<real>1380</real>
 			<key>ypos</key>
-			<real>240</real>
+			<real>265</real>
 		</dict>
 		<key>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</key>
 		<dict>
 			<key>note</key>
 			<string>Workflow Settings</string>
 			<key>xpos</key>
-			<real>1345</real>
+			<real>1510</real>
 			<key>ypos</key>
-			<real>350</real>
+			<real>205</real>
 		</dict>
 		<key>C81E575B-0A6B-45AE-B968-6A2313FB84A7</key>
 		<dict>
 			<key>xpos</key>
 			<real>970</real>
 			<key>ypos</key>
-			<real>355</real>
+			<real>180</real>
 		</dict>
 		<key>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</key>
 		<dict>
@@ -1487,23 +1513,23 @@ fi</string>
 			<key>xpos</key>
 			<real>1380</real>
 			<key>ypos</key>
-			<real>500</real>
+			<real>435</real>
 		</dict>
 		<key>D922B7A2-2433-441D-B70D-4556591E487D</key>
 		<dict>
 			<key>xpos</key>
-			<real>975</real>
+			<real>1215</real>
 			<key>ypos</key>
-			<real>65</real>
+			<real>95</real>
 		</dict>
 		<key>F0F0F0F0-F0F0-40F0-80F0-F0F0F0F0F0F0</key>
 		<dict>
 			<key>note</key>
 			<string>Apply Configuration and Return</string>
 			<key>xpos</key>
-			<real>1155</real>
+			<real>1205</real>
 			<key>ypos</key>
-			<real>210</real>
+			<real>235</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
