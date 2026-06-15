@@ -670,6 +670,12 @@ Continue accepting Clop's native `128x0` and `0x720` forms. Subtitles must
 explain the interpretation before execution. Invalid input should produce one
 clear, non-executable result with concise examples.
 
+When a valid typed value also partially matches saved presets, keep the
+interpreted typed action first and list the matching presets below it. This
+keeps Return and Control-Return attached to exactly what the user typed while
+retaining preset discovery and autocomplete. Only an exact normalized preset
+match is combined into the primary interpreted row.
+
 The instructional item must always remain at the top of the parameter menu,
 even when presets exist. Users must always be able to type and run a new value
 without first choosing a preset.
@@ -826,7 +832,9 @@ destinations remain literal in previews.
 Use the same guided-input principle as crop: show syntax help when empty, then
 interpret a typed factor or percentage as one primary result. Accept values
 such as `0.5` and `75%`, normalizing percentages to factors such as `0.75`.
-Only user-created presets should appear as additional choices.
+Only user-created presets should appear as additional choices. A valid typed
+factor remains the first result when it partially matches a preset; exact
+normalized matches combine into one saved result.
 
 ### Convert
 

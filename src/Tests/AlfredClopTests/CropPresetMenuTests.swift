@@ -66,7 +66,7 @@ struct CropPresetMenuTests {
     }
 
     @Test
-    func typedQueryPrefersMatchingPresetOverFreeFormAction() throws {
+    func validTypedQueryStaysFirstBeforeMatchingPresets() throws {
         let fixture = try Fixture()
         try fixture.save("16:9")
         try fixture.save("1920")
@@ -77,30 +77,36 @@ struct CropPresetMenuTests {
 
         #expect(
             response.items.map(\.title)
-                == ["w128"]
+                == ["Use long edge 128", "w128"]
         )
         #expect(response.items.allSatisfy {
             $0.title != "Type crop or resize parameters"
         })
+        #expect(response.items[0].mods?.control?.subtitle == "Save 128 as a preset")
+        #expect(
+            response.items[1].mods?.control?.subtitle
+                == "Remove saved preset w128"
+        )
     }
 
     @Test
-    func numericPresetPrefixIsImmediatelySelected() throws {
+    func numericPresetPrefixKeepsTypedValueAvailableFirst() throws {
         let fixture = try Fixture()
         try fixture.save("2:3")
         try fixture.save("1920")
 
         let response = fixture.response(query: "19")
-        let item = try #require(response.items.first)
-        let operation = try operationRequest(from: item)
+        let typedItem = try #require(response.items.first)
+        let operation = try operationRequest(from: typedItem)
 
-        #expect(response.items.map(\.title) == ["1920"])
-        #expect(item.autocomplete == "1920")
+        #expect(response.items.map(\.title) == ["Use long edge 19", "1920"])
+        #expect(typedItem.autocomplete == "19")
         #expect(operation.action == .crop(
-            size: "1920",
+            size: "19",
             smartCrop: false,
             longEdge: true
         ))
+        #expect(typedItem.mods?.control?.subtitle == "Save 19 as a preset")
     }
 
     @Test

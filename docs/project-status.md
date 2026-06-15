@@ -211,7 +211,8 @@ configurations, and no migration or fallback state is maintained.
 - Empty crop queries show one non-executable instructional item instead of
   workflow-authored presets
 - Typed queries remove the instructional item immediately, filter saved
-  presets, and select matching presets before offering a free-form action
+  presets, and keep a valid interpreted action first before partial preset
+  matches
 - Partial preset queries remain useful without showing premature validation
   errors; exact normalized preset matches produce one saved interpreted action
 - Typed values without matching presets produce exactly one interpreted result

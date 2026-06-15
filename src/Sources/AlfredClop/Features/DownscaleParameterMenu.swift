@@ -206,21 +206,22 @@ enum DownscaleParameterMenu {
 
         if let factor = DownscaleFactorParser.parse(trimmedQuery) {
             let candidate = DownscaleActionPreset(factor: factor.factor)
-            if let exactPreset = presets.first(where: { $0 == candidate }) {
-                items.append(interpretedItem(
-                    for: factor,
-                    request: request,
-                    savedPreset: exactPreset,
-                    environment: environment
-                ))
-            } else if matchingPresets.isEmpty {
-                items.append(interpretedItem(
-                    for: factor,
-                    request: request,
-                    savedPreset: nil,
-                    environment: environment
-                ))
-            }
+            let exactPreset = presets.first(where: { $0 == candidate })
+            items.append(interpretedItem(
+                for: factor,
+                request: request,
+                savedPreset: exactPreset,
+                environment: environment
+            ))
+            items.append(contentsOf: matchingPresets
+                .filter { $0 != exactPreset }
+                .map {
+                    presetItem(
+                        for: $0,
+                        request: request,
+                        environment: environment
+                    )
+                })
         } else if matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
                 title: "Invalid downscale factor",
@@ -230,7 +231,7 @@ enum DownscaleParameterMenu {
             ))
         }
 
-        if items.isEmpty {
+        if items.isEmpty && !matchingPresets.isEmpty {
             items.append(contentsOf: matchingPresets.compactMap {
                 presetItem(for: $0, request: request, environment: environment)
             })

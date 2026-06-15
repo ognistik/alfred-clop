@@ -135,6 +135,30 @@ struct DownscaleParameterMenuTests {
     }
 
     @Test
+    func validTypedFactorStaysFirstBeforeMatchingPreset() throws {
+        let fixture = try DownscalePresetFixture()
+        _ = try fixture.store.save(.downscale(DownscaleActionPreset(
+            factor: 0.75
+        )))
+
+        let response = DownscaleParameterMenu.response(
+            stateJSON: try downscaleStateJSON(context: .arguments),
+            query: "7",
+            environment: fixture.environment
+        )
+        let typedItem = try #require(response.items.first)
+        let operation = try operationRequest(from: typedItem)
+
+        #expect(response.items.map(\.title) == ["Use 7%", "75%"])
+        #expect(operation.action == .downscale(factor: 0.07))
+        #expect(typedItem.mods?.control?.subtitle == "Save 7% as a preset")
+        #expect(
+            response.items[1].mods?.control?.subtitle
+                == "Remove saved preset 75%"
+        )
+    }
+
+    @Test
     func controlReturnOnTypedValueSavesPreset() throws {
         let fixture = try DownscalePresetFixture()
         let response = DownscaleParameterMenu.response(

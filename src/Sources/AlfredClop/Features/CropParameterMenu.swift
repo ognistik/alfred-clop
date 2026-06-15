@@ -268,25 +268,24 @@ enum CropParameterMenu {
 
         if let size = CropSizeParser.parse(trimmedQuery) {
             let candidate = CropActionPreset(size: size)
-            if let exactPreset = presets.first(where: { $0 == candidate }) {
-                if let item = interpretedItem(
-                    for: size,
-                    request: request,
-                    savedPreset: exactPreset,
-                    environment: environment
-                ) {
-                    items.append(item)
-                }
-            } else if matchingPresets.isEmpty {
-                if let item = interpretedItem(
-                    for: size,
-                    request: request,
-                    savedPreset: nil,
-                    environment: environment
-                ) {
-                    items.append(item)
-                }
+            let exactPreset = presets.first(where: { $0 == candidate })
+            if let item = interpretedItem(
+                for: size,
+                request: request,
+                savedPreset: exactPreset,
+                environment: environment
+            ) {
+                items.append(item)
             }
+            items.append(contentsOf: matchingPresets
+                .filter { $0 != exactPreset }
+                .compactMap {
+                    presetItem(
+                        for: $0,
+                        request: request,
+                        environment: environment
+                    )
+                })
         } else if matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
                 title: "Invalid crop or resize value",
@@ -296,7 +295,7 @@ enum CropParameterMenu {
             ))
         }
 
-        if items.isEmpty {
+        if items.isEmpty && !matchingPresets.isEmpty {
             items.append(contentsOf: matchingPresets.compactMap {
                 presetItem(for: $0, request: request, environment: environment)
             })
