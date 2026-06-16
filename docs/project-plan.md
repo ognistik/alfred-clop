@@ -791,9 +791,10 @@ immediately from the modifier action.
 
 Presets live only in the submenu for their action. Crop presets appear in Crop
 / Resize, downscale presets in Downscale, conversion presets in the relevant
-Convert menu, and Optimize presets in the relevant media Optimize controls
-menu. Add and remove them there; do not duplicate preset management in
-Configuration or expose presets through the External Trigger.
+Convert menu, and Optimize presets appear in the Optimize menu and the
+relevant media Optimize controls editor. Add and remove them there; do not
+duplicate preset management in Configuration or expose presets through the
+External Trigger.
 
 Workflow settings storage:
 
@@ -998,7 +999,7 @@ The first Optimize menu row runs Clop defaults for the current input. Its
 subtitle should be compact, for example:
 
 ```text
-⏎ Run • ⇥ Controls • ⌃⏎ Custom Presets
+Copied file · Clop Defaults · ⇥ Controls, ⌃↩ Save Preset
 ```
 
 Tab or Control-Return on that default row autocompletes a controls prefix such
@@ -1008,6 +1009,14 @@ Alfred Large Type when useful. Once the user types a valid control expression,
 the primary interpreted row supports Return to run, Tab to normalize for
 editing, and Control-Return to save the complete media-specific preset. Saved
 presets support Return to run and Control-Return to open removal confirmation.
+
+For homogeneous image, video, PDF, or audio input, typing directly in the
+Optimize menu is also interpreted as that media's controls, so the user does
+not need to enter `controls:` before typing common values. The interpreted
+typed action remains first whenever the typed query is valid. Plausible but
+incomplete control prefixes keep a concise guidance row first, with matching
+saved presets below it. This mirrors Crop / Resize and Downscale while keeping
+the explicit `controls:` editor available through Tab or Control-Return.
 
 Interactive Optimize controls intentionally exclude Clop's typed optimise
 `--crop` and `--downscale-factor` options because Alfred Clop already exposes
@@ -1020,10 +1029,20 @@ Optimize media controls:
 
 | Media | Interactive grammar |
 | --- | --- |
-| Image | compression `5...100`, `c70` shorthand, or `adaptive` |
-| Video | compression `5...100`, `c70`, `auto`, encoder `hardware`, `software`, `lossless`, or `adaptive`, `mute`, and playback speed such as `2x` |
-| PDF | `adaptive` or DPI `300`, `250`, `200`, `150`, `100`, `72`, or `48` |
-| Audio | compression `5...100`, `c70`, or bitrate such as `b128` |
+| Image | compression `5...100`, or `ad` / `adaptive` |
+| Video | compression `5...100` / `au` / `auto`, encoder `hw` / `hardware`, `sw` / `software`, `ll` / `lossless`, or `ad` / `adaptive`, `m` / `mute`, and playback speed such as `2x` |
+| PDF | `ad` / `adaptive` or DPI `300`, `250`, `200`, `150`, `100`, `72`, or `48`; also accepts `dpi 150` |
+| Audio | compression `5...100`, or bitrate such as `b128` / `bitrate 128` |
+
+Optimize controls accept either spaces or commas between tokens. Teach compact
+tokens first in Alfred subtitles, for example:
+
+```text
+5-100/au, hw/sw/ll/ad, m, 2x
+```
+
+Large Type may show full words and examples such as `70 m`, `70, hw`,
+`au sw m`, and `ad, m, 1.5x`.
 
 Validation should teach the grammar in place: duplicate compression values,
 duplicate encoders, invalid PDF DPI values, and mutually exclusive audio
@@ -1032,7 +1051,8 @@ Bitrate takes priority over compression in audio execution, matching Clop.
 
 For homogeneous input, the Optimize menu opens directly in that media mode.
 Presets are scoped by action and media: image Optimize presets never appear in
-video, PDF, or audio Optimize menus.
+video, PDF, or audio Optimize menus. Saved presets remain visible in the root
+Optimize media menu and the explicit controls editor.
 
 For mixed input, the Optimize menu shows:
 
@@ -1199,7 +1219,7 @@ Selected folder: 14 files · Compress · ⌘⏎ Aggressive, ⇧⏎ Output Templa
 Copied file · Long edge 1920 · ⌃⏎ Save Preset
 Passed file · Crop to 16:9 · ⌥⏎ Smart Crop, ⌃⏎ Save Preset
 Selected file · Saved Preset · Long edge 1920 · ⌃⏎ Remove Preset
-Copied file · Clop Defaults · ⏎ Run, ⇥ Controls, ⌃⏎ Custom Presets
+Copied file · Clop Defaults · ⇥ Controls, ⌃↩ Save Preset
 ```
 
 For Crop / Resize results that perform an actual crop, Option-Return enables

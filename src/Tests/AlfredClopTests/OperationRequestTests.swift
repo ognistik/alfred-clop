@@ -14,6 +14,25 @@ struct OperationRequestTests {
     }
 
     @Test
+    func mediaSpecificOptimizeRequestRoundTrips() throws {
+        let request = OperationRequest(
+            inputs: ["/tmp/video.mp4"],
+            action: .optimiseMedia(OptimizeRequest(
+                media: .video,
+                controls: .video(VideoOptimizeControls(
+                    compression: .automatic,
+                    encoder: .software,
+                    removeAudio: true,
+                    playbackSpeed: 1.5
+                ))
+            )),
+            execution: makeExecutionOptions()
+        )
+
+        #expect(try roundTrip(request) == request)
+    }
+
+    @Test
     func convertRequestRoundTrips() throws {
         let request = OperationRequest(
             inputs: ["/tmp/image.png"],

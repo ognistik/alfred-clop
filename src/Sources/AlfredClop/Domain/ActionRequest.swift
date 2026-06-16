@@ -1,5 +1,6 @@
 enum ActionRequest: Codable, Equatable {
     case optimise(aggressive: Bool)
+    case optimiseMedia(OptimizeRequest)
     case crop(size: String, smartCrop: Bool, longEdge: Bool)
     case downscale(factor: Double)
     case convert(ConversionChoice)
@@ -10,6 +11,7 @@ enum ActionRequest: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case type
         case aggressive
+        case optimize
         case size
         case smartCrop
         case longEdge
@@ -24,6 +26,7 @@ enum ActionRequest: Codable, Equatable {
 
     private enum ActionType: String, Codable {
         case optimise
+        case optimiseMedia
         case crop
         case downscale
         case convert
@@ -39,6 +42,9 @@ enum ActionRequest: Codable, Equatable {
         case let .optimise(aggressive):
             try container.encode(ActionType.optimise, forKey: .type)
             try container.encode(aggressive, forKey: .aggressive)
+        case let .optimiseMedia(request):
+            try container.encode(ActionType.optimiseMedia, forKey: .type)
+            try container.encode(request, forKey: .optimize)
         case let .crop(size, smartCrop, longEdge):
             try container.encode(ActionType.crop, forKey: .type)
             try container.encode(size, forKey: .size)
@@ -71,6 +77,10 @@ enum ActionRequest: Codable, Equatable {
         switch type {
         case .optimise:
             self = .optimise(aggressive: try container.decode(Bool.self, forKey: .aggressive))
+        case .optimiseMedia:
+            self = .optimiseMedia(
+                try container.decode(OptimizeRequest.self, forKey: .optimize)
+            )
         case .crop:
             self = .crop(
                 size: try container.decode(String.self, forKey: .size),

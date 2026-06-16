@@ -124,10 +124,43 @@ struct ConversionActionPreset: Codable, Equatable, Hashable {
     }
 }
 
+struct OptimizeActionPreset: Codable, Equatable, Hashable {
+    var request: OptimizeRequest
+
+    init(request: OptimizeRequest) {
+        self.request = request
+    }
+
+    init(from decoder: Decoder) throws {
+        request = try OptimizeRequest(from: decoder)
+        guard OptimizeControlParser.isSupported(request),
+              !OptimizeControlParser.controlDescriptions(
+                for: request
+              ).isEmpty else {
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: decoder.codingPath,
+                    debugDescription:
+                        "Optimize preset is incomplete or unsupported."
+                )
+            )
+        }
+    }
+
+    var displayValue: String {
+        OptimizeControlParser.displayValue(for: request)
+    }
+
+    var stableUID: String {
+        "optimize.preset.\(request.media.rawValue).\(OptimizeControlParser.stableKey(for: request))"
+    }
+}
+
 enum ActionPreset: Codable, Equatable, Hashable {
     case crop(CropActionPreset)
     case downscale(DownscaleActionPreset)
     case conversion(ConversionActionPreset)
+    case optimize(OptimizeActionPreset)
 
     private enum CodingKeys: String, CodingKey {
         case type
@@ -137,12 +170,14 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case media
         case format
         case setting
+        case optimize
     }
 
     private enum PresetType: String, Codable {
         case crop
         case downscale
         case conversion
+        case optimize
     }
 
     func encode(to encoder: Encoder) throws {
@@ -161,6 +196,9 @@ enum ActionPreset: Codable, Equatable, Hashable {
             try container.encode(preset.choice.media, forKey: .media)
             try container.encode(preset.choice.format, forKey: .format)
             try container.encode(preset.choice.setting, forKey: .setting)
+        case let .optimize(preset):
+            try container.encode(PresetType.optimize, forKey: .type)
+            try container.encode(preset.request, forKey: .optimize)
         }
     }
 
@@ -173,6 +211,20 @@ enum ActionPreset: Codable, Equatable, Hashable {
             self = .downscale(try DownscaleActionPreset(from: decoder))
         case .conversion:
             self = .conversion(try ConversionActionPreset(from: decoder))
+        case .optimize:
+            let request = try container.decode(OptimizeRequest.self, forKey: .optimize)
+            guard OptimizeControlParser.isSupported(request),
+                  !OptimizeControlParser.controlDescriptions(
+                    for: request
+                  ).isEmpty else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .optimize,
+                    in: container,
+                    debugDescription:
+                        "Optimize preset is incomplete or unsupported."
+                )
+            }
+            self = .optimize(OptimizeActionPreset(request: request))
         }
     }
 }

@@ -62,6 +62,68 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
+    func mediaSpecificOptimizeBuildsTypedSubcommandControls() throws {
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/movie with spaces.mp4"],
+            action: .optimiseMedia(OptimizeRequest(
+                media: .video,
+                controls: .video(VideoOptimizeControls(
+                    compression: .value(70),
+                    encoder: .adaptive,
+                    removeAudio: true,
+                    playbackSpeed: 2
+                ))
+            )),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(command.arguments == [
+            "optimise",
+            "video",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--compression",
+            "70",
+            "--encoder",
+            "adaptive",
+            "--remove-audio",
+            "--playback-speed-factor",
+            "2",
+            "--gui",
+            "/tmp/movie with spaces.mp4"
+        ])
+    }
+
+    @Test
+    func mediaSpecificOptimizeUsesDPIAndBitrateFlags() throws {
+        let pdf = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/document.pdf"],
+            action: .optimiseMedia(OptimizeRequest(
+                media: .pdf,
+                controls: .pdf(PDFOptimizeControls(dpi: .adaptive))
+            )),
+            execution: makeExecutionOptions()
+        ))
+        let audio = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/audio.wav"],
+            action: .optimiseMedia(OptimizeRequest(
+                media: .audio,
+                controls: .audio(AudioOptimizeControls(
+                    compression: nil,
+                    bitrate: 128
+                ))
+            )),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(pdf.arguments.contains("--dpi"))
+        #expect(pdf.arguments.contains("adaptive"))
+        #expect(audio.arguments.contains("--bitrate"))
+        #expect(audio.arguments.contains("128"))
+    }
+
+    @Test
     func existingPreservedOutputUsesNextNumericSuffix() throws {
         let directory = try makeTemporaryDirectory()
         let source = directory.appendingPathComponent("photo.png")

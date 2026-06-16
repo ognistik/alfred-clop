@@ -209,14 +209,7 @@ enum PublicRequestParser {
     ) throws -> ActionRequest {
         switch action {
         case .optimise:
-            try rejectUnknown(values, allowed: ["aggressive"])
-            return .optimise(
-                aggressive: try boolean(
-                    values["aggressive"],
-                    name: "aggressive",
-                    defaultValue: false
-                )
-            )
+            return try optimizeExecution(values: values)
         case .crop:
             try rejectUnknown(values, allowed: ["size", "smart crop"])
             guard let sizeValue = values["size"], !sizeValue.isEmpty else {
@@ -258,6 +251,84 @@ enum PublicRequestParser {
         case .cropPDF:
             throw PublicRequestError.unsupportedExecution(title(for: action))
         }
+    }
+
+    private static func optimizeExecution(
+        values: [String: String]
+    ) throws -> ActionRequest {
+        try rejectUnknown(
+            values,
+            allowed: [
+                "aggressive",
+                "media",
+                "controls",
+                "compression",
+                "encoder",
+                "remove audio",
+                "playback speed",
+                "dpi",
+                "bitrate"
+            ]
+        )
+        let controlValues = values.filter { key, _ in
+            key != "aggressive"
+        }
+        guard !controlValues.isEmpty else {
+            return .optimise(
+                aggressive: try boolean(
+                    values["aggressive"],
+                    name: "aggressive",
+                    defaultValue: false
+                )
+            )
+        }
+        guard values["aggressive"] == nil else {
+            throw PublicRequestError.invalidParameter(
+                "aggressive",
+                "not available with media-specific Optimize controls"
+            )
+        }
+        guard let mediaValue = values["media"],
+              let media = optimizeMedia(for: mediaValue) else {
+            throw PublicRequestError.missingParameter("media")
+        }
+
+        var controlParts = [String]()
+        if let controls = values["controls"], !controls.isEmpty {
+            controlParts.append(controls)
+        }
+        if let compression = values["compression"] {
+            controlParts.append(compression)
+        }
+        if let encoder = values["encoder"] {
+            controlParts.append(encoder)
+        }
+        if try boolean(
+            values["remove audio"],
+            name: "remove audio",
+            defaultValue: false
+        ) {
+            controlParts.append("mute")
+        }
+        if let speed = values["playback speed"] {
+            controlParts.append(speed.hasSuffix("x") ? speed : "\(speed)x")
+        }
+        if let dpi = values["dpi"] {
+            controlParts.append("dpi \(dpi)")
+        }
+        if let bitrate = values["bitrate"] {
+            controlParts.append("bitrate \(bitrate)")
+        }
+        guard let request = OptimizeControlParser.parse(
+            controlParts.joined(separator: " "),
+            media: media
+        ), !OptimizeControlParser.controlDescriptions(for: request).isEmpty else {
+            throw PublicRequestError.invalidParameter(
+                "Optimize controls",
+                controlParts.joined(separator: " ")
+            )
+        }
+        return .optimiseMedia(request)
     }
 
     private static func inferredConversionExecution(
@@ -473,6 +544,21 @@ enum PublicRequestParser {
 
     private static func action(for value: String) -> ClopAction? {
         actionNames[normalizedName(value)]
+    }
+
+    private static func optimizeMedia(for value: String) -> OptimizeMediaKind? {
+        switch normalizedName(value) {
+        case "image", "images":
+            return .image
+        case "video", "videos":
+            return .video
+        case "pdf", "pdfs":
+            return .pdf
+        case "audio":
+            return .audio
+        default:
+            return nil
+        }
     }
 
     private static func title(for action: ClopAction) -> String {

@@ -12,8 +12,8 @@ Milestones 1 and 2 are substantially complete. Milestone 3 includes
 parameter-free execution, a guided dynamic parameter step for crop and resize,
 the bounded Downscale parameter step, user-defined Crop / Resize and
 Downscale action presets, media-specific conversion with inline controls and
-presets, shared settings, and the unified input and routing foundation planned
-for Milestone 6.
+presets, media-specific Optimize controls and presets, shared settings, and
+the unified input and routing foundation planned for Milestone 6.
 
 The public automation surface is now one typed `clop` request with independent
 input and route values. Files, folders, HTTP/HTTPS URLs, clipboard content,
@@ -85,9 +85,8 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
   routes return to their original source-aware empty or unsupported state
 - Unsupported clipboard content uses generic, path-free feedback because the
   clipboard contents may be incidental or unexpected
-- One Optimize result in the main menu; the planned controls-model cleanup
-  will turn it into the entry point for Optimize defaults, media controls, and
-  presets while keeping immediate Standard and Aggressive execution on
+- One Optimize result in the main menu opens the Optimize defaults, controls,
+  and presets menu while keeping immediate Standard and Aggressive execution on
   modifiers
 - Source-aware subtitles for selected, copied, and passed files
 - Compact source/object subtitles distinguish selected, copied, and passed
@@ -323,6 +322,40 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - Preservation preflight predicts the converted extension before checking
   collisions and choosing numeric suffixes
 
+### Media-specific Optimize controls
+
+- Optimize is a first-class parameter menu: Return opens the Optimize menu,
+  Command-Return runs immediate Aggressive Optimize, Option-Return runs
+  immediate Standard Optimize, and Shift combinations invert preservation for
+  immediate runs
+- Homogeneous input interprets typed Optimize queries directly as controls,
+  with `controls:` still available as an explicit editor; mixed input exposes
+  `image controls:`, `video controls:`, `pdf controls:`, and
+  `audio controls:` prefixes for compatible media kinds
+- Empty Optimize controls editors show one non-executable typing guide row
+  with concise Large Type references followed by saved presets for the
+  relevant media kind
+- Image Optimize accepts `70` compression and `ad` / `adaptive` compression
+- Video Optimize accepts `70` compression, `au` / `auto` compression,
+  `hw` / `hardware`, `sw` / `software`, `ll` / `lossless`, and `ad` /
+  `adaptive` encoders, `m` / `mute`, and playback speeds such as `2x` or
+  `1.5x`; compact subtitles group the mutually exclusive compression choice
+  as `5-100/au`
+- PDF Optimize accepts `ad` / `adaptive`, supported bare DPI values, and
+  `dpi 150` forms
+- Audio Optimize accepts `70` compression, `b128`, and `bitrate 128`
+- Optimize controls accept spaces or commas between tokens
+- Optimize presets are stored in `settings.json`, scoped by action and media
+  kind, visible in both the Optimize menu and the matching controls editor,
+  and support Control-Return save plus confirmation-based removal
+- Menu and External Trigger execution both use typed media-specific Optimize
+  request models and build Clop arguments as arrays
+- External Trigger execution supports explicit media controls, including video
+  playback speed, while presets remain interactive-only
+- Mixed local or URL input is filtered to matching known media before launching
+  a media-specific Optimize command; folders remain broad and are passed
+  through to Clop with the configured recursion policy
+
 ### Shared settings and execution policy
 
 - Versioned `settings.json` stores action presets and the active output
@@ -433,12 +466,6 @@ structure.
 
 ## Not implemented
 
-- Main-menu action reshaping where Optimize opens its controls/presets menu on
-  Return and uses modifiers for immediate Standard or Aggressive execution
-- Media-specific Optimize controls and presets using shallow `controls:`
-  grammar rather than nested per-control submenus
-- Mixed-input Optimize prefixes such as `image controls:` and
-  `video controls:` with media-scoped presets
 - Extended Crop / Resize grammar for `adaptive`, `no-adaptive`, and `mute`
   controls in addition to existing geometry and Smart Crop behavior
 - Disposable Clop probes for typed optimise and crop commands with mixed media,
@@ -448,9 +475,9 @@ structure.
 - Dynamic PDF device and paper-size menus
 - Workflow icons, packaging, and release automation
 
-### Planned controls model
+### Implemented controls model
 
-The next interaction model is now settled:
+The shared controls interaction model is now:
 
 - main action rows with controls or presets open their action menu on Return;
 - fast defaults remain available through explicit modifiers;
@@ -458,8 +485,8 @@ The next interaction model is now settled:
 - Command-Return runs immediate Aggressive Optimize;
 - Option-Return runs immediate Standard Optimize;
 - Shift combinations invert Preserve Original for the immediate run;
-- Optimize presets are scoped by media kind and appear only inside the
-  relevant Optimize controls menu;
+- Optimize presets are scoped by media kind and appear in both the Optimize
+  menu and the relevant controls editor;
 - Optimize does not expose crop or downscale controls in Alfred's UI because
   Crop / Resize and Downscale already own those workflows and already optimize;
 - video Optimize includes playback speed as a typed control and External
@@ -516,18 +543,16 @@ The next interaction model is now settled:
 
 ## Next recommended task
 
-Implement the action-menu and controls architecture cleanup before adding new
-PDF Crop features: make Optimize a first-class controls/presets menu, move
-immediate Standard and Aggressive Optimize to modifiers, add media Optimize
-control grammar and presets, and extend Crop / Resize controls. Run the mixed
-media Clop probes before locking the filtering behavior for media-specific
-branches.
+Extend Crop / Resize controls with the documented adaptive, no-adaptive, and
+mute controls, then run the disposable typed `optimise` and `crop` probes
+needed to confirm mixed-media filtering behavior before starting PDF Crop
+parameter menus.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 230 tests.
+- `./scripts/test.sh` passes 247 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

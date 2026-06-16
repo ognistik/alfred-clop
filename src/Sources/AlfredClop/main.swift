@@ -282,7 +282,7 @@ enum AlfredClopCommand {
             }
 
             switch state.mode {
-            case .optimise:
+            case .optimise, .optimisePresetRemoval:
                 return OptimizeParameterMenu.response(
                     stateJSON: stateJSON,
                     query: query

@@ -18,6 +18,7 @@ enum ClopCommandBuilderError: Error, Equatable {
     case invalidCropSize
     case invalidDownscaleFactor
     case invalidConversion
+    case invalidOptimizeControls
     case unsupportedAction
     case unsupportedBackupBehavior
     case invalidOutputTemplate(OutputTemplateError)
@@ -80,6 +81,15 @@ struct ClopCommandBuilder {
             arguments = optimiseArguments(
                 for: resolvedRequest,
                 aggressive: aggressive
+            )
+            expectsJSON = true
+        case let .optimiseMedia(optimize):
+            guard OptimizeControlParser.isSupported(optimize) else {
+                throw ClopCommandBuilderError.invalidOptimizeControls
+            }
+            arguments = typedOptimiseArguments(
+                for: resolvedRequest,
+                optimize: optimize
             )
             expectsJSON = true
         case let .crop(size, smartCrop, longEdge):
@@ -263,6 +273,82 @@ struct ClopCommandBuilder {
             arguments.append("--no-adaptive-optimisation")
         default:
             break
+        }
+
+        return arguments
+            + outputArguments(for: request.execution.output)
+            + request.inputs
+    }
+
+    private func typedOptimiseArguments(
+        for request: OperationRequest,
+        optimize: OptimizeRequest
+    ) -> [String] {
+        var arguments = [
+            "optimise",
+            optimize.media.rawValue,
+            "--json",
+            "--no-progress",
+            "--skip-errors"
+        ]
+
+        switch optimize.controls {
+        case .image(let controls):
+            switch controls.compression {
+            case .value(let value):
+                arguments += ["--compression", String(value)]
+            case .adaptive:
+                arguments += ["--compression", "adaptive"]
+            case nil:
+                break
+            }
+        case .video(let controls):
+            switch controls.compression {
+            case .value(let value):
+                arguments += ["--compression", String(value)]
+            case .automatic:
+                arguments += ["--compression", "auto"]
+            case nil:
+                break
+            }
+            if let encoder = controls.encoder {
+                arguments += ["--encoder", encoder.rawValue]
+            }
+            if controls.removeAudio {
+                arguments.append("--remove-audio")
+            }
+            if let speed = controls.playbackSpeed {
+                arguments += [
+                    "--playback-speed-factor",
+                    OptimizeControlParser.displayNumber(speed)
+                ]
+            }
+        case .pdf(let controls):
+            switch controls.dpi {
+            case .value(let value):
+                arguments += ["--dpi", String(value)]
+            case .adaptive:
+                arguments += ["--dpi", "adaptive"]
+            case nil:
+                break
+            }
+        case .audio(let controls):
+            if let compression = controls.compression {
+                arguments += ["--compression", String(compression)]
+            }
+            if let bitrate = controls.bitrate {
+                arguments += ["--bitrate", String(bitrate)]
+            }
+        }
+
+        if request.execution.showClopUI {
+            arguments.append("--gui")
+        }
+        if request.execution.copyResult {
+            arguments.append("--copy")
+        }
+        if request.execution.recursiveFolders {
+            arguments.append("--recursive")
         }
 
         return arguments

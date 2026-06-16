@@ -494,6 +494,8 @@ enum DownscaleParameterMenu {
             return downscale.displayValue
         case let .conversion(conversion):
             return conversion.displayValue
+        case let .optimize(optimize):
+            return optimize.displayValue
         }
     }
 

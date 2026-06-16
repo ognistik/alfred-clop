@@ -74,6 +74,12 @@ enum ExecuteMode {
                 subtitle: "Choose a supported format and conversion control.",
                 valid: false
             )
+        } catch ClopCommandBuilderError.invalidOptimizeControls {
+            return feedback(
+                title: "Invalid Optimize controls",
+                subtitle: "Use supported controls for that media type.",
+                valid: false
+            )
         } catch ClopCommandBuilderError.unsupportedAction {
             return feedback(
                 title: "This action cannot run yet",
@@ -194,6 +200,12 @@ enum ExecuteMode {
                 subtitle: "Clop processed \(files).",
                 valid: false
             )
+        case .optimiseMedia:
+            return feedback(
+                title: "Optimization complete",
+                subtitle: "Clop processed \(files).",
+                valid: false
+            )
         case .uncropPDF:
             return feedback(
                 title: "PDF uncrop complete",
@@ -264,7 +276,7 @@ enum ExecuteMode {
 
     private static func operationLabel(for action: ActionRequest) -> String {
         switch action {
-        case .optimise:
+        case .optimise, .optimiseMedia:
             return "Optimization"
         case .crop:
             return "Crop / resize"

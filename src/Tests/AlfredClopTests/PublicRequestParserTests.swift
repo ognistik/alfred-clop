@@ -133,6 +133,55 @@ struct PublicRequestParserTests {
     }
 
     @Test
+    func optimizeExecutionAcceptsMediaControls() throws {
+        let request = try PublicRequestParser.parse("""
+        execute: Optimize
+        media: video
+        controls: 70, sw, m
+        playback speed: 2
+
+        /tmp/movie.mp4
+        """)
+
+        #expect(request.route == .execute(action: .optimiseMedia(
+            OptimizeRequest(
+                media: .video,
+                controls: .video(VideoOptimizeControls(
+                    compression: .value(70),
+                    encoder: .software,
+                    removeAudio: true,
+                    playbackSpeed: 2
+                ))
+            )
+        )))
+    }
+
+    @Test
+    func optimizeExecutionRejectsConflictingControlsAndPresets() {
+        #expect(throws: PublicRequestError.invalidParameter(
+            "Optimize controls",
+            "70 b128"
+        )) {
+            try PublicRequestParser.parse("""
+            execute: Optimize
+            media: audio
+            controls: 70 b128
+
+            /tmp/audio.wav
+            """)
+        }
+        #expect(throws: PublicRequestError.unexpectedParameter("preset")) {
+            try PublicRequestParser.parse("""
+            execute: Optimize
+            media: image
+            preset: ad
+
+            /tmp/image.png
+            """)
+        }
+    }
+
+    @Test
     func cropExecutionNormalizesSizeAndDefaultsSmartCropToFalse() throws {
         let request = try PublicRequestParser.parse("""
         execute: Crop / Resize

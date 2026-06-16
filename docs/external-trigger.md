@@ -122,6 +122,32 @@ clipboard
 
 Accepted boolean values are `true`, `false`, `yes`, `no`, `on`, and `off`.
 
+Media-specific Optimize controls are also supported. They use explicit fields
+or the same compact controls grammar as the Alfred menu:
+
+```text
+execute: Optimize
+media: video
+controls: 70, sw, m
+playback speed: 1.5
+
+/path/movie.mp4
+```
+
+Supported media controls:
+
+- image: `compression: 70`, `compression: ad`, or `controls: 70`
+- video: `compression: 70`, `compression: au`, `encoder: sw`,
+  `remove audio: true`, `playback speed: 2`, or `controls: 70 sw m 2x`
+- PDF: `dpi: 150`, `dpi: ad`, or `controls: dpi 150`
+- audio: `compression: 70`, `bitrate: 128`, or `controls: b128`
+
+The compact Optimize grammar accepts spaces or commas between tokens. Video
+shorthand uses `5-100/au` for compression, `hw/sw/ll/ad` for encoder, `m` for
+mute, and `2x` for speed. Full words such as `auto`, `software`, `lossless`,
+`adaptive`, and `mute` remain accepted. External Trigger execution never uses
+workflow action presets by name.
+
 Crop / Resize requires `size`. It accepts the same values as the workflow menu:
 
 ```text
@@ -152,15 +178,31 @@ Whole numbers from `2` through `99` are interpreted as percentages. Values
 must be greater than `0` and less than `100%`; bare `1`, `100%`, and larger
 values are rejected.
 
+Convert execution requires `format`. The generic `Convert` action infers
+image, video, or audio from the format; media-specific action names can also
+be used:
+
+```text
+execute: Convert Audio
+format: mp3
+bitrate: 128
+
+/path/recording.wav
+```
+
+Image and MP4 conversion accept `compression`; MP4 also accepts `auto`. Audio
+accepts `compression` or `bitrate`.
+
 ### Current Grammar
 
 This table is the complete shorthand execution grammar currently implemented:
 
 | Action | Parameters | Omitted behavior |
 | --- | --- | --- |
-| `Optimize` | `aggressive` (optional boolean) | Standard optimization |
+| `Optimize` | `aggressive` (optional boolean), optional media-specific controls | Standard optimization |
 | `Crop / Resize` | `size` (required), `smart crop` (optional boolean) | Smart Crop disabled |
 | `Downscale` | `factor` (required) | Uses workflow execution settings |
+| `Convert`, `Convert Image`, `Convert Video`, `Convert Audio` | `format` (required), optional compression/bitrate where supported | Uses Clop defaults for that target |
 | `Uncrop PDF` | None | Uses workflow execution settings |
 | `Strip Metadata` | None | Uses workflow execution settings |
 
@@ -168,14 +210,10 @@ The following shortcuts open their existing workflow menus, but their execution
 syntax is intentionally unavailable until those parameter menus and operations
 are implemented:
 
-- `convert image:`
-- `convert video:`
-- `convert audio:`
 - `crop pdf:`
 
-Attempting `execute:` with Convert Image, Convert Video, Convert Audio, or Crop
-PDF produces a visible error rather than guessing at an unfinished parameter
-contract.
+Attempting `execute:` with Crop PDF produces a visible error rather than
+guessing at an unfinished parameter contract.
 
 ### Defaults And Workflow Settings
 

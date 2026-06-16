@@ -128,8 +128,24 @@ enum ClopRequestDispatcher {
                     subtitle: error.localizedDescription
                 )
             }
+            let operationInputs = inputs(
+                for: action,
+                selection: selection
+            )
+            guard !operationInputs.isEmpty else {
+                if case let .optimiseMedia(request) = action {
+                    return feedback(
+                        title: "Optimize controls do not support this input",
+                        subtitle: "\(request.media.displayName) controls require \(request.media.rawValue) input."
+                    )
+                }
+                return feedback(
+                    title: "No files to process",
+                    subtitle: "Choose one or more files and try again."
+                )
+            }
             let operation = OperationRequest(
-                inputs: selection.inputs,
+                inputs: operationInputs,
                 action: action,
                 execution: execution
             )
@@ -298,6 +314,12 @@ enum ClopRequestDispatcher {
         switch action {
         case .optimise:
             menuAction = .optimise
+        case .optimiseMedia(let request):
+            menuAction = .optimise
+            guard OptimizeControlParser.isSupported(request),
+                  !inputs(for: action, selection: selection).isEmpty else {
+                return false
+            }
         case .crop:
             menuAction = .crop
         case .downscale:
@@ -316,6 +338,42 @@ enum ClopRequestDispatcher {
         }
         return ActionCatalog.validActions(for: selection)
             .contains(where: { $0.action == menuAction })
+    }
+
+    private static func inputs(
+        for action: ActionRequest,
+        selection: InputSelection
+    ) -> [String] {
+        guard case let .optimiseMedia(request) = action else {
+            return selection.inputs
+        }
+        return mediaInputs(
+            for: request.media,
+            selection: selection
+        )
+    }
+
+    private static func mediaInputs(
+        for media: OptimizeMediaKind,
+        selection: InputSelection
+    ) -> [String] {
+        let kinds = selection.itemKinds.isEmpty
+            ? Array(repeating: InputItemKind.localFile, count: selection.inputs.count)
+            : selection.itemKinds
+        let detector = MediaKindDetector()
+        return selection.inputs.enumerated().compactMap { index, input in
+            let kind = index < kinds.count ? kinds[index] : .localFile
+            switch kind {
+            case .folder:
+                return input
+            case .remoteURL:
+                guard let url = URL(string: input) else { return nil }
+                return detector.kind(for: url) == media.mediaKind ? input : nil
+            case .localFile:
+                return detector.kind(for: URL(fileURLWithPath: input))
+                    == media.mediaKind ? input : nil
+            }
+        }
     }
 
     private static func applying(

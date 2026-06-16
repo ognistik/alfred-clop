@@ -251,6 +251,51 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func mediaSpecificOptimizeExecutionFiltersMixedInputs() throws {
+        let image = try temporaryFile(named: "image.png")
+        let video = try temporaryFile(named: "movie with spaces.mp4")
+        defer { try? FileManager.default.removeItem(at: image.deletingLastPathComponent()) }
+        defer { try? FileManager.default.removeItem(at: video.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(
+                items: [image.path, video.path],
+                extractText: false
+            ),
+            route: .execute(action: .optimiseMedia(OptimizeRequest(
+                media: .video,
+                controls: .video(VideoOptimizeControls(
+                    playbackSpeed: 2
+                ))
+            )))
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Optimization complete")
+        #expect(runner.command?.arguments == [
+            "optimise",
+            "video",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--playback-speed-factor",
+            "2",
+            "--gui",
+            video.path
+        ])
+    }
+
+    @Test
     func executeRouteCanOverridePreservationForHeadlessModifiers() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
