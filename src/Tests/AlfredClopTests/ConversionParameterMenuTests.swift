@@ -221,6 +221,25 @@ struct ConversionParameterMenuTests {
             query: "",
             environment: fixture.environment
         )
+        #expect(confirmation.items.map(\.title) == [
+            "Remove Preset WebP · Compression 70?",
+            "Cancel"
+        ])
+
+        let cancelState = try #require(
+            confirmation.items[1]
+                .variables?[ActionMenu.menuStateVariable]
+        )
+        let cancelled = ConversionParameterMenu.response(
+            stateJSON: cancelState,
+            query: "",
+            environment: fixture.environment
+        )
+        #expect(cancelled.items.contains {
+            $0.title == "WebP · Compression 70"
+        })
+        #expect(try fixture.store.load().presets.count == 1)
+
         let removalState = try #require(
             confirmation.items.first?
                 .variables?[ActionMenu.menuStateVariable]

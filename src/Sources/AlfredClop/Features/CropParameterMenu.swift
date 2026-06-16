@@ -448,6 +448,7 @@ enum CropParameterMenu {
             )
         )
         let stateJSON = (try? encodedState(state)) ?? ""
+        let cancelStateJSON = (try? encodedState(.crop(request))) ?? ""
 
         return ScriptFilterResponse(
             items: [
@@ -458,6 +459,16 @@ enum CropParameterMenu {
                     valid: true,
                     variables: transitionVariables(
                         stateJSON: stateJSON,
+                        request: request
+                    )
+                ),
+                ScriptFilterItem(
+                    title: "Cancel",
+                    subtitle: "Return keeps preset",
+                    arg: cancelStateJSON,
+                    valid: true,
+                    variables: transitionVariables(
+                        stateJSON: cancelStateJSON,
                         request: request
                     )
                 )

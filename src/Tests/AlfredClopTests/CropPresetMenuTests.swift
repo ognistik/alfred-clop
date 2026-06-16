@@ -193,8 +193,18 @@ struct CropPresetMenuTests {
             stateJSON: confirmStateJSON,
             query: ""
         )
-        #expect(confirmation.items.count == 1)
+        #expect(confirmation.items.count == 2)
         #expect(confirmation.items[0].title == "Remove Preset w128?")
+        #expect(confirmation.items[1].title == "Cancel")
+        #expect(confirmation.items[1].subtitle == "Return keeps preset")
+        #expect(try fixture.store.load().presets.count == 2)
+
+        let cancelStateJSON = try #require(
+            confirmation.items[1].variables?[ActionMenu.menuStateVariable]
+        )
+        let cancelled = fixture.response(stateJSON: cancelStateJSON, query: "")
+        #expect(cancelled.items.contains { $0.title == "w128" })
+        #expect(cancelled.items.contains { $0.title == "h720" })
         #expect(try fixture.store.load().presets.count == 2)
 
         let removeStateJSON = try #require(

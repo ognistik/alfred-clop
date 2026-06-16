@@ -785,9 +785,10 @@ duplicate typed result and preset. Attempting to save it again must leave
 storage unchanged and provide clear feedback.
 
 Return on a preset executes it. Control-Return on an existing preset opens a
-confirmation step. Confirming removes the preset and returns to the same
-parameter menu with the remaining presets visible. Never delete a preset
-immediately from the modifier action.
+confirmation step with a visible Cancel row. Confirming removes the preset and
+returns to the same parameter menu with the remaining presets visible.
+Selecting Cancel keeps the preset and returns to the same clean parameter
+menu. Never delete a preset immediately from the modifier action.
 
 Presets live only in the submenu for their action. Crop presets appear in Crop
 / Resize, downscale presets in Downscale, conversion presets in the relevant

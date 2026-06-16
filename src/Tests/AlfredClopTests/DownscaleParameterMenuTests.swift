@@ -183,6 +183,52 @@ struct DownscaleParameterMenuTests {
         ])
     }
 
+    @Test
+    func controlReturnOnPresetCanBeCancelled() throws {
+        let fixture = try DownscalePresetFixture()
+        _ = try fixture.store.save(.downscale(DownscaleActionPreset(
+            factor: 0.75
+        )))
+        let response = DownscaleParameterMenu.response(
+            stateJSON: try downscaleStateJSON(context: .arguments),
+            query: "",
+            environment: fixture.environment
+        )
+        let preset = try #require(response.items.first {
+            $0.title == "75%"
+        })
+        let confirmationState = try #require(
+            preset.mods?.control?.variables?[ActionMenu.menuStateVariable]
+        )
+        let confirmation = DownscaleParameterMenu.response(
+            stateJSON: confirmationState,
+            query: "",
+            environment: fixture.environment
+        )
+
+        #expect(confirmation.items.map(\.title) == [
+            "Remove Preset 75%?",
+            "Cancel"
+        ])
+
+        let cancelState = try #require(
+            confirmation.items[1].variables?[ActionMenu.menuStateVariable]
+        )
+        let cancelled = DownscaleParameterMenu.response(
+            stateJSON: cancelState,
+            query: "",
+            environment: fixture.environment
+        )
+
+        #expect(cancelled.items.map(\.title) == [
+            "Type a downscale factor",
+            "75%"
+        ])
+        #expect(try fixture.store.load().presets == [
+            .downscale(DownscaleActionPreset(factor: 0.75))
+        ])
+    }
+
     private func downscaleStateJSON(
         context: ActionInputContext
     ) throws -> String {

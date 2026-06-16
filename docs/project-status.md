@@ -258,6 +258,7 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - Matching typed and saved values combine into one result marked as saved
 - Control-Return saves new typed values immediately
 - Control-Return on a saved preset opens a typed removal confirmation step
+  with a visible Cancel row
 - Confirmed removal returns to Crop / Resize with inputs and source context
   preserved
 - Malformed and unsupported preset files are rejected visibly without being
@@ -285,7 +286,8 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - External Trigger execution supports `execute: Downscale` with required
   `factor:` using the same grammar as the menu
 - Downscale presets are stored in `settings.json`, scoped to the Downscale
-  submenu, and support Control-Return save and confirmation-based removal
+  submenu, and support Control-Return save and confirmation-based removal with
+  a visible Cancel row
 
 ### Media-specific conversion
 
@@ -306,7 +308,8 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
   requiring another step
 - Complete target-and-control combinations can be saved with Control-Return;
   saves and confirmed removals return to the full media target list, while
-  existing presets use confirmation-based Control-Return removal
+  existing presets use confirmation-based Control-Return removal with a
+  visible Cancel row
 - Saved conversion presets appear in both the media target list and the
   target-specific controls editor with concise saved-preset subtitles
 - Built-in same-format image targets are hidden only for clear homogeneous
@@ -347,7 +350,8 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - Optimize controls accept spaces or commas between tokens
 - Optimize presets are stored in `settings.json`, scoped by action and media
   kind, visible in both the Optimize menu and the matching controls editor,
-  and support Control-Return save plus confirmation-based removal
+  and support Control-Return save plus confirmation-based removal with a
+  visible Cancel row
 - Menu and External Trigger execution both use typed media-specific Optimize
   request models and build Clop arguments as arrays
 - External Trigger execution supports explicit media controls, including video
@@ -552,7 +556,7 @@ parameter menus.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 247 tests.
+- `./scripts/test.sh` passes 248 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

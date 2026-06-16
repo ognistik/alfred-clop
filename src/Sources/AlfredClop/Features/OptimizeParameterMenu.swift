@@ -632,6 +632,7 @@ enum OptimizeParameterMenu {
             action: PresetMenuAction(kind: .remove, preset: action.preset)
         )
         let stateJSON = encoded(state)
+        let cancelStateJSON = encoded(.optimise(request))
         let name: String
         if case .optimize(let preset) = action.preset {
             name = preset.displayValue
@@ -647,6 +648,16 @@ enum OptimizeParameterMenu {
                     valid: true,
                     variables: transitionVariables(
                         stateJSON: stateJSON,
+                        request: request
+                    )
+                ),
+                ScriptFilterItem(
+                    title: "Cancel",
+                    subtitle: "Return keeps preset",
+                    arg: cancelStateJSON,
+                    valid: true,
+                    variables: transitionVariables(
+                        stateJSON: cancelStateJSON,
                         request: request
                     )
                 )

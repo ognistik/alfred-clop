@@ -526,6 +526,7 @@ enum ConversionParameterMenu {
             action: PresetMenuAction(kind: .remove, preset: action.preset)
         )
         let stateJSON = encoded(state)
+        let cancelStateJSON = encoded(.conversion(request, format: format))
         let name: String
         if case .conversion(let preset) = action.preset {
             name = preset.displayValue
@@ -541,6 +542,16 @@ enum ConversionParameterMenu {
                     valid: true,
                     variables: transitionVariables(
                         stateJSON: stateJSON,
+                        request: request
+                    )
+                ),
+                ScriptFilterItem(
+                    title: "Cancel",
+                    subtitle: "Return keeps preset",
+                    arg: cancelStateJSON,
+                    valid: true,
+                    variables: transitionVariables(
+                        stateJSON: cancelStateJSON,
                         request: request
                     )
                 )

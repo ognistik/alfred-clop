@@ -409,6 +409,21 @@ struct OptimizeParameterMenuTests {
             query: "",
             environment: fixture.environment
         )
+        #expect(confirmation.items.map(\.title) == [
+            "Remove Preset PDF · 150 DPI?",
+            "Cancel"
+        ])
+        let cancelState = try #require(
+            confirmation.items[1].variables?[ActionMenu.menuStateVariable]
+        )
+        let cancelled = OptimizeParameterMenu.response(
+            stateJSON: cancelState,
+            query: "",
+            environment: fixture.environment
+        )
+        #expect(cancelled.items.map(\.title).contains("PDF · 150 DPI"))
+        #expect(try fixture.store.load().presets.count == 1)
+
         let removeState = try #require(confirmation.items.first?.arg)
         let afterRemove = OptimizeParameterMenu.response(
             stateJSON: removeState,
