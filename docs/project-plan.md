@@ -537,6 +537,26 @@ The equivalent typed JSON is:
 }
 ```
 
+Headless Optimize requests use explicit fields rather than presets. Mixed
+Optimize may use the broad default request. Media-specific Optimize requests
+may provide only the controls exposed by the Alfred controls grammar:
+
+```text
+execute: Optimize Video
+compression: auto
+encoder: software
+mute: true
+speed: 2x
+
+/path/video.mov
+```
+
+Supported media-specific Optimize fields are image `compression`, video
+`compression`, `encoder`, `mute`, and `speed`, PDF `dpi`, and audio
+`compression` or `bitrate`. Optimize crop and downscale flags are intentionally
+not part of Alfred Clop's product surface because those workflows belong to
+Crop / Resize and Downscale.
+
 A `menu` route without an action opens the main menu. A `menu` route with an
 action opens that action's clean parameter menu. Action parameter values are
 not part of a menu request; if accidentally present, ignore them. An `execute`
@@ -649,28 +669,33 @@ Use a small state machine instead of several unrelated binaries:
 ```text
 Input
   -> Action menu
-      -> Parameter menu, when required
+      -> Parameter or controls menu, when available
           -> Execute
-      -> Execute, for immediate actions
+      -> Execute, for explicit fast modifiers
 ```
 
 Suggested top-level actions:
 
 1. Optimize
-2. Optimize with Controls
-3. Crop / Resize
-4. Downscale
-5. Convert
-6. PDF Crop
-7. PDF Uncrop
-8. Strip Metadata
-9. Run Pipeline
-10. Manage Pipelines
+2. Crop / Resize
+3. Downscale
+4. Convert
+5. PDF Crop
+6. PDF Uncrop
+7. Strip Metadata
+8. Run Pipeline
+9. Manage Pipelines
 
-Keep fast defaults near the top. Advanced controls should remain discoverable
-through searchable actions rather than turning every operation into a long
-mandatory wizard. Aggressive Optimize is not a separate top-level action;
-Command-Return will provide that override on Optimize.
+Main action rows should normally lead to the action's menu so presets and
+controls have a consistent home. Fast execution remains available through
+explicit modifiers on rows where a sensible immediate default exists. Optimize
+is the model: Return opens the Optimize menu, Command-Return runs Aggressive
+Optimize immediately, Option-Return runs Standard Optimize immediately, and
+Shift combinations invert Preserve Original for that immediate run.
+
+Parameter and controls menus should stay shallow and query-driven. Prefer
+autocomplete prefixes and editable grammar over nested "advanced" submenus, so
+Backspace acts as the user's natural way back to the broader menu.
 
 The query should fuzzy-match title, synonyms, and keywords. Examples:
 
@@ -705,6 +730,24 @@ Once the user types, show one primary interpreted result:
 Continue accepting Clop's native `128x0` and `0x720` forms. Subtitles must
 explain the interpretation before execution. Invalid input should produce one
 clear, non-executable result with concise examples.
+
+Crop / Resize also owns geometry-adjacent processing controls exposed by the
+Clop `crop` command. Extend the same query grammar instead of adding deeper
+submenus:
+
+| Token | Meaning |
+| --- | --- |
+| `smart` | Enable smart crop |
+| `adaptive` | Enable adaptive image optimization |
+| `no-adaptive` | Disable adaptive image optimization |
+| `mute` | Remove audio from cropped videos |
+
+Examples include `16:9 smart`, `1920 adaptive`, and `1280x720 mute`. The
+interpreted result title should translate the complete query into natural
+language, while validation rows explain conflicts such as duplicate adaptive
+tokens. Aggressive or Standard optimization remains a global/modifier choice,
+and output behavior remains controlled by workflow settings, Shift modifiers,
+or headless External Trigger overrides rather than by the crop grammar.
 
 When a valid typed value also partially matches saved presets, keep the
 interpreted typed action first and list the matching presets below it. This
@@ -747,9 +790,10 @@ parameter menu with the remaining presets visible. Never delete a preset
 immediately from the modifier action.
 
 Presets live only in the submenu for their action. Crop presets appear in Crop
-/ Resize, downscale presets in Downscale, and conversion presets in the
-relevant Convert menu. Add and remove them there; do not duplicate preset
-management in Configuration.
+/ Resize, downscale presets in Downscale, conversion presets in the relevant
+Convert menu, and Optimize presets in the relevant media Optimize controls
+menu. Add and remove them there; do not duplicate preset management in
+Configuration or expose presets through the External Trigger.
 
 Workflow settings storage:
 
@@ -945,14 +989,71 @@ different from app-backed conversion and must not share the same request model.
 
 ### Media-specific optimize
 
-- image: compression `5...100` or adaptive, optional downscale and crop;
-- video: compression `5...100` or auto, encoder, remove audio, speed,
-  downscale, and crop;
-- PDF: adaptive or enumerated DPI, optional destructive crop;
-- audio: compression `5...100` or an explicit supported bitrate.
+The main Optimize row opens a controls menu on Return. Its fast modifiers
+execute immediately without entering the menu: Command-Return runs Aggressive
+Optimize, Option-Return runs Standard Optimize, and Shift combinations invert
+Preserve Original for that immediate run.
 
-The simple Optimize action should continue to use Clop's mixed-type defaults.
-The controlled variants require homogeneous media input.
+The first Optimize menu row runs Clop defaults for the current input. Its
+subtitle should be compact, for example:
+
+```text
+⏎ Run • ⇥ Controls • ⌃⏎ Custom Presets
+```
+
+Tab or Control-Return on that default row autocompletes a controls prefix such
+as `controls: ` for homogeneous input. In controls mode, the first row becomes
+the focused grammar reference and should expose a larger reference through
+Alfred Large Type when useful. Once the user types a valid control expression,
+the primary interpreted row supports Return to run, Tab to normalize for
+editing, and Control-Return to save the complete media-specific preset. Saved
+presets support Return to run and Control-Return to open removal confirmation.
+
+Interactive Optimize controls intentionally exclude Clop's typed optimise
+`--crop` and `--downscale-factor` options because Alfred Clop already exposes
+those behaviors through Crop / Resize and Downscale, both of which optimize as
+part of their command. Headless typed requests should follow the same product
+surface unless a future CLI coverage decision explicitly revisits these hidden
+flags.
+
+Optimize media controls:
+
+| Media | Interactive grammar |
+| --- | --- |
+| Image | compression `5...100`, `c70` shorthand, or `adaptive` |
+| Video | compression `5...100`, `c70`, `auto`, encoder `hardware`, `software`, `lossless`, or `adaptive`, `mute`, and playback speed such as `2x` |
+| PDF | `adaptive` or DPI `300`, `250`, `200`, `150`, `100`, `72`, or `48` |
+| Audio | compression `5...100`, `c70`, or bitrate such as `b128` |
+
+Validation should teach the grammar in place: duplicate compression values,
+duplicate encoders, invalid PDF DPI values, and mutually exclusive audio
+compression/bitrate combinations produce one concise non-executable result.
+Bitrate takes priority over compression in audio execution, matching Clop.
+
+For homogeneous input, the Optimize menu opens directly in that media mode.
+Presets are scoped by action and media: image Optimize presets never appear in
+video, PDF, or audio Optimize menus.
+
+For mixed input, the Optimize menu shows:
+
+1. Optimize All with Defaults
+2. Image Optimize Controls
+3. Video Optimize Controls
+4. PDF Optimize Controls
+5. Audio Optimize Controls
+
+Selecting a media controls row autocompletes a query prefix such as
+`video controls: `. Backspace returns to the mixed Optimize menu. Media
+presets appear only after the relevant media prefix so they are never confused
+with whole-batch defaults. Known explicit files in a media-specific mixed
+branch should be filtered to compatible media unless Clop probes prove that
+passing mixed files to typed optimise subcommands gives better user feedback.
+Folders and ambiguous URLs may remain broad inputs to the media-specific Clop
+subcommand with honest subtitles.
+
+External Trigger execution exposes the same supported media controls as
+explicit key/value parameters, including video playback speed. It never
+addresses Optimize presets.
 
 ### PDF crop
 
@@ -989,17 +1090,30 @@ publishes a stable complete grammar. Preserve inline step text exactly.
 
 ### Advanced execution options
 
-Show an optional final options menu for commands that support it:
+Do not add a generic final options menu to normal Alfred action flows. The
+interactive UI should stay user-facing and action-specific rather than exposing
+raw CLI option sets. Shared execution policy is handled through workflow
+settings, Configuration, and compact modifiers where they are already part of
+the product model.
 
-- output path or template;
-- recurse into folders;
-- include or exclude file types;
+Headless External Trigger execution may expose deliberate advanced overrides:
+
+- output behavior or one-run output template, only for commands that support
+  `--output`;
+- recursive folder processing when inherited workflow settings are not enough;
 - copy result;
-- show Clop UI;
-- submit asynchronously.
+- Clop UI visibility;
+- skip errors or asynchronous submission where the command supports them and
+  the request can be described honestly.
 
-Also expose aggressive mode, adaptive image optimization, PDF DPI, and video
-audio removal on each broad processing command whose help includes them.
+Include and exclude type filters are automation-oriented controls. Keep them
+out of ordinary parameter menus unless a future workflow feature gives them a
+clear human-facing purpose.
+
+Also expose action-owned processing controls such as adaptive image
+optimization and video audio removal through the relevant action grammar where
+they change output meaning. Aggressive or Standard processing remains a
+global/modifier choice rather than a nested menu option.
 
 Hide unsupported options per command. Async execution is fire-and-forget and
 must not promise final output paths or completion status.
@@ -1012,16 +1126,15 @@ Recommended defaults:
 
 | Input | Effect |
 | --- | --- |
-| Return | Run with configured defaults |
-| Command-Return | Invert the configured aggressive-processing default where supported |
-| Option-Return | Enable the action's documented alternate processing mode where one exists |
-| Command-Option-Return | Combine the aggressive-default inversion with the alternate mode when both are supported |
-| Shift-Return | Invert the configured Preserve Original behavior |
+| Return | Open the action menu when controls or presets exist; otherwise run the row |
+| Command-Return | Run Aggressive Optimize immediately on the main Optimize row; otherwise an action-specific immediate modifier only when clearly documented |
+| Option-Return | Run Standard Optimize immediately on the main Optimize row; otherwise an action-specific immediate modifier only when clearly documented |
+| Shift-Return | Invert the configured Preserve Original behavior for an immediate executable row |
 | Control-Return | Continue creating or save a complete preset, or request removal of an existing preset |
 
-Do not hard-code "Command means aggressive" at execution time. Encode the
-modifier's resolved `OperationRequest` directly in that Alfred item's `mods`
-JSON. This makes the subtitle and actual operation impossible to drift apart.
+Do not hard-code modifier behavior at execution time. Encode the modifier's
+resolved `OperationRequest` directly in that Alfred item's `mods` JSON. This
+makes the subtitle and actual operation impossible to drift apart.
 
 Modifiers keep one meaning across top-level and parameter menus, but only
 appear where applicable. Unsupported modifiers must not silently acquire a
@@ -1046,9 +1159,10 @@ can handle. Configuration namespace rows do not use this processing-input Large
 Type behavior because their Large Type surface is reserved for configuration
 help such as output-template tokens.
 
-Do not add a separate Aggressive Optimize action to the menu. Return uses the
-configured Standard or Aggressive default, while Command-Return resolves the
-opposite behavior and states it accurately in the subtitle.
+Do not add separate Standard Optimize, Aggressive Optimize, or Optimize with
+Controls actions to the main menu. The single Optimize row opens the Optimize
+menu on Return and exposes Standard or Aggressive immediate execution through
+modifiers.
 
 ### Subtitle style
 
@@ -1081,11 +1195,11 @@ Template`, `Replace Originals`, `Aggressive`, and `Standard`.
 Examples:
 
 ```text
-Selected folder: 14 files · Compress · ⌘↩ Aggressive, ⇧↩ Output Template
-Copied file · Long edge 1920 · ⌃↩ Save Preset
-Passed file · Crop to 16:9 · ⌥↩ Smart Crop, ⌃↩ Save Preset
-Selected file · Saved Preset · Long edge 1920 · ⌃↩ Remove Preset
-Copied file · Clop Defaults · ⇥ Controls, ⌃↩ Save Preset
+Selected folder: 14 files · Compress · ⌘⏎ Aggressive, ⇧⏎ Output Template
+Copied file · Long edge 1920 · ⌃⏎ Save Preset
+Passed file · Crop to 16:9 · ⌥⏎ Smart Crop, ⌃⏎ Save Preset
+Selected file · Saved Preset · Long edge 1920 · ⌃⏎ Remove Preset
+Copied file · Clop Defaults · ⏎ Run, ⇥ Controls, ⌃⏎ Custom Presets
 ```
 
 For Crop / Resize results that perform an actual crop, Option-Return enables

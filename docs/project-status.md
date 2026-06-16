@@ -85,9 +85,10 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
   routes return to their original source-aware empty or unsupported state
 - Unsupported clipboard content uses generic, path-free feedback because the
   clipboard contents may be incidental or unexpected
-- One Optimize result in the main menu; aggressive optimization remains
-  available to typed execution and Hotkeys pending the planned Command-Return
-  modifier
+- One Optimize result in the main menu; the planned controls-model cleanup
+  will turn it into the entry point for Optimize defaults, media controls, and
+  presets while keeping immediate Standard and Aggressive execution on
+  modifiers
 - Source-aware subtitles for selected, copied, and passed files
 - Compact source/object subtitles distinguish selected, copied, and passed
   files, folders, URLs, and mixed batches without the generic "input" wording
@@ -432,9 +433,43 @@ structure.
 
 ## Not implemented
 
+- Main-menu action reshaping where Optimize opens its controls/presets menu on
+  Return and uses modifiers for immediate Standard or Aggressive execution
+- Media-specific Optimize controls and presets using shallow `controls:`
+  grammar rather than nested per-control submenus
+- Mixed-input Optimize prefixes such as `image controls:` and
+  `video controls:` with media-scoped presets
+- Extended Crop / Resize grammar for `adaptive`, `no-adaptive`, and `mute`
+  controls in addition to existing geometry and Smart Crop behavior
+- Disposable Clop probes for typed optimise and crop commands with mixed media,
+  used to decide when Alfred Clop should filter known files itself versus
+  passing broad inputs to Clop
 - PDF-crop parameter menus and parsing
 - Dynamic PDF device and paper-size menus
 - Workflow icons, packaging, and release automation
+
+### Planned controls model
+
+The next interaction model is now settled:
+
+- main action rows with controls or presets open their action menu on Return;
+- fast defaults remain available through explicit modifiers;
+- the main Optimize row opens the Optimize menu on Return;
+- Command-Return runs immediate Aggressive Optimize;
+- Option-Return runs immediate Standard Optimize;
+- Shift combinations invert Preserve Original for the immediate run;
+- Optimize presets are scoped by media kind and appear only inside the
+  relevant Optimize controls menu;
+- Optimize does not expose crop or downscale controls in Alfred's UI because
+  Crop / Resize and Downscale already own those workflows and already optimize;
+- video Optimize includes playback speed as a typed control and External
+  Trigger parameter;
+- parameter menus stay shallow and query-driven, using prefixes such as
+  `controls:` or `video controls:` so Backspace naturally returns to the
+  broader menu;
+- subtitles use compact symbols such as `⏎`, `⇥`, `⌘`, `⌥`, `⌃`, and `⇧`;
+- Alfred Large Type may provide concise grammar references for dense control
+  surfaces.
 
 ### Implemented unified input design
 
@@ -481,9 +516,12 @@ structure.
 
 ## Next recommended task
 
-Implement the bounded reversible PDF Crop parameter menus and typed parsing,
-starting with aspect ratio and custom resolution before adding dynamic device
-and paper-size discovery.
+Implement the action-menu and controls architecture cleanup before adding new
+PDF Crop features: make Optimize a first-class controls/presets menu, move
+immediate Standard and Aggressive Optimize to modifiers, add media Optimize
+control grammar and presets, and extend Crop / Resize controls. Run the mixed
+media Clop probes before locking the filtering behavior for media-specific
+branches.
 
 ## Verification baseline
 
