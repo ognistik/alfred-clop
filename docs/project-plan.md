@@ -662,6 +662,18 @@ broad input type rather than removing potentially valid choices. Add concise
 media requirements only to affected results and let typed validation or Clop
 report the final incompatibility.
 
+Disposable Clop 3.0.0 probes show that some broad commands accept more media
+than their visible operation suggests. In particular, `crop` can optimize audio
+and `downscale` can optimize PDFs when those files are passed in a mixed batch.
+Alfred Clop should keep user-facing action semantics strict for clear known
+inputs: media-specific actions should filter or reject known incompatible
+files, Crop / Resize should stay limited to image, video, and PDF, Downscale
+should stay limited to image, video, and audio, and media-specific Convert
+should remain strict for clear mixed selections. When any input is ambiguous,
+such as an unclear URL or budget-limited folder, the workflow should preserve
+the broad submitted batch and let Clop own command-specific filtering,
+clipboard results, and output-template behavior.
+
 ## Menu flow
 
 Use a small state machine instead of several unrelated binaries:

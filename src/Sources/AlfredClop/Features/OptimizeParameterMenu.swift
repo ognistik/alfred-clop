@@ -771,6 +771,9 @@ enum OptimizeParameterMenu {
         for media: OptimizeMediaKind,
         request: ParameterStepRequest
     ) -> [String] {
+        if !(request.ambiguousKinds ?? []).isEmpty {
+            return request.inputs
+        }
         let kinds = request.itemKinds
             ?? Array(repeating: .localFile, count: request.inputs.count)
         let detector = MediaKindDetector()

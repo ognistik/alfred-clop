@@ -490,12 +490,19 @@ structure.
   extension appending, directory-template requirements, silent collision
   overwrites, empty-output failure, literal unknown tokens, multi-file
   expansion, and app-backed conversion extensions
+- Disposable mixed-input probes verified that broad `optimise` handles mixed
+  image, video, audio, and PDF batches; typed media Optimize and Convert
+  commands internally filter to matching media; and broad `crop` and
+  `downscale` also process out-of-scope media through optimization side
+  effects. Alfred Clop keeps strict filtering for clear known inputs, but
+  ambiguous selections now preserve the broad submitted batch so Clop owns the
+  final processed set, clipboard result, and output behavior.
+- Ambiguous mixed input no longer lets partial known media hide otherwise
+  source-capable actions, and media-specific Optimize requests preserve the
+  full ambiguous batch instead of pre-filtering to the matching media subset.
 
 ## Not implemented
 
-- Disposable Clop probes for typed optimise and crop commands with mixed media,
-  used to decide when Alfred Clop should filter known files itself versus
-  passing broad inputs to Clop
 - PDF-crop parameter menus and parsing
 - Dynamic PDF device and paper-size menus
 - Workflow icons, packaging, and release automation
@@ -571,14 +578,14 @@ The shared controls interaction model is now:
 
 ## Next recommended task
 
-Run the disposable typed `optimise` and `crop` probes needed to confirm
-mixed-media filtering behavior before starting PDF Crop parameter menus.
+Start the bounded PDF Crop parameter menu work now that mixed-media filtering
+behavior has been verified.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 262 tests.
+- `./scripts/test.sh` passes 265 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

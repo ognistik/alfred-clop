@@ -87,6 +87,31 @@ struct ActionMenuTests {
     }
 
     @Test
+    func ambiguousURLMixedWithKnownMediaKeepsURLCapableActionsAvailable() {
+        let response = ActionMenu.response(
+            for: InputSelection(
+                inputs: [
+                    "https://example.com/photo.jpg",
+                    "https://example.com/download"
+                ],
+                mediaKinds: [.image],
+                itemKinds: [.remoteURL, .remoteURL],
+                ambiguousKinds: [.remoteURL]
+            ),
+            query: ""
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Optimize",
+            "Crop / Resize",
+            "Downscale",
+            "Convert Image",
+            "Convert Video",
+            "Convert Audio"
+        ])
+    }
+
+    @Test
     func menuResponseIsValidScriptFilterJSON() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

@@ -357,6 +357,9 @@ enum ClopRequestDispatcher {
         for media: OptimizeMediaKind,
         selection: InputSelection
     ) -> [String] {
+        if !selection.ambiguousKinds.isEmpty {
+            return selection.inputs
+        }
         let kinds = selection.itemKinds.isEmpty
             ? Array(repeating: InputItemKind.localFile, count: selection.inputs.count)
             : selection.itemKinds

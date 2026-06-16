@@ -1,6 +1,6 @@
 # Clop CLI Reference
 
-Research date: June 12, 2026
+Research date: June 12, 2026; mixed-input probes updated June 16, 2026
 
 ## Target version and method
 
@@ -349,6 +349,65 @@ places a new converted file beside the original by default.
 The workflow should choose one conversion model explicitly. New media support
 and structured results require the typed app-backed commands; offline image
 conversion and the old quality scale require legacy mode.
+
+### Mixed-input filtering probes
+
+Disposable probes on June 16, 2026 used temporary copies of an image, video,
+audio file, PDF, unsupported text file, and mixed folder. All app-backed probes
+used `--json`, `--no-progress`, and `--skip-errors` where supported.
+
+Observed behavior:
+
+- Broad `optimise` processed image, video, audio, and PDF inputs in one batch.
+  Unsupported text input was silently excluded from the JSON result.
+- Typed `optimise image`, `optimise video`, `optimise pdf`, and
+  `optimise audio` accepted a broad local argument list but internally reduced
+  the job to matching media only. Non-matching files and unsupported text did
+  not appear in `failed`.
+- Typed app-backed `convert image`, `convert video`, and `convert audio`
+  behaved the same way for local mixed files: each command processed only its
+  matching media.
+- Typed media commands also filtered inside a supplied mixed folder. For
+  example, `optimise image` and `convert image` processed only the image in a
+  folder containing image, video, audio, PDF, and text files.
+- Broad `crop --size 16:9` processed images, videos, PDFs, and audio from the
+  same mixed local batch and mixed folder. The audio item was optimized into an
+  `.m4a` result rather than cropped. Unsupported text was excluded.
+- Broad `crop` accepted `--remove-audio` and `--adaptive-optimisation` in the
+  same mixed batch without rejecting non-video or non-image/PDF inputs.
+- Broad `downscale --factor 0.5` processed images, videos, audio, and PDFs
+  from the same mixed local batch and mixed folder. The PDF item was optimized
+  rather than downscaled by geometry or bitrate. Unsupported text was excluded.
+- `uncrop-pdf` accepted a mixed local file list, processed the PDF, ignored the
+  other files, and exited 0.
+- `strip-exif` accepted a mixed local file list and exited 0, but wrote
+  per-file stderr diagnostics. It explicitly warned that PDFs are unsupported
+  and attempted non-image/video files. The local probe environment was missing
+  Clop's bundled `exiftool`, so success behavior for supported files was not
+  re-verified by this probe.
+- A typed image optimization request containing a recognizable `.jpg` HTTPS URL
+  and a local video processed only the URL candidate, then reported a download
+  failure for that URL. A crop request containing a recognizable image URL and
+  an extensionless URL submitted both and reported download failures for both.
+
+Workflow policy from these probes:
+
+- For clear known input, keep Alfred Clop's menus, presets, controls, and
+  execution validation aligned with the workflow's visible action semantics.
+  Clearly incompatible media should stay hidden or rejected before launch.
+- For ambiguous input, preserve the user's broad submitted batch and let Clop's
+  command-specific filtering own the final processed set, clipboard result, and
+  output-template behavior.
+- Ambiguous input includes extensionless or otherwise unclear HTTP/HTTPS URLs
+  and folders whose final contents cannot be fully known from workflow
+  inspection.
+- If an input selection contains ambiguity, do not use partial known media to
+  remove otherwise source-capable actions or to trim media-specific Optimize
+  requests down to a subset before Clop sees them.
+- Keep Crop / Resize and Downscale restricted to their documented workflow
+  media sets for clear known input. Do not broaden them to include audio for
+  Crop / Resize or PDFs for Downscale just because Clop performs optimization
+  side effects on those files.
 
 ## `crop-pdf`
 

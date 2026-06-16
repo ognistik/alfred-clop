@@ -118,9 +118,9 @@ enum ActionCatalog {
 
     static func validActions(for selection: InputSelection) -> [ActionDefinition] {
         definitions.filter { definition in
-            let supportsKnownKinds = selection.mediaKinds.allSatisfy(
-                definition.supportedKinds.contains
-            )
+            let supportsKnownKinds = selection.ambiguousKinds.isEmpty
+                ? selection.mediaKinds.allSatisfy(definition.supportedKinds.contains)
+                : true
             let supportsSources = selection.itemKinds.allSatisfy { kind in
                 switch kind {
                 case .localFile:

@@ -296,6 +296,47 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func mediaSpecificOptimizeExecutionPreservesAmbiguousMixedInputs() throws {
+        let imageURL = "https://example.com/photo.jpg"
+        let ambiguousURL = "https://example.com/download"
+        let request = ClopRequest(
+            input: .explicit(
+                items: [imageURL, ambiguousURL],
+                extractText: false
+            ),
+            route: .execute(action: .optimiseMedia(OptimizeRequest(
+                media: .video,
+                controls: .video(VideoOptimizeControls(removeAudio: true))
+            )))
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Optimization complete")
+        #expect(runner.command?.arguments == [
+            "optimise",
+            "video",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--remove-audio",
+            "--gui",
+            imageURL,
+            ambiguousURL
+        ])
+    }
+
+    @Test
     func executeRouteCanOverridePreservationForHeadlessModifiers() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

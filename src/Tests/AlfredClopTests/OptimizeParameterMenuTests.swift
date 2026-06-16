@@ -114,6 +114,36 @@ struct OptimizeParameterMenuTests {
     }
 
     @Test
+    func ambiguousMediaControlsPreserveTheFullInputBatch() throws {
+        let request = ParameterStepRequest(
+            action: .optimise,
+            inputs: [
+                "https://example.com/photo.jpg",
+                "https://example.com/download"
+            ],
+            mediaKinds: [.image],
+            itemKinds: [.remoteURL, .remoteURL],
+            ambiguousKinds: [.remoteURL]
+        )
+        let response = OptimizeParameterMenu.response(
+            stateJSON: try stateJSON(for: request),
+            query: "video controls: m"
+        )
+        let item = try #require(response.items.first)
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((try #require(item.arg)).utf8)
+        )
+
+        #expect(item.title == "Optimize Video · Mute")
+        #expect(operation.inputs == request.inputs)
+        #expect(operation.action == .optimiseMedia(OptimizeRequest(
+            media: .video,
+            controls: .video(VideoOptimizeControls(removeAudio: true))
+        )))
+    }
+
+    @Test
     func homogeneousOptimizeTreatsTypedQueryAsControls() throws {
         let request = ParameterStepRequest(
             action: .optimise,
