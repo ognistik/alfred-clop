@@ -92,7 +92,13 @@ struct ClopCommandBuilder {
                 optimize: optimize
             )
             expectsJSON = true
-        case let .crop(size, smartCrop, longEdge):
+        case let .crop(
+            size,
+            smartCrop,
+            longEdge,
+            adaptiveOptimisation,
+            removeAudio
+        ):
             guard let parsedSize = CropSizeParser.parse(size),
                   parsedSize.longEdge == longEdge else {
                 throw ClopCommandBuilderError.invalidCropSize
@@ -101,7 +107,9 @@ struct ClopCommandBuilder {
                 for: resolvedRequest,
                 size: size,
                 smartCrop: smartCrop,
-                longEdge: longEdge
+                longEdge: longEdge,
+                adaptiveOptimisation: adaptiveOptimisation,
+                removeAudio: removeAudio
             )
             expectsJSON = true
         case let .downscale(factor):
@@ -148,7 +156,9 @@ struct ClopCommandBuilder {
         for request: OperationRequest,
         size: String,
         smartCrop: Bool,
-        longEdge: Bool
+        longEdge: Bool,
+        adaptiveOptimisation: CropAdaptiveOptimisation?,
+        removeAudio: Bool
     ) -> [String] {
         var arguments = ["crop", "--size", size, "--json", "--no-progress"]
         arguments.append("--skip-errors")
@@ -158,6 +168,17 @@ struct ClopCommandBuilder {
         }
         if smartCrop {
             arguments.append("--smart-crop")
+        }
+        switch adaptiveOptimisation {
+        case .enabled:
+            arguments.append("--adaptive-optimisation")
+        case .disabled:
+            arguments.append("--no-adaptive-optimisation")
+        case nil:
+            break
+        }
+        if removeAudio {
+            arguments.append("--remove-audio")
         }
         if request.execution.aggressiveProcessing == true {
             arguments.append("--aggressive")

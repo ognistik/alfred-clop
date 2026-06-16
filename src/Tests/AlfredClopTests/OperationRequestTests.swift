@@ -53,7 +53,13 @@ struct OperationRequestTests {
     func cropRequestRoundTrips() throws {
         let request = OperationRequest(
             inputs: ["/tmp/image.png"],
-            action: .crop(size: "1200x630", smartCrop: true, longEdge: false),
+            action: .crop(
+                size: "1200x630",
+                smartCrop: true,
+                longEdge: false,
+                adaptiveOptimisation: .enabled,
+                removeAudio: true
+            ),
             execution: makeExecutionOptions()
         )
 

@@ -714,7 +714,7 @@ non-executable instructional item:
 
 ```text
 Type crop or resize parameters
-Examples: 1200x630, 16:9, 1920, w128, h720
+Examples: 1200x630, 16:9, 1920, w128, h720 · Controls
 ```
 
 Once the user types, show one primary interpreted result:
@@ -727,27 +727,46 @@ Once the user types, show one primary interpreted result:
 | `w128` | Fixed width, calculated height | `128x0` |
 | `h720` | Fixed height, calculated width | `0x720` |
 
-Continue accepting Clop's native `128x0` and `0x720` forms. Subtitles must
-explain the interpretation before execution. Invalid input should produce one
-clear, non-executable result with concise examples.
+Continue accepting Clop's native `128x0` and `0x720` forms. The interpreted
+row title must summarize the action being performed, while the subtitle keeps
+the input source, compact accepted-size guide, and Command-L reference
+available without repeating the title. Invalid input should produce one clear,
+non-executable result with concise examples.
 
 Crop / Resize also owns geometry-adjacent processing controls exposed by the
-Clop `crop` command. Extend the same query grammar instead of adding deeper
-submenus:
+Clop `crop` command. Keep direct typed queries working, but provide a shallow
+`controls:` editor from the empty instructional row so users can discover the
+grammar through the same Tab and Control-Return flow used by Optimize and
+Convert. Backspace from `controls:` naturally returns to the root Crop /
+Resize menu.
 
 | Token | Meaning |
 | --- | --- |
-| `smart` | Enable smart crop |
-| `adaptive` | Enable adaptive image optimization |
-| `no-adaptive` | Disable adaptive image optimization |
-| `mute` | Remove audio from cropped videos |
+| `ad` or `adaptive` | Enable adaptive image optimization |
+| `m` or `mute` | Remove audio from cropped videos |
 
-Examples include `16:9 smart`, `1920 adaptive`, and `1280x720 mute`. The
+The `no-ad` / `no-adaptive` form remains accepted as an advanced explicit
+override and should be documented in Large Type, but do not promote it in the
+interactive subtitle examples if Clop's default crop behavior is already
+non-adaptive. Examples include `16:9 ad` and `1280x720 mute`. The
 interpreted result title should translate the complete query into natural
-language, while validation rows explain conflicts such as duplicate adaptive
-tokens. Aggressive or Standard optimization remains a global/modifier choice,
-and output behavior remains controlled by workflow settings, Shift modifiers,
-or headless External Trigger overrides rather than by the crop grammar.
+language, including adaptive, no-adaptive, and mute controls; keep those action
+details out of subtitles so subtitles remain useful for input context, grammar
+guidance, and modifiers. Validation rows explain conflicts such as duplicate
+adaptive tokens. Smart Crop remains an Option-Return modifier and an explicit
+External Trigger boolean. Aggressive or Standard optimization remains a
+global/modifier choice, and output behavior remains controlled by workflow
+settings, Shift modifiers, or headless External Trigger overrides rather than
+by the crop grammar.
+
+Show video-only controls only when they can matter: visible guidance may show
+`m` / `mute` for clear video input, mixed input that includes video, folders,
+or ambiguous URLs. Hide mute guidance for clear image/PDF-only input, while
+typed validation should reject unsupported mute controls if a user enters one
+manually. Saved mute presets should be hidden for clear non-video input and
+remain visible for video or ambiguous input. Saved preset labels should carry
+important controls in the title when they change behavior, such as
+`16:9 · Adaptive` or `16:9 · Mute Video`, instead of overloading subtitles.
 
 When a valid typed value also partially matches saved presets, keep the
 interpreted typed action first and list the matching presets below it. This

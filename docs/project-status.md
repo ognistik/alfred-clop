@@ -239,6 +239,27 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - Invalid, malformed, negative, decimal, and zero-only values rejected visibly
 - Crop execution through `clop crop --size VALUE --json --no-progress`
 - Conditional `--long-edge`; menu-generated requests keep `smartCrop` disabled
+- Crop / Resize typed controls accept `ad` / `adaptive`, `no-ad` /
+  `no-adaptive`, and `m` / `mute` after the size, with spaces or commas
+  between tokens
+- The empty Crop / Resize instruction row offers a `controls:` editor through
+  Tab and Control-Return, matching the shallow controls flow used by Optimize
+  and Convert
+- Interactive guidance promotes `ad` for adaptive behavior and only shows
+  video mute guidance when the selected, copied, or passed input could include
+  video; `no-ad` remains accepted as an advanced explicit override in the
+  Large Type reference and automation grammar
+- Typed `m` / `mute` controls and saved mute presets are rejected or hidden for
+  clearly non-video input, while video, folders, URLs, and ambiguous input keep
+  them available
+- Incomplete control prefixes keep a helpful non-executable grammar row
+  instead of falling through to unrelated presets, while invalid and
+  conflicting controls are rejected visibly
+- Crop / Resize execution builds `--adaptive-optimisation`,
+  `--no-adaptive-optimisation`, and `--remove-audio` as separate arguments
+- External Trigger execution supports the same controls through compact
+  `controls:` grammar or explicit `adaptive`, `no adaptive`, `mute`, and
+  `remove audio` booleans
 - Crop and resize notifications distinguish complete success, partial batches,
   and all-skipped batches such as requests that would enlarge source images
 - Normalized inputs and selected, copied, or passed context preserved across
@@ -251,6 +272,8 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
   `<settingsPath>/settings.json` when configured
 - No preset inputs, custom names, or execution-setting overrides
 - Friendly normalization for equivalent forms such as `w128` and `128x0`
+- Crop / Resize presets may include adaptive optimization and mute controls,
+  and equivalent typed control aliases combine with saved presets
 - Fixed grammar instruction followed by saved presets with stable item UIDs
 - Saved presets use deterministic natural sorting by their friendly display
   values because Alfred learning is disabled for this submenu
@@ -470,8 +493,6 @@ structure.
 
 ## Not implemented
 
-- Extended Crop / Resize grammar for `adaptive`, `no-adaptive`, and `mute`
-  controls in addition to existing geometry and Smart Crop behavior
 - Disposable Clop probes for typed optimise and crop commands with mixed media,
   used to decide when Alfred Clop should filter known files itself versus
   passing broad inputs to Clop
@@ -493,6 +514,9 @@ The shared controls interaction model is now:
   menu and the relevant controls editor;
 - Optimize does not expose crop or downscale controls in Alfred's UI because
   Crop / Resize and Downscale already own those workflows and already optimize;
+- Crop / Resize exposes adaptive optimization and video mute controls through
+  the same shallow typed query as geometry values and through a `controls:`
+  editor, with longer grammar help in Large Type;
 - video Optimize includes playback speed as a typed control and External
   Trigger parameter;
 - parameter menus stay shallow and query-driven, using prefixes such as
@@ -547,16 +571,14 @@ The shared controls interaction model is now:
 
 ## Next recommended task
 
-Extend Crop / Resize controls with the documented adaptive, no-adaptive, and
-mute controls, then run the disposable typed `optimise` and `crop` probes
-needed to confirm mixed-media filtering behavior before starting PDF Crop
-parameter menus.
+Run the disposable typed `optimise` and `crop` probes needed to confirm
+mixed-media filtering behavior before starting PDF Crop parameter menus.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 248 tests.
+- `./scripts/test.sh` passes 262 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

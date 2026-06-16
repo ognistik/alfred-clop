@@ -411,7 +411,7 @@ enum ConfigurationMenu {
         ))
         return templateReferenceItem(
             title: title,
-            subtitle: "\(templateExample(template)) · ⌘L reference",
+            subtitle: "\(templateExample(template)) · ⌘L Reference",
             arg: stateJSON,
             valid: true,
             variables: mutationVariables(stateJSON),
@@ -448,7 +448,7 @@ enum ConfigurationMenu {
         ScriptFilterResponse(items: [
             templateReferenceItem(
                 title: title,
-                subtitle: "\(subtitle) · ⌘L reference"
+                subtitle: "\(subtitle) · ⌘L Reference"
             )
         ])
     }

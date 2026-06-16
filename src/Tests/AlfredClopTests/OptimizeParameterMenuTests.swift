@@ -217,7 +217,7 @@ struct OptimizeParameterMenuTests {
         )
 
         #expect(response.items.first?.title == "Invalid Optimize controls")
-        #expect(response.items.first?.subtitle == "5-100 compression, b128, or bitrate 128 · ⌘L reference")
+        #expect(response.items.first?.subtitle == "5-100 compression, b128, or bitrate 128 · ⌘L Reference")
     }
 
     @Test

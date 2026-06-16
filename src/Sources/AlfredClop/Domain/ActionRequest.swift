@@ -1,7 +1,13 @@
 enum ActionRequest: Codable, Equatable {
     case optimise(aggressive: Bool)
     case optimiseMedia(OptimizeRequest)
-    case crop(size: String, smartCrop: Bool, longEdge: Bool)
+    case crop(
+        size: String,
+        smartCrop: Bool,
+        longEdge: Bool,
+        adaptiveOptimisation: CropAdaptiveOptimisation? = nil,
+        removeAudio: Bool = false
+    )
     case downscale(factor: Double)
     case convert(ConversionChoice)
     case cropPDF(mode: String, value: String, pageLayout: String?)
@@ -15,6 +21,8 @@ enum ActionRequest: Codable, Equatable {
         case size
         case smartCrop
         case longEdge
+        case adaptiveOptimisation
+        case removeAudio
         case factor
         case format
         case media
@@ -45,11 +53,22 @@ enum ActionRequest: Codable, Equatable {
         case let .optimiseMedia(request):
             try container.encode(ActionType.optimiseMedia, forKey: .type)
             try container.encode(request, forKey: .optimize)
-        case let .crop(size, smartCrop, longEdge):
+        case let .crop(
+            size,
+            smartCrop,
+            longEdge,
+            adaptiveOptimisation,
+            removeAudio
+        ):
             try container.encode(ActionType.crop, forKey: .type)
             try container.encode(size, forKey: .size)
             try container.encode(smartCrop, forKey: .smartCrop)
             try container.encode(longEdge, forKey: .longEdge)
+            try container.encodeIfPresent(
+                adaptiveOptimisation,
+                forKey: .adaptiveOptimisation
+            )
+            try container.encode(removeAudio, forKey: .removeAudio)
         case let .downscale(factor):
             try container.encode(ActionType.downscale, forKey: .type)
             try container.encode(factor, forKey: .factor)
@@ -85,7 +104,15 @@ enum ActionRequest: Codable, Equatable {
             self = .crop(
                 size: try container.decode(String.self, forKey: .size),
                 smartCrop: try container.decode(Bool.self, forKey: .smartCrop),
-                longEdge: try container.decode(Bool.self, forKey: .longEdge)
+                longEdge: try container.decode(Bool.self, forKey: .longEdge),
+                adaptiveOptimisation: try container.decodeIfPresent(
+                    CropAdaptiveOptimisation.self,
+                    forKey: .adaptiveOptimisation
+                ),
+                removeAudio: try container.decodeIfPresent(
+                    Bool.self,
+                    forKey: .removeAudio
+                ) ?? false
             )
         case .downscale:
             self = .downscale(factor: try container.decode(Double.self, forKey: .factor))

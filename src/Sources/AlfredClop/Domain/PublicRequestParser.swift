@@ -211,21 +211,69 @@ enum PublicRequestParser {
         case .optimise:
             return try optimizeExecution(values: values)
         case .crop:
-            try rejectUnknown(values, allowed: ["size", "smart crop"])
+            try rejectUnknown(
+                values,
+                allowed: [
+                    "size",
+                    "smart crop",
+                    "controls",
+                    "adaptive",
+                    "no adaptive",
+                    "mute",
+                    "remove audio"
+                ]
+            )
             guard let sizeValue = values["size"], !sizeValue.isEmpty else {
                 throw PublicRequestError.missingParameter("size")
             }
-            guard let size = CropSizeParser.parse(sizeValue) else {
-                throw PublicRequestError.invalidParameter("size", sizeValue)
+            var controlParts = [sizeValue]
+            if let controls = values["controls"], !controls.isEmpty {
+                controlParts.append(controls)
+            }
+            if try boolean(
+                values["adaptive"],
+                name: "adaptive",
+                defaultValue: false
+            ) {
+                controlParts.append("adaptive")
+            }
+            if try boolean(
+                values["no adaptive"],
+                name: "no adaptive",
+                defaultValue: false
+            ) {
+                controlParts.append("no-adaptive")
+            }
+            let mute = try boolean(
+                values["mute"],
+                name: "mute",
+                defaultValue: false
+            )
+            let removeAudio = try boolean(
+                values["remove audio"],
+                name: "remove audio",
+                defaultValue: false
+            )
+            if mute || removeAudio {
+                controlParts.append("mute")
+            }
+            let controlText = controlParts.joined(separator: " ")
+            guard let controls = CropControlParser.parse(controlText) else {
+                throw PublicRequestError.invalidParameter(
+                    "crop controls",
+                    controlText
+                )
             }
             return .crop(
-                size: size.value,
+                size: controls.size.value,
                 smartCrop: try boolean(
                     values["smart crop"],
                     name: "smart crop",
                     defaultValue: false
                 ),
-                longEdge: size.longEdge
+                longEdge: controls.size.longEdge,
+                adaptiveOptimisation: controls.adaptiveOptimisation,
+                removeAudio: controls.removeAudio
             )
         case .downscale:
             try rejectUnknown(values, allowed: ["factor"])

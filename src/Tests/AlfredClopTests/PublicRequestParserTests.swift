@@ -227,6 +227,56 @@ struct PublicRequestParserTests {
         ))
     }
 
+    @Test
+    func cropExecutionAcceptsAdaptiveAndMuteControls() throws {
+        let compact = try PublicRequestParser.parse("""
+        execute: Crop / Resize
+        size: 16:9
+        controls: no-ad, m
+
+        /tmp/movie.mp4
+        """)
+        let explicit = try PublicRequestParser.parse("""
+        execute: Crop / Resize
+        size: w128
+        adaptive: true
+        remove audio: yes
+
+        /tmp/movie.mp4
+        """)
+
+        #expect(compact.route == .execute(action: .crop(
+            size: "16:9",
+            smartCrop: false,
+            longEdge: false,
+            adaptiveOptimisation: .disabled,
+            removeAudio: true
+        )))
+        #expect(explicit.route == .execute(action: .crop(
+            size: "128x0",
+            smartCrop: false,
+            longEdge: false,
+            adaptiveOptimisation: .enabled,
+            removeAudio: true
+        )))
+    }
+
+    @Test
+    func cropExecutionRejectsConflictingControls() {
+        #expect(throws: PublicRequestError.invalidParameter(
+            "crop controls",
+            "16:9 adaptive no-adaptive"
+        )) {
+            try PublicRequestParser.parse("""
+            execute: Crop / Resize
+            size: 16:9
+            controls: adaptive no-adaptive
+
+            /tmp/movie.mp4
+            """)
+        }
+    }
+
     @Test(arguments: [
         ("50", 0.5),
         ("50%", 0.5),

@@ -66,6 +66,33 @@ struct CropPresetMenuTests {
     }
 
     @Test
+    func matchingTypedControlsCombineWithSavedPreset() throws {
+        let fixture = try Fixture()
+        try fixture.save("w128 ad m")
+
+        let response = fixture.response(query: "128x0 adaptive mute")
+        let matchingItems = response.items.filter {
+            $0.uid == "crop.preset.size.128x0.enabled.mute"
+        }
+        let operation = try operationRequest(
+            from: try #require(matchingItems.first)
+        )
+
+        #expect(matchingItems.count == 1)
+        #expect(matchingItems[0].title == "Width 128, auto height · Adaptive · Mute Video")
+        #expect(!matchingItems[0].subtitle.contains("Adaptive"))
+        #expect(!matchingItems[0].subtitle.contains("Mute"))
+        #expect(matchingItems[0].subtitle.contains("Saved Preset"))
+        #expect(operation.action == .crop(
+            size: "128x0",
+            smartCrop: false,
+            longEdge: false,
+            adaptiveOptimisation: .enabled,
+            removeAudio: true
+        ))
+    }
+
+    @Test
     func validTypedQueryStaysFirstBeforeMatchingPresets() throws {
         let fixture = try Fixture()
         try fixture.save("16:9")
@@ -87,6 +114,72 @@ struct CropPresetMenuTests {
             response.items[1].mods?.control?.subtitle
                 == "Remove Preset w128"
         )
+    }
+
+    @Test
+    func validTypedControlsStayFirstBeforeMatchingPresets() throws {
+        let fixture = try Fixture()
+        try fixture.save("1200x630 ad m")
+        try fixture.save("1200x630 no-ad m")
+
+        let response = fixture.response(query: "1200x630 m")
+        let operation = try operationRequest(
+            from: try #require(response.items.first)
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Use 1200x630 · Mute Video",
+            "1200x630 · Adaptive · Mute Video",
+            "1200x630 · No Adaptive · Mute Video"
+        ])
+        #expect(operation.action == .crop(
+            size: "1200x630",
+            smartCrop: false,
+            longEdge: false,
+            adaptiveOptimisation: nil,
+            removeAudio: true
+        ))
+    }
+
+    @Test
+    func mutePresetsAreHiddenForClearNonVideoInput() throws {
+        let fixture = try Fixture(mediaKinds: [.image, .pdf])
+        try fixture.save("w128")
+        try fixture.save("w128 m")
+        try fixture.save("h720 mute")
+
+        let root = fixture.response(query: "")
+        let filtered = fixture.response(query: "128")
+
+        #expect(root.items.map(\.title) == [
+            "Type crop or resize parameters",
+            "w128"
+        ])
+        #expect(filtered.items.map(\.title) == [
+            "Long edge 128",
+            "w128"
+        ])
+        #expect(!root.items.contains { $0.title.contains("Mute Video") })
+        #expect(!filtered.items.contains { $0.title.contains("Mute Video") })
+    }
+
+    @Test
+    func mutePresetsRemainVisibleForVideoAndAmbiguousInput() throws {
+        let videoFixture = try Fixture(mediaKinds: [.video])
+        let ambiguousFixture = try Fixture(
+            mediaKinds: [],
+            itemKinds: [.remoteURL],
+            ambiguousKinds: [.remoteURL]
+        )
+        try videoFixture.save("w128 m")
+        try ambiguousFixture.save("w128 m")
+
+        #expect(videoFixture.response(query: "").items.contains {
+            $0.title == "w128 · Mute Video"
+        })
+        #expect(ambiguousFixture.response(query: "").items.contains {
+            $0.title == "w128 · Mute Video"
+        })
     }
 
     @Test
@@ -146,7 +239,7 @@ struct CropPresetMenuTests {
     @Test
     func controlReturnSavesTypedValueAndPreservesInputsAndContext() throws {
         let fixture = try Fixture(context: .arguments)
-        let initial = fixture.response(query: "w128")
+        let initial = fixture.response(query: "w128 no-ad m")
         let typedItem = try #require(initial.items.first(where: { $0.valid }))
         let control = try #require(typedItem.mods?.control)
         let saveStateJSON = try #require(
@@ -163,13 +256,21 @@ struct CropPresetMenuTests {
 
         let saved = fixture.response(stateJSON: saveStateJSON, query: "")
         let combined = try #require(saved.items.first(where: {
-            $0.uid == "crop.preset.size.128x0"
+            $0.uid == "crop.preset.size.128x0.disabled.mute"
         }))
         let operation = try operationRequest(from: combined)
 
         #expect(saved.items[0].title == "Type crop or resize parameters")
         #expect(combined.subtitle.contains("Saved Preset"))
+        #expect(combined.title == "w128 · No Adaptive · Mute Video")
         #expect(operation.inputs == fixture.inputs)
+        #expect(operation.action == .crop(
+            size: "128x0",
+            smartCrop: false,
+            longEdge: false,
+            adaptiveOptimisation: .disabled,
+            removeAudio: true
+        ))
         #expect(try fixture.store.load().presets.count == 1)
     }
 
@@ -266,7 +367,12 @@ private struct Fixture {
         "/tmp/Second Document.pdf"
     ]
 
-    init(context: ActionInputContext = .selected) throws {
+    init(
+        context: ActionInputContext = .selected,
+        mediaKinds: [MediaKind]? = nil,
+        itemKinds: [InputItemKind]? = nil,
+        ambiguousKinds: [AmbiguousInputKind]? = nil
+    ) throws {
         directory = try makeTemporaryDirectory()
             .appendingPathComponent("Preset Data With Spaces")
         environment = Environment(values: [
@@ -277,15 +383,18 @@ private struct Fixture {
             for: MenuState.crop(ParameterStepRequest(
                 action: .crop,
                 inputs: inputs,
-                inputContext: context
+                inputContext: context,
+                mediaKinds: mediaKinds,
+                itemKinds: itemKinds,
+                ambiguousKinds: ambiguousKinds
             )),
             prettyPrinted: false
         )
     }
 
     func save(_ value: String) throws {
-        let size = try #require(CropSizeParser.parse(value))
-        _ = try store.save(.crop(CropActionPreset(size: size)))
+        let controls = try #require(CropControlParser.parse(value))
+        _ = try store.save(.crop(CropActionPreset(controls: controls)))
     }
 
     func response(

@@ -1,18 +1,41 @@
 import Foundation
 
+enum CropAdaptiveOptimisation: String, Codable, Equatable, Hashable {
+    case enabled
+    case disabled
+}
+
 struct CropActionPreset: Codable, Equatable, Hashable {
     var size: String
     var longEdge: Bool
+    var adaptiveOptimisation: CropAdaptiveOptimisation?
+    var removeAudio: Bool
+
+    init(
+        controls: CropControls
+    ) {
+        size = controls.size.value
+        longEdge = controls.size.longEdge
+        adaptiveOptimisation = controls.adaptiveOptimisation
+        removeAudio = controls.removeAudio
+    }
 
     init(size: CropSize) {
-        self.size = size.value
-        self.longEdge = size.longEdge
+        self.init(controls: CropControls(size: size))
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let size = try container.decode(String.self, forKey: .size)
         let longEdge = try container.decode(Bool.self, forKey: .longEdge)
+        let adaptiveOptimisation = try container.decodeIfPresent(
+            CropAdaptiveOptimisation.self,
+            forKey: .adaptiveOptimisation
+        )
+        let removeAudio = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .removeAudio
+        ) ?? false
 
         guard let parsed = CropSizeParser.parse(size),
               parsed.value == size,
@@ -26,25 +49,44 @@ struct CropActionPreset: Codable, Equatable, Hashable {
 
         self.size = size
         self.longEdge = longEdge
+        self.adaptiveOptimisation = adaptiveOptimisation
+        self.removeAudio = removeAudio
     }
 
     var cropSize: CropSize {
         CropSizeParser.parse(size)!
     }
 
+    var controls: CropControls {
+        CropControls(
+            size: cropSize,
+            adaptiveOptimisation: adaptiveOptimisation,
+            removeAudio: removeAudio
+        )
+    }
+
     var displayValue: String {
+        let sizeDisplay: String
         switch cropSize.kind {
         case let .fixedWidth(width):
-            return "w\(width)"
+            sizeDisplay = "w\(width)"
         case let .fixedHeight(height):
-            return "h\(height)"
+            sizeDisplay = "h\(height)"
         case .exactDimensions, .aspectRatio, .longEdge:
-            return size
+            sizeDisplay = size
         }
+        let controls = CropControlParser.compactControlTokens(for: controls)
+        return ([sizeDisplay] + controls).joined(separator: " ")
     }
 
     var stableUID: String {
-        "crop.preset.\(longEdge ? "long-edge" : "size").\(size)"
+        [
+            "crop.preset",
+            longEdge ? "long-edge" : "size",
+            size,
+            adaptiveOptimisation?.rawValue,
+            removeAudio ? "mute" : nil
+        ].compactMap(\.self).joined(separator: ".")
     }
 }
 
@@ -166,6 +208,8 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case type
         case size
         case longEdge
+        case adaptiveOptimisation
+        case removeAudio
         case factor
         case media
         case format
@@ -188,6 +232,11 @@ enum ActionPreset: Codable, Equatable, Hashable {
             try container.encode(PresetType.crop, forKey: .type)
             try container.encode(preset.size, forKey: .size)
             try container.encode(preset.longEdge, forKey: .longEdge)
+            try container.encodeIfPresent(
+                preset.adaptiveOptimisation,
+                forKey: .adaptiveOptimisation
+            )
+            try container.encode(preset.removeAudio, forKey: .removeAudio)
         case let .downscale(preset):
             try container.encode(PresetType.downscale, forKey: .type)
             try container.encode(preset.factor, forKey: .factor)

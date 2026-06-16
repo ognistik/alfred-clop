@@ -330,7 +330,7 @@ enum OptimizeParameterMenu {
             subtitle: [
                 inputDescription(for: request),
                 acceptedControlSubtitle(for: media),
-                "⌘L reference"
+                "⌘L Reference"
             ].joined(separator: " · "),
             arg: "",
             valid: false,
@@ -349,7 +349,7 @@ enum OptimizeParameterMenu {
             subtitle: [
                 inputDescription(for: request),
                 emptyControlSubtitle(for: media),
-                "⌘L reference"
+                "⌘L Reference"
             ].joined(separator: " · "),
             arg: "",
             valid: false,
@@ -916,7 +916,7 @@ enum OptimizeParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Invalid Optimize controls",
-            subtitle: "\(emptyControlSubtitle(for: media)) · ⌘L reference",
+            subtitle: "\(emptyControlSubtitle(for: media)) · ⌘L Reference",
             arg: "",
             valid: false,
             text: ScriptFilterText(

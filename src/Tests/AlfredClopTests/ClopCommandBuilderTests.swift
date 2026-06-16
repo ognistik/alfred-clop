@@ -266,6 +266,34 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
+    func cropControlsUseDocumentedOptionalFlags() throws {
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/movie with spaces.mp4"],
+            action: .crop(
+                size: "16:9",
+                smartCrop: false,
+                longEdge: false,
+                adaptiveOptimisation: .disabled,
+                removeAudio: true
+            ),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(command.arguments == [
+            "crop",
+            "--size",
+            "16:9",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--no-adaptive-optimisation",
+            "--remove-audio",
+            "--gui",
+            "/tmp/movie with spaces.mp4"
+        ])
+    }
+
+    @Test
     func recursiveFolderSettingIsAppliedToSupportedCommands() throws {
         var execution = makeExecutionOptions()
         execution.recursiveFolders = true

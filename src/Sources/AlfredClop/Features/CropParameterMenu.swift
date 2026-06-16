@@ -1,6 +1,6 @@
 import Foundation
 
-enum CropSizeKind: Equatable {
+enum CropSizeKind: Equatable, Hashable {
     case exactDimensions(width: Int, height: Int)
     case aspectRatio(width: Int, height: Int)
     case longEdge(Int)
@@ -8,10 +8,68 @@ enum CropSizeKind: Equatable {
     case fixedHeight(Int)
 }
 
-struct CropSize: Equatable {
+struct CropSize: Equatable, Hashable {
     var value: String
     var longEdge: Bool
     var kind: CropSizeKind
+}
+
+struct CropControls: Codable, Equatable, Hashable {
+    var size: CropSize
+    var adaptiveOptimisation: CropAdaptiveOptimisation?
+    var removeAudio: Bool
+
+    init(
+        size: CropSize,
+        adaptiveOptimisation: CropAdaptiveOptimisation? = nil,
+        removeAudio: Bool = false
+    ) {
+        self.size = size
+        self.adaptiveOptimisation = adaptiveOptimisation
+        self.removeAudio = removeAudio
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case size
+        case longEdge
+        case adaptiveOptimisation
+        case removeAudio
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(size.value, forKey: .size)
+        try container.encode(size.longEdge, forKey: .longEdge)
+        try container.encodeIfPresent(
+            adaptiveOptimisation,
+            forKey: .adaptiveOptimisation
+        )
+        try container.encode(removeAudio, forKey: .removeAudio)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let value = try container.decode(String.self, forKey: .size)
+        let longEdge = try container.decode(Bool.self, forKey: .longEdge)
+        guard let parsed = CropSizeParser.parse(value),
+              parsed.value == value,
+              parsed.longEdge == longEdge else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .size,
+                in: container,
+                debugDescription: "Crop controls are not normalized or supported."
+            )
+        }
+        size = parsed
+        adaptiveOptimisation = try container.decodeIfPresent(
+            CropAdaptiveOptimisation.self,
+            forKey: .adaptiveOptimisation
+        )
+        removeAudio = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .removeAudio
+        ) ?? false
+    }
 }
 
 enum CropSizeParser {
@@ -127,7 +185,165 @@ enum CropSizeParser {
     }
 }
 
+enum CropControlParser {
+    static func parse(_ input: String) -> CropControls? {
+        let tokens = tokenize(input)
+        guard !tokens.isEmpty else {
+            return nil
+        }
+
+        var size: CropSize?
+        var adaptiveOptimisation: CropAdaptiveOptimisation?
+        var removeAudio = false
+        var index = 0
+
+        while index < tokens.count {
+            let token = tokens[index]
+            if let parsedSize = CropSizeParser.parse(token) {
+                guard size == nil else { return nil }
+                size = parsedSize
+                index += 1
+                continue
+            }
+            if token == "no", index + 1 < tokens.count,
+               isAdaptiveToken(tokens[index + 1]) {
+                guard adaptiveOptimisation == nil else { return nil }
+                adaptiveOptimisation = .disabled
+                index += 2
+                continue
+            }
+            if token == "ad" || token == "adaptive" {
+                guard adaptiveOptimisation == nil else { return nil }
+                adaptiveOptimisation = .enabled
+                index += 1
+                continue
+            }
+            if token == "na" || token == "noad" || token == "no-ad"
+                || token == "no-adaptive" || token == "noadaptive" {
+                guard adaptiveOptimisation == nil else { return nil }
+                adaptiveOptimisation = .disabled
+                index += 1
+                continue
+            }
+            if token == "m" || token == "mu" || token == "mute" {
+                guard !removeAudio else { return nil }
+                removeAudio = true
+                index += 1
+                continue
+            }
+            return nil
+        }
+
+        guard let size else {
+            return nil
+        }
+        return CropControls(
+            size: size,
+            adaptiveOptimisation: adaptiveOptimisation,
+            removeAudio: removeAudio
+        )
+    }
+
+    static func isPossiblePrefix(_ input: String) -> Bool {
+        let tokens = tokenize(input)
+        guard !tokens.isEmpty else {
+            return false
+        }
+        let last = tokens[tokens.count - 1]
+        guard isProperPrefix(
+            last,
+            of: [
+                "ad", "adaptive", "na", "noad", "no-ad",
+                "no-adaptive", "noadaptive", "m", "mu", "mute"
+            ]
+        ) || last == "no" else {
+            return false
+        }
+        let priorTokens = tokens.dropLast()
+        guard !priorTokens.isEmpty else {
+            return false
+        }
+        let priorText = priorTokens.joined(separator: " ")
+        return parse(priorText) != nil
+            || priorTokens.contains { CropSizeParser.parse($0) != nil }
+    }
+
+    static func displayValue(for controls: CropControls) -> String {
+        CropActionPreset(controls: controls).displayValue
+    }
+
+    static func compactControlTokens(for controls: CropControls) -> [String] {
+        [
+            controls.adaptiveOptimisation.map {
+                $0 == .enabled ? "ad" : "no-ad"
+            },
+            controls.removeAudio ? "m" : nil
+        ].compactMap(\.self)
+    }
+
+    static func controlDescriptions(for controls: CropControls) -> [String] {
+        [
+            controls.adaptiveOptimisation.map {
+                $0 == .enabled ? "Adaptive" : "No Adaptive"
+            },
+            controls.removeAudio ? "Mute" : nil
+        ].compactMap(\.self)
+    }
+
+    static var largeTypeReference: String {
+        """
+        Crop / Resize controls
+
+        Start with a size:
+        1200x630 exact crop
+        16:9 aspect ratio
+        1920 long edge
+        w128 fixed width
+        h720 fixed height
+
+        Add optional controls after the size:
+        ad or adaptive
+        m or mute
+
+        Advanced:
+        no-ad or no-adaptive explicitly disables adaptive optimization.
+
+        Examples:
+        1200x630 ad
+        16:9 m
+        w128 mute
+        """
+    }
+
+    private static func tokenize(_ input: String) -> [String] {
+        input
+            .lowercased()
+            .replacingOccurrences(of: ",", with: " ")
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+    }
+
+    private static func isAdaptiveToken(_ token: String) -> Bool {
+        token == "ad" || token == "adaptive"
+    }
+
+    private static func isProperPrefix(
+        _ token: String,
+        of candidates: [String]
+    ) -> Bool {
+        guard !candidates.contains(token) else {
+            return false
+        }
+        return !token.isEmpty
+            && candidates.contains { candidate in
+                candidate.hasPrefix(token) && candidate != token
+            }
+    }
+}
+
 enum CropParameterMenu {
+    private static let controlsPrefix = "controls: "
+
     static func response(
         stateJSON: String,
         query: String,
@@ -233,7 +449,9 @@ enum CropParameterMenu {
             presets = try store.load().presets.compactMap { preset in
                 guard case let .crop(crop) = preset else { return nil }
                 return crop
-            }.sorted(by: presetDisplayOrder)
+            }
+            .filter { supportsPreset($0, request: request) }
+            .sorted(by: presetDisplayOrder)
         } catch {
             return storageErrorResponse(
                 request: request,
@@ -247,8 +465,21 @@ enum CropParameterMenu {
             request.inputs,
             itemKinds: request.itemKinds
         )
+        if let controlsQuery = controlsQueryValue(from: trimmedQuery) {
+            return controlsResponse(
+                request: request,
+                stateJSON: stateJSON,
+                query: controlsQuery,
+                presets: presets,
+                environment: environment,
+                affordance: affordance
+            )
+        }
         guard !trimmedQuery.isEmpty else {
-            let items = ([instructionItem] + presets.compactMap {
+            let items = ([instructionItem(
+                request: request,
+                stateJSON: stateJSON
+            )] + presets.compactMap {
                 presetItem(for: $0, request: request, environment: environment)
             }).map(affordance.apply)
             return ScriptFilterResponse(
@@ -266,11 +497,22 @@ enum CropParameterMenu {
         }
         var items = [ScriptFilterItem]()
 
-        if let size = CropSizeParser.parse(trimmedQuery) {
-            let candidate = CropActionPreset(size: size)
+        if let controls = CropControlParser.parse(trimmedQuery) {
+            guard supportsControls(controls, request: request) else {
+                items.append(unsupportedMuteItem(request: request))
+                return ScriptFilterResponse(
+                    items: items.map(affordance.apply),
+                    variables: preservedVariables(
+                        for: request,
+                        stateJSON: stateJSON
+                    ),
+                    skipKnowledge: true
+                )
+            }
+            let candidate = CropActionPreset(controls: controls)
             let exactPreset = presets.first(where: { $0 == candidate })
             if let item = interpretedItem(
-                for: size,
+                for: controls,
                 request: request,
                 savedPreset: exactPreset,
                 environment: environment
@@ -286,18 +528,114 @@ enum CropParameterMenu {
                         environment: environment
                     )
                 })
+        } else if CropControlParser.isPossiblePrefix(trimmedQuery),
+                  matchingPresets.isEmpty {
+            items.append(ScriptFilterItem(
+                title: "Keep typing crop controls",
+                subtitle: "Start with a size, then add controls. ⌘L Reference",
+                arg: "",
+                valid: false,
+                text: ScriptFilterText(
+                    largetype: CropControlParser.largeTypeReference
+                )
+            ))
         } else if matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
                 title: "Invalid crop or resize value",
-                subtitle: "Use 1200x630, 16:9, 1920, w128, or h720.",
+                subtitle: "Use 1200x630, 16:9, 1920, w128, or h720. ⌘L Reference",
                 arg: "",
-                valid: false
+                valid: false,
+                text: ScriptFilterText(
+                    largetype: CropControlParser.largeTypeReference
+                )
             ))
         }
 
         if items.isEmpty && !matchingPresets.isEmpty {
             items.append(contentsOf: matchingPresets.compactMap {
                 presetItem(for: $0, request: request, environment: environment)
+            })
+        }
+
+        return ScriptFilterResponse(
+            items: items.map(affordance.apply),
+            variables: preservedVariables(for: request, stateJSON: stateJSON),
+            skipKnowledge: true
+        )
+    }
+
+    private static func controlsResponse(
+        request: ParameterStepRequest,
+        stateJSON: String,
+        query: String,
+        presets: [CropActionPreset],
+        environment: Environment,
+        affordance: ScriptFilterAffordance
+    ) -> ScriptFilterResponse {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matchingPresets = trimmedQuery.isEmpty
+            ? presets
+            : presets.filter { presetMatchesQuery($0, query: trimmedQuery) }
+        var items = [ScriptFilterItem]()
+
+        if trimmedQuery.isEmpty {
+            items.append(controlsInstructionItem(request: request))
+            items.append(contentsOf: matchingPresets.compactMap {
+                presetItem(
+                    for: $0,
+                    request: request,
+                    environment: environment,
+                    autocompletePrefix: controlsPrefix
+                )
+            })
+        } else if let controls = CropControlParser.parse(trimmedQuery) {
+            guard supportsControls(controls, request: request) else {
+                items.append(unsupportedMuteItem(request: request))
+                return ScriptFilterResponse(
+                    items: items.map(affordance.apply),
+                    variables: preservedVariables(
+                        for: request,
+                        stateJSON: stateJSON
+                    ),
+                    skipKnowledge: true
+                )
+            }
+            let candidate = CropActionPreset(controls: controls)
+            let exactPreset = presets.first(where: { $0 == candidate })
+            if let item = interpretedItem(
+                for: controls,
+                request: request,
+                savedPreset: exactPreset,
+                environment: environment,
+                autocompletePrefix: controlsPrefix
+            ) {
+                items.append(item)
+            }
+            items.append(contentsOf: matchingPresets
+                .filter { $0 != exactPreset }
+                .compactMap {
+                    presetItem(
+                        for: $0,
+                        request: request,
+                        environment: environment,
+                        autocompletePrefix: controlsPrefix
+                    )
+                })
+        } else if CropControlParser.isPossiblePrefix(trimmedQuery),
+                  matchingPresets.isEmpty {
+            items.append(partialControlsItem(request: request))
+        } else if matchingPresets.isEmpty {
+            items.append(invalidControlsItem(request: request))
+        }
+
+        if items.isEmpty && !matchingPresets.isEmpty {
+            items.append(contentsOf: matchingPresets.compactMap {
+                presetItem(
+                    for: $0,
+                    request: request,
+                    environment: environment,
+                    autocompletePrefix: controlsPrefix
+                )
             })
         }
 
@@ -316,6 +654,21 @@ enum CropParameterMenu {
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: nil
         )
+        let haystack = [
+            preset.displayValue,
+            preset.size,
+            CropControlParser.compactControlTokens(for: preset.controls)
+                .joined(separator: " ")
+        ].joined(separator: " ").folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: nil
+        )
+        let queryTokens = normalizedQuery
+            .replacingOccurrences(of: ",", with: " ")
+            .split(whereSeparator: \.isWhitespace)
+        if queryTokens.count > 1 {
+            return queryTokens.allSatisfy { haystack.contains($0) }
+        }
         return [preset.displayValue, preset.size].contains { value in
             value.folding(
                 options: [.caseInsensitive, .diacriticInsensitive],
@@ -325,12 +678,13 @@ enum CropParameterMenu {
     }
 
     private static func interpretedItem(
-        for size: CropSize,
+        for controls: CropControls,
         request: ParameterStepRequest,
         savedPreset: CropActionPreset?,
-        environment: Environment
+        environment: Environment,
+        autocompletePrefix: String = ""
     ) -> ScriptFilterItem? {
-        let preset = CropActionPreset(size: size)
+        let preset = CropActionPreset(controls: controls)
         guard let argument = operationArgument(
             for: preset,
             request: request,
@@ -339,42 +693,43 @@ enum CropParameterMenu {
             return nil
         }
 
-        let title: String
+        let baseTitle: String
         let interpretation: String
-        switch size.kind {
+        switch controls.size.kind {
         case let .exactDimensions(width, height):
-            title = "Use \(width)x\(height)"
-            interpretation = "Exact \(width)x\(height)"
+            baseTitle = "Use \(width)x\(height)"
+            interpretation = "Crop to \(width)x\(height)"
         case let .aspectRatio(width, height):
-            title = "Use \(width):\(height)"
-            interpretation = "Crop to aspect ratio \(width):\(height)"
+            baseTitle = "Use \(width):\(height)"
+            interpretation = "Crop to \(width):\(height)"
         case let .longEdge(edge):
-            title = "Long edge \(edge)"
+            baseTitle = "Long edge \(edge)"
             interpretation = "Long edge \(edge)"
         case let .fixedWidth(width):
-            title = "Width \(width), auto height"
+            baseTitle = "Width \(width), auto height"
             interpretation = "Fixed width \(width)"
         case let .fixedHeight(height):
-            title = "Height \(height), auto width"
+            baseTitle = "Height \(height), auto width"
             interpretation = "Fixed height \(height)"
         }
         let hints = rowHints(
             for: preset.cropSize,
             savedPreset: savedPreset != nil
         )
+        let isSavedPreset = savedPreset != nil
 
         return ScriptFilterItem(
             uid: savedPreset?.stableUID,
-            title: title,
+            title: actionTitle(baseTitle: baseTitle, controls: controls),
             subtitle: [
                 inputDescription(for: request),
-                interpretation,
-                savedPreset == nil ? hints : "Saved Preset",
-                savedPreset == nil ? nil : Optional("⌃↩ Remove Preset")
+                isSavedPreset ? interpretation : acceptedSizeSubtitle,
+                isSavedPreset ? "Saved Preset" : hints,
+                isSavedPreset ? Optional("⌃↩ Remove Preset") : nil
             ].compactMap(\.self).joined(separator: " · "),
             arg: argument,
             valid: true,
-            autocomplete: preset.displayValue,
+            autocomplete: autocompletePrefix + preset.displayValue,
             match: "\(preset.displayValue) \(preset.size)",
             variables: [
                 ActionMenu.requestKindVariable:
@@ -389,6 +744,9 @@ enum CropParameterMenu {
                     preset: preset,
                     request: request
                 )
+            ),
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: request)
             )
         )
     }
@@ -396,7 +754,8 @@ enum CropParameterMenu {
     private static func presetItem(
         for preset: CropActionPreset,
         request: ParameterStepRequest,
-        environment: Environment
+        environment: Environment,
+        autocompletePrefix: String = ""
     ) -> ScriptFilterItem? {
         guard let argument = operationArgument(
             for: preset,
@@ -408,7 +767,7 @@ enum CropParameterMenu {
 
         return ScriptFilterItem(
             uid: preset.stableUID,
-            title: preset.displayValue,
+            title: presetTitle(for: preset),
             subtitle: [
                 inputDescription(for: request),
                 "Saved Preset",
@@ -417,7 +776,7 @@ enum CropParameterMenu {
             ].joined(separator: " · "),
             arg: argument,
             valid: true,
-            autocomplete: preset.displayValue,
+            autocomplete: autocompletePrefix + preset.displayValue,
             match: "\(preset.displayValue) \(preset.size)",
             variables: [
                 ActionMenu.requestKindVariable:
@@ -506,7 +865,9 @@ enum CropParameterMenu {
                 action: .crop(
                     size: preset.size,
                     smartCrop: smartCrop,
-                    longEdge: preset.longEdge
+                    longEdge: preset.longEdge,
+                    adaptiveOptimisation: preset.adaptiveOptimisation,
+                    removeAudio: preset.removeAudio
                 ),
                 execution: execution
             ),
@@ -634,15 +995,31 @@ enum CropParameterMenu {
             )
         )
         let stateJSON = (try? encodedState(state)) ?? ""
+        let title = presetTitle(for: preset)
         let subtitle = kind == .save
-            ? "Save Preset \(preset.displayValue)"
-            : "Remove Preset \(preset.displayValue)"
+            ? "Save Preset \(title)"
+            : "Remove Preset \(title)"
 
         return ScriptFilterModifier(
             arg: stateJSON,
             subtitle: subtitle,
             valid: true,
             variables: transitionVariables(
+                stateJSON: stateJSON,
+                request: request
+            )
+        )
+    }
+
+    private static func controlsModifier(
+        request: ParameterStepRequest,
+        stateJSON: String
+    ) -> ScriptFilterModifier {
+        ScriptFilterModifier(
+            arg: controlsPrefix,
+            subtitle: "Save Preset",
+            valid: true,
+            variables: queryTransitionVariables(
                 stateJSON: stateJSON,
                 request: request
             )
@@ -662,21 +1039,116 @@ enum CropParameterMenu {
         return variables
     }
 
-    private static var instructionItem: ScriptFilterItem {
+    private static func queryTransitionVariables(
+        stateJSON: String,
+        request: ParameterStepRequest
+    ) -> [String: String] {
+        var variables = preservedVariables(
+            for: request,
+            stateJSON: stateJSON
+        )
+        variables[ActionMenu.requestKindVariable] =
+            WorkflowRequestKind.parameterStepQuery.rawValue
+        return variables
+    }
+
+    private static func instructionItem(
+        request: ParameterStepRequest,
+        stateJSON: String
+    ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Type crop or resize parameters",
-            subtitle: "Examples: 1200x630, 16:9, 1920, w128, h720 · ⌃↩ Save Preset",
+            subtitle: "Examples: 1200x630, 16:9, 1920, w128, h720 · ⇥ Controls, ⌃↩ Save Preset",
             arg: "",
-            valid: false
+            valid: false,
+            autocomplete: controlsPrefix,
+            mods: ScriptFilterMods(
+                command: nil,
+                option: nil,
+                control: controlsModifier(
+                    request: request,
+                    stateJSON: stateJSON
+                ),
+                shift: nil,
+                function: nil,
+                commandOption: nil,
+                commandShift: nil,
+                optionShift: nil,
+                commandOptionShift: nil
+            )
+        )
+    }
+
+    private static func controlsInstructionItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Type crop controls",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: CropControlParser.largeTypeReference
+            )
+        )
+    }
+
+    private static func partialControlsItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Keep typing crop controls",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: CropControlParser.largeTypeReference
+            )
+        )
+    }
+
+    private static func invalidControlsItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Invalid crop controls",
+            subtitle: "\(controlsHelp(for: request)) · ⌘L Reference",
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: CropControlParser.largeTypeReference
+            )
+        )
+    }
+
+    private static func unsupportedMuteItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Mute only applies to video",
+            subtitle: "\(controlsHelp(for: request)) · ⌘L Reference",
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: CropControlParser.largeTypeReference
+            )
         )
     }
 
     private static func interpretation(for size: CropSize) -> String {
         switch size.kind {
         case let .exactDimensions(width, height):
-            return "Exact \(width)x\(height)"
+            return "Crop to \(width)x\(height)"
         case let .aspectRatio(width, height):
-            return "Crop to aspect ratio \(width):\(height)"
+            return "Crop to \(width):\(height)"
         case let .longEdge(edge):
             return "Long edge \(edge)"
         case let .fixedWidth(width):
@@ -712,6 +1184,109 @@ enum CropParameterMenu {
         case let .optimize(optimize):
             return optimize.displayValue
         }
+    }
+
+    private static func presetTitle(for preset: CropActionPreset) -> String {
+        actionTitle(
+            baseTitle: baseDisplayValue(for: preset.cropSize),
+            controls: preset.controls
+        )
+    }
+
+    private static func actionTitle(
+        baseTitle: String,
+        controls: CropControls
+    ) -> String {
+        ([baseTitle] + titleControlDescriptions(for: controls))
+            .joined(separator: " · ")
+    }
+
+    private static func titleControlDescriptions(
+        for controls: CropControls
+    ) -> [String] {
+        [
+            controls.adaptiveOptimisation.map {
+                $0 == .enabled ? "Adaptive" : "No Adaptive"
+            },
+            controls.removeAudio ? "Mute Video" : nil
+        ].compactMap(\.self)
+    }
+
+    private static func baseDisplayValue(for size: CropSize) -> String {
+        switch size.kind {
+        case let .fixedWidth(width):
+            return "w\(width)"
+        case let .fixedHeight(height):
+            return "h\(height)"
+        case .exactDimensions, .aspectRatio, .longEdge:
+            return size.value
+        }
+    }
+
+    private static func controlsHelp(
+        for request: ParameterStepRequest
+    ) -> String {
+        supportsMuteControl(for: request)
+            ? "Size, then ad for adaptive, m for mute"
+            : "Size, then ad for adaptive"
+    }
+
+    private static var acceptedSizeSubtitle: String {
+        "1200x630/16:9/1920/w128/h720 · ⌘L Reference"
+    }
+
+    private static func largeTypeReference(
+        for request: ParameterStepRequest
+    ) -> String {
+        let inputReference = request.inputs.isEmpty
+            ? ""
+            : "\n\nInputs\n\n\(request.inputs.joined(separator: "\n"))"
+        return "\(CropControlParser.largeTypeReference)\(inputReference)"
+    }
+
+    private static func supportsMuteControl(
+        for request: ParameterStepRequest
+    ) -> Bool {
+        if request.mediaKinds?.contains(.video) == true {
+            return true
+        }
+        if request.ambiguousKinds?.isEmpty == false {
+            return true
+        }
+        if request.itemKinds?.contains(where: {
+            $0 == .folder || $0 == .remoteURL
+        }) == true {
+            return true
+        }
+        return request.mediaKinds == nil
+    }
+
+    private static func supportsPreset(
+        _ preset: CropActionPreset,
+        request: ParameterStepRequest
+    ) -> Bool {
+        guard preset.removeAudio else {
+            return true
+        }
+        return supportsMuteControl(for: request)
+    }
+
+    private static func supportsControls(
+        _ controls: CropControls,
+        request: ParameterStepRequest
+    ) -> Bool {
+        guard controls.removeAudio else {
+            return true
+        }
+        return supportsMuteControl(for: request)
+    }
+
+    private static func controlsQueryValue(from query: String) -> String? {
+        let marker = "controls:"
+        guard query.lowercased().hasPrefix(marker) else {
+            return nil
+        }
+        return String(query.dropFirst(marker.count))
     }
 
     private static func presetDisplayOrder(
@@ -758,7 +1333,7 @@ enum CropParameterMenu {
     ) -> ScriptFilterResponse {
         ScriptFilterResponse(
             items: [
-                instructionItem,
+                instructionItem(request: request, stateJSON: stateJSON),
                 ScriptFilterItem(
                     title: "Unable to read saved presets",
                     subtitle: detail,
