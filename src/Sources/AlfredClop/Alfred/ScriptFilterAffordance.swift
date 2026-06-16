@@ -32,10 +32,14 @@ struct ScriptFilterAffordance {
         )
     }
 
-    static func settingsFile(_ path: String) -> ScriptFilterAffordance {
+    static func settingsFile(
+        _ path: String,
+        largeType: String? = nil
+    ) -> ScriptFilterAffordance {
         ScriptFilterAffordance(
             quickLookURL: path,
-            action: ScriptFilterAction(file: path)
+            action: ScriptFilterAction(file: path),
+            largeType: largeType
         )
     }
 

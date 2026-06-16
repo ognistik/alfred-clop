@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 15, 2026
+Last updated: June 16, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -28,6 +28,11 @@ completion and error notification settings.
 Raw image clipboard materialization is also complete. Clipboard PNG or TIFF
 data now becomes a private cached image input when no native files or usable
 path/URL text are available.
+
+The public External Trigger now supports advanced headless output overrides.
+`execute` routes can inherit defaults, force the configured output template,
+force a one-off custom template, or force in-place behavior for one run. Menu
+routes reject execution overrides so interactive state stays predictable.
 
 The shared settings and global execution-policy foundation is complete.
 Workflow-owned settings and action presets now share `settings.json`,
@@ -307,10 +312,13 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - Built-in same-format image targets are hidden only for clear homogeneous
   inputs, with JPG and JPEG treated as equivalent
 - Saved same-format recompression presets remain visible and executable
-- Typed External Trigger execution supports format plus optional compression
-  or bitrate parameters
+- Typed External Trigger execution supports `execute: Convert` with format
+  inference plus optional compression or bitrate parameters; media-specific
+  `Convert Image`, `Convert Video`, and `Convert Audio` remain compatible
 - App-backed conversion uses JSON result inspection and inherits Clop UI,
   copy-result, recursion, and preservation settings
+- External Trigger conversion requests are rejected before process launch when
+  the inferred target media does not match the normalized input
 - Preservation preflight predicts the converted extension before checking
   collisions and choosing numeric suffixes
 
@@ -344,6 +352,11 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - Successful processing notifications are suppressed when Clop UI is visible;
   background execution and Configuration mutations follow the default-on
   completion policy
+- Public headless `execute` requests may use `output: default`,
+  `output: template`, `output template: TEMPLATE`, or `output: false`;
+  omitted output is the same as `output: default`
+- Output overrides are not accepted on `menu` routes and are rejected for
+  Strip Metadata because Clop's `strip-exif` command has no output option
 - Raw clipboard-image expiry follows the configured retention period
 - Typing `:` replaces processing actions with Configuration commands; deleting
   it restores actions for the same normalized input
@@ -365,6 +378,9 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
 - Every Configuration namespace row, including Output Template editor results,
   confirmations, and mutation feedback, exposes the active `settings.json` to
   Quick Look and Alfred file actions when settings can be resolved
+- Configuration Large Type shows a readable settings summary with the settings
+  path, current output template, and preset counts plus up to five examples per
+  category; the Output Template editor keeps the token reference in Large Type
 - Root Configuration commands provide stable Tab autocomplete values such as
   `:settings`, `:reset output`, `:remove presets`, and `:clear cache`
 - `Reset output template` appears only for a customized template and restores
@@ -445,8 +461,10 @@ structure.
   fragments preserved
 - `menu` route opens either the main menu or a clean action parameter menu;
   accidental action values are ignored
-- `execute` route requires a complete typed action and inherits workflow
-  execution settings
+- `execute` route requires a complete typed action, inherits workflow
+  execution settings, and accepts only documented advanced headless overrides
+- `execute: Convert` infers image, video, or audio conversion from `format`;
+  presets are intentionally not addressable through the External Trigger
 - Empty Finder selection notifies and stops without clipboard fallback
 - `recursiveFolders` controls both folder inspection depth and Clop's
   `--recursive` argument
@@ -471,7 +489,7 @@ and paper-size discovery.
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 221 tests.
+- `./scripts/test.sh` passes 230 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

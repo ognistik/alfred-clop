@@ -281,6 +281,132 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func executeRouteOutputTemplateOverrideForcesConfiguredTemplate() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let settings = try makeTemporaryDirectory()
+        try PresetStore(
+            fileURL: settings.appendingPathComponent("settings.json")
+        ).persist(SettingsDocument(outputTemplate: "%P/%f-custom"))
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(
+                action: .optimise(aggressive: false),
+                overrides: ExecutionOverrides(output: .template)
+            )
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: Environment(values: [
+                PresetStore.workflowDataEnvironmentKey: settings.path,
+                "preserveOriginal": "false"
+            ]),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Optimization complete")
+        #expect(runner.command?.arguments.contains("--output") == true)
+        #expect(runner.command?.arguments.contains("%P/%f-custom") == true)
+    }
+
+    @Test
+    func executeRouteCustomOutputTemplateOverrideIsOneOff() throws {
+        let file = try temporaryFile(named: "audio.wav")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(
+                action: .convert(ConversionChoice(media: .audio, format: "mp3")),
+                overrides: ExecutionOverrides(
+                    output: .customTemplate("%P/%f-podcast")
+                )
+            )
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: Environment(values: ["preserveOriginal": "false"]),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Conversion complete")
+        #expect(runner.command?.arguments.contains("--output") == true)
+        #expect(runner.command?.arguments.contains("%P/%f-podcast") == true)
+    }
+
+    @Test
+    func stripMetadataRejectsOutputOverridesBeforeLaunchingClop() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(
+                action: .stripMetadata,
+                overrides: ExecutionOverrides(output: .disabled)
+            )
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Output override not supported")
+        #expect(runner.command == nil)
+    }
+
+    @Test
+    func conversionMismatchIsRejectedBeforeLaunchingClop() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(action: .convert(ConversionChoice(
+                media: .audio,
+                format: "mp3"
+            )))
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Conversion does not support this input")
+        #expect(response.items.first?.subtitle == "MP3 conversion requires audio input.")
+        #expect(runner.command == nil)
+    }
+
+    @Test
     func headlessExecutionUsesOnlyConfiguredSettingsLocation() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

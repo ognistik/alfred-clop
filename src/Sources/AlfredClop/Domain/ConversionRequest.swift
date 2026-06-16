@@ -174,6 +174,22 @@ enum ConversionCatalog {
         return formats(for: media).contains(canonical) ? canonical : nil
     }
 
+    static func choice(
+        forFormat value: String,
+        setting: ConversionSetting? = nil
+    ) -> ConversionChoice? {
+        for media in ConversionMediaKind.allCases {
+            if let format = normalizedFormat(value, media: media) {
+                return ConversionChoice(
+                    media: media,
+                    format: format,
+                    setting: setting
+                )
+            }
+        }
+        return nil
+    }
+
     static func supportsControls(_ choice: ConversionChoice) -> Bool {
         switch choice.media {
         case .image, .audio:

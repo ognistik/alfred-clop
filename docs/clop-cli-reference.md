@@ -422,6 +422,8 @@ clop strip-exif [options] [files...]
 | `--exclude-types VALUE` | Exclude types |
 
 This command is documented for images and videos. PDFs are not supported.
+It does not expose `--output`, so Alfred Clop must reject one-run output
+template overrides for Strip Metadata before launching the CLI.
 
 ## `pipeline`
 
@@ -577,6 +579,11 @@ Because Clop silently overwrites an existing output path, the workflow must
 detect collisions between planned outputs, existing files, and the source
 paths before process launch. An output template is preservation behavior, not
 a true backup policy.
+
+Workflow-level automation may force the configured output template, force a
+one-off template, force in-place behavior, or inherit the global setting. Those
+choices still reduce to either supplying a validated `--output` argument or
+omitting `--output` for the selected command.
 
 ## Known limitations and items to probe
 

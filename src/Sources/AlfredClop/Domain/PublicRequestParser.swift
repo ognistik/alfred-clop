@@ -11,6 +11,7 @@ enum PublicRequestError: Error, Equatable {
     case missingParameter(String)
     case invalidParameter(String, String)
     case unexpectedParameter(String)
+    case executeOnlyParameter(String)
 
     var title: String { "Invalid Clop request" }
 
@@ -36,6 +37,8 @@ enum PublicRequestError: Error, Equatable {
             return "Invalid \(parameter): \(value)"
         case .unexpectedParameter(let parameter):
             return "The selected action does not use the \(parameter) parameter."
+        case .executeOnlyParameter(let parameter):
+            return "\(parameter) only works with execute."
         }
     }
 }
@@ -154,51 +157,56 @@ enum PublicRequestParser {
 
         if first.key == "menu" {
             guard !first.value.isEmpty else {
+                try rejectExecuteOnlyParameters(Array(directives.dropFirst()))
                 return .menu(action: nil)
             }
             if normalizedName(first.value) == "configuration" {
-                guard directives.count == 1 else {
-                    throw PublicRequestError.unexpectedParameter(
-                        directives[1].key
-                    )
-                }
+                try rejectExecuteOnlyParameters(Array(directives.dropFirst()))
                 return .configuration
             }
             guard let action = action(for: first.value) else {
                 throw PublicRequestError.unknownAction(first.value)
             }
-            guard directives.count == 1 else {
-                throw PublicRequestError.unexpectedParameter(directives[1].key)
-            }
+            try rejectExecuteOnlyParameters(Array(directives.dropFirst()))
             return .menu(action: action)
         }
 
         if first.key == "execute" {
+            let executeParameters = Array(directives.dropFirst())
+            let values = try parameterDictionary(executeParameters)
+            let overrides = try executionOverrides(from: values)
+            let actionValues = values.filter {
+                !executionOverrideKeys.contains($0.key)
+            }
+            if normalizedName(first.value) == "convert" {
+                return .execute(
+                    action: try inferredConversionExecution(values: actionValues),
+                    overrides: overrides
+                )
+            }
             guard let action = action(for: first.value) else {
                 throw PublicRequestError.unknownAction(first.value)
             }
             return .execute(
                 action: try execution(
                     for: action,
-                    parameters: Array(directives.dropFirst())
-                )
+                    values: actionValues
+                ),
+                overrides: overrides
             )
         }
 
         guard first.value.isEmpty, let action = action(for: first.key) else {
             throw PublicRequestError.unknownDirective(first.key)
         }
-        guard directives.count == 1 else {
-            throw PublicRequestError.unexpectedParameter(directives[1].key)
-        }
+        try rejectExecuteOnlyParameters(Array(directives.dropFirst()))
         return .menu(action: action)
     }
 
     private static func execution(
         for action: ClopAction,
-        parameters: [(key: String, value: String)]
+        values: [String: String]
     ) throws -> ActionRequest {
-        let values = try parameterDictionary(parameters)
         switch action {
         case .optimise:
             try rejectUnknown(values, allowed: ["aggressive"])
@@ -252,6 +260,40 @@ enum PublicRequestParser {
         }
     }
 
+    private static func inferredConversionExecution(
+        values: [String: String]
+    ) throws -> ActionRequest {
+        try rejectUnknown(
+            values,
+            allowed: ["format", "compression", "bitrate"]
+        )
+        guard let formatValue = values["format"], !formatValue.isEmpty else {
+            throw PublicRequestError.missingParameter("format")
+        }
+        guard values["compression"] == nil || values["bitrate"] == nil else {
+            throw PublicRequestError.invalidParameter(
+                "conversion controls",
+                "use compression or bitrate, not both"
+            )
+        }
+
+        let setting = try conversionSetting(from: values)
+        guard let choice = ConversionCatalog.choice(
+            forFormat: formatValue,
+            setting: setting
+        ) else {
+            throw PublicRequestError.invalidParameter("format", formatValue)
+        }
+        guard ConversionCatalog.isSupported(choice) else {
+            let value = values["compression"] ?? values["bitrate"] ?? formatValue
+            throw PublicRequestError.invalidParameter(
+                "conversion controls",
+                value
+            )
+        }
+        return .convert(choice)
+    }
+
     private static func conversionExecution(
         for action: ClopAction,
         values: [String: String]
@@ -287,12 +329,29 @@ enum PublicRequestParser {
             )
         }
 
-        let setting: ConversionSetting?
+        let choice = ConversionChoice(
+            media: media,
+            format: format,
+            setting: try conversionSetting(from: values)
+        )
+        guard ConversionCatalog.isSupported(choice) else {
+            let value = values["compression"] ?? values["bitrate"] ?? format
+            throw PublicRequestError.invalidParameter(
+                "conversion controls",
+                value
+            )
+        }
+        return .convert(choice)
+    }
+
+    private static func conversionSetting(
+        from values: [String: String]
+    ) throws -> ConversionSetting? {
         if let compression = values["compression"] {
             if normalizedName(compression) == "auto" {
-                setting = .automaticCompression
+                return .automaticCompression
             } else if let value = Int(compression), (5...100).contains(value) {
-                setting = .compression(value)
+                return .compression(value)
             } else {
                 throw PublicRequestError.invalidParameter(
                     "compression",
@@ -303,24 +362,68 @@ enum PublicRequestParser {
             guard let value = Int(bitrate), value > 0 else {
                 throw PublicRequestError.invalidParameter("bitrate", bitrate)
             }
-            setting = .bitrate(value)
+            return .bitrate(value)
         } else {
-            setting = nil
+            return nil
+        }
+    }
+
+    private static func executionOverrides(
+        from values: [String: String]
+    ) throws -> ExecutionOverrides? {
+        let output = try outputOverride(from: values)
+        guard output != nil else {
+            return nil
+        }
+        return ExecutionOverrides(output: output)
+    }
+
+    private static func outputOverride(
+        from values: [String: String]
+    ) throws -> OutputOverride? {
+        let output = values["output"].map(normalizedName)
+        let template = values["output template"]
+
+        if let template {
+            guard !template.isEmpty else {
+                throw PublicRequestError.missingParameter("output template")
+            }
+            if let output, output != "template" {
+                throw PublicRequestError.invalidParameter(
+                    "output",
+                    values["output"] ?? ""
+                )
+            }
+            return .customTemplate(template)
         }
 
-        let choice = ConversionChoice(
-            media: media,
-            format: format,
-            setting: setting
-        )
-        guard ConversionCatalog.isSupported(choice) else {
-            let value = values["compression"] ?? values["bitrate"] ?? format
+        guard let output else {
+            return nil
+        }
+        switch output {
+        case "default":
+            return .default
+        case "template":
+            return .template
+        case "false", "off", "no", "in-place", "in place":
+            return .disabled
+        default:
             throw PublicRequestError.invalidParameter(
-                "conversion controls",
-                value
+                "output",
+                values["output"] ?? ""
             )
         }
-        return .convert(choice)
+    }
+
+    private static func rejectExecuteOnlyParameters(
+        _ parameters: [(key: String, value: String)]
+    ) throws {
+        if let parameter = parameters.first {
+            if executionOverrideKeys.contains(parameter.key) {
+                throw PublicRequestError.executeOnlyParameter(parameter.key)
+            }
+            throw PublicRequestError.unexpectedParameter(parameter.key)
+        }
     }
 
     private static func parameterDictionary(
@@ -397,5 +500,10 @@ enum PublicRequestParser {
         "crop pdf (reversible)": .cropPDF,
         "uncrop pdf": .uncropPDF,
         "strip metadata": .stripMetadata
+    ]
+
+    private static let executionOverrideKeys: Set<String> = [
+        "output",
+        "output template"
     ]
 }

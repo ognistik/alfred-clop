@@ -193,12 +193,13 @@ enum ClopInputRequest: Codable, Equatable {
 enum ClopRouteRequest: Codable, Equatable {
     case menu(action: ClopAction?)
     case configuration
-    case execute(action: ActionRequest)
+    case execute(action: ActionRequest, overrides: ExecutionOverrides? = nil)
 
     private enum CodingKeys: String, CodingKey {
         case type
         case action
         case destination
+        case overrides
     }
 
     private enum RouteType: String, Codable {
@@ -215,9 +216,10 @@ enum ClopRouteRequest: Codable, Equatable {
         case .configuration:
             try container.encode(RouteType.menu, forKey: .type)
             try container.encode("configuration", forKey: .destination)
-        case let .execute(action):
+        case let .execute(action, overrides):
             try container.encode(RouteType.execute, forKey: .type)
             try container.encode(action, forKey: .action)
+            try container.encodeIfPresent(overrides, forKey: .overrides)
         }
     }
 
@@ -237,8 +239,72 @@ enum ClopRouteRequest: Codable, Equatable {
             )
         case .execute:
             self = .execute(
-                action: try container.decode(ActionRequest.self, forKey: .action)
+                action: try container.decode(ActionRequest.self, forKey: .action),
+                overrides: try container.decodeIfPresent(
+                    ExecutionOverrides.self,
+                    forKey: .overrides
+                )
             )
+        }
+    }
+}
+
+struct ExecutionOverrides: Codable, Equatable {
+    var output: OutputOverride?
+
+    init(output: OutputOverride? = nil) {
+        self.output = output
+    }
+}
+
+enum OutputOverride: Codable, Equatable {
+    case `default`
+    case template
+    case customTemplate(String)
+    case disabled
+
+    private enum CodingKeys: String, CodingKey {
+        case mode
+        case template
+    }
+
+    private enum Mode: String, Codable {
+        case `default`
+        case template
+        case disabled
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .default:
+            try container.encode(Mode.default, forKey: .mode)
+        case .template:
+            try container.encode(Mode.template, forKey: .mode)
+        case let .customTemplate(template):
+            try container.encode(Mode.template, forKey: .mode)
+            try container.encode(template, forKey: .template)
+        case .disabled:
+            try container.encode(Mode.disabled, forKey: .mode)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(Mode.self, forKey: .mode) {
+        case .default:
+            self = .default
+        case .template:
+            if let template = try container.decodeIfPresent(
+                String.self,
+                forKey: .template
+            ) {
+                self = .customTemplate(template)
+            } else {
+                self = .template
+            }
+        case .disabled:
+            self = .disabled
         }
     }
 }

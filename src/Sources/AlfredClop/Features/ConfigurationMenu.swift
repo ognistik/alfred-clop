@@ -568,10 +568,89 @@ enum ConfigurationMenu {
         _ response: ScriptFilterResponse,
         store: PresetStore
     ) -> ScriptFilterResponse {
-        let affordance = ScriptFilterAffordance.settingsFile(store.fileURL.path)
+        let affordance = ScriptFilterAffordance.settingsFile(
+            store.fileURL.path,
+            largeType: configurationSummary(store: store)
+        )
         var response = response
         response.items = response.items.map(affordance.apply)
         return response
+    }
+
+    private static func configurationSummary(store: PresetStore) -> String? {
+        guard let document = try? store.load() else {
+            return nil
+        }
+
+        var lines = [
+            "SETTINGS",
+            store.fileURL.path,
+            "",
+            "OUTPUT TEMPLATE",
+            document.outputTemplate,
+            "",
+            "PRESETS"
+        ]
+        let groups = presetGroups(document.presets)
+        if groups.isEmpty {
+            lines.append("None")
+        } else {
+            for (index, group) in groups.enumerated() {
+                if index > 0 {
+                    lines.append("")
+                }
+                lines.append("\(group.title): \(group.values.count)")
+                lines.append(contentsOf: visiblePresetValues(group.values))
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func visiblePresetValues(_ values: [String]) -> [String] {
+        let maximum = 5
+        var lines = values.prefix(maximum).map { "- \($0)" }
+        if values.count > maximum {
+            lines.append("... and \(values.count - maximum) more")
+        }
+        return lines
+    }
+
+    private static func presetGroups(
+        _ presets: [ActionPreset]
+    ) -> [(title: String, values: [String])] {
+        var crop = [String]()
+        var downscale = [String]()
+        var convertImage = [String]()
+        var convertVideo = [String]()
+        var convertAudio = [String]()
+
+        for preset in presets {
+            switch preset {
+            case .crop(let value):
+                crop.append(value.displayValue)
+            case .downscale(let value):
+                downscale.append(value.displayValue)
+            case .conversion(let value):
+                switch value.choice.media {
+                case .image:
+                    convertImage.append(value.displayValue)
+                case .video:
+                    convertVideo.append(value.displayValue)
+                case .audio:
+                    convertAudio.append(value.displayValue)
+                }
+            }
+        }
+
+        return [
+            ("Crop / Resize", crop),
+            ("Downscale", downscale),
+            ("Convert Image", convertImage),
+            ("Convert Video", convertVideo),
+            ("Convert Audio", convertAudio)
+        ].compactMap { group in
+            group.1.isEmpty ? nil : group
+        }
     }
 
     private static func encoded(_ state: MenuState) -> String {

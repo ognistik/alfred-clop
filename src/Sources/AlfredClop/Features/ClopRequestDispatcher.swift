@@ -93,17 +93,34 @@ enum ClopRequestDispatcher {
                 context: context,
                 environment: environment
             )
-        case let .execute(action):
+        case let .execute(action, overrides):
             guard supports(action: action, selection: selection) else {
+                if case let .convert(choice) = action {
+                    return feedback(
+                        title: "Conversion does not support this input",
+                        subtitle: "\(choice.displayFormat) conversion requires \(choice.media.rawValue) input."
+                    )
+                }
                 return feedback(
                     title: "Action does not support this input",
                     subtitle: "Choose an action compatible with every supplied item."
                 )
             }
-            let execution: ExecutionOptions
+            var execution: ExecutionOptions
             do {
                 execution = try environment.resolvedExecutionOptions(
                     preserveOriginal: preserveOriginalOverride
+                )
+                execution = try applying(
+                    overrides,
+                    to: execution,
+                    action: action,
+                    environment: environment
+                )
+            } catch let error as ExecutionOverrideError {
+                return feedback(
+                    title: "Output override not supported",
+                    subtitle: error.localizedDescription
                 )
             } catch {
                 return feedback(
@@ -285,6 +302,45 @@ enum ClopRequestDispatcher {
             .contains(where: { $0.action == menuAction })
     }
 
+    private static func applying(
+        _ overrides: ExecutionOverrides?,
+        to execution: ExecutionOptions,
+        action: ActionRequest,
+        environment: Environment
+    ) throws -> ExecutionOptions {
+        guard let output = overrides?.output else {
+            return execution
+        }
+        if case .stripMetadata = action, output != .default {
+            throw ExecutionOverrideError.unsupportedOutputOverride
+        }
+
+        var resolved = execution
+        switch output {
+        case .default:
+            break
+        case .template:
+            resolved.output = .sameFolder(
+                template: try configuredOutputTemplate(environment: environment)
+            )
+        case let .customTemplate(template):
+            resolved.output = .sameFolder(template: template)
+        case .disabled:
+            resolved.output = .inPlace
+        }
+        return resolved
+    }
+
+    private static func configuredOutputTemplate(
+        environment: Environment
+    ) throws -> String {
+        do {
+            return try PresetStore(environment: environment).load().outputTemplate
+        } catch PresetStoreError.missingWorkflowDataDirectory {
+            return SettingsDocument.builtInOutputTemplate
+        }
+    }
+
     private static func context(
         for input: ClopInputRequest
     ) -> ActionInputContext {
@@ -310,5 +366,16 @@ enum ClopRequestDispatcher {
                 valid: false
             )
         ])
+    }
+}
+
+private enum ExecutionOverrideError: LocalizedError {
+    case unsupportedOutputOverride
+
+    var errorDescription: String? {
+        switch self {
+        case .unsupportedOutputOverride:
+            return "Strip Metadata does not support output templates."
+        }
     }
 }

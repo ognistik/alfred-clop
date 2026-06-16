@@ -236,6 +236,60 @@ struct PublicRequestParserTests {
         ))))
     }
 
+    @Test
+    func genericConversionExecutionInfersMediaFromFormat() throws {
+        let request = try PublicRequestParser.parse("""
+        execute: Convert
+        format: webm
+
+        /tmp/video.mov
+        """)
+
+        #expect(request.route == .execute(action: .convert(ConversionChoice(
+            media: .video,
+            format: "webm"
+        ))))
+    }
+
+    @Test
+    func executeOutputOverridesAreParsedSeparatelyFromActionParameters() throws {
+        let configuredTemplate = try PublicRequestParser.parse("""
+        execute: Optimize
+        output: template
+
+        /tmp/image.png
+        """)
+        let customTemplate = try PublicRequestParser.parse("""
+        execute: Convert
+        format: mp3
+        output template: %P/%f-podcast
+
+        /tmp/audio.wav
+        """)
+        let disabled = try PublicRequestParser.parse("""
+        execute: Downscale
+        factor: 50%
+        output: false
+
+        /tmp/image.png
+        """)
+
+        #expect(configuredTemplate.route == .execute(
+            action: .optimise(aggressive: false),
+            overrides: ExecutionOverrides(output: .template)
+        ))
+        #expect(customTemplate.route == .execute(
+            action: .convert(ConversionChoice(media: .audio, format: "mp3")),
+            overrides: ExecutionOverrides(
+                output: .customTemplate("%P/%f-podcast")
+            )
+        ))
+        #expect(disabled.route == .execute(
+            action: .downscale(factor: 0.5),
+            overrides: ExecutionOverrides(output: .disabled)
+        ))
+    }
+
     @Test(arguments: [
         "execute: Uncrop PDF",
         "execute: Strip Metadata"
@@ -287,6 +341,14 @@ struct PublicRequestParserTests {
         (
             "execute: Convert Image\ncompression: 70\n\n/tmp/image.jpg",
             PublicRequestError.missingParameter("format")
+        ),
+        (
+            "menu: Optimize\noutput: false\n\n/tmp/image.jpg",
+            PublicRequestError.executeOnlyParameter("output")
+        ),
+        (
+            "execute: Optimize\noutput template:\n\n/tmp/image.jpg",
+            PublicRequestError.missingParameter("output template")
         ),
         (
             "menu: Crop / Resize\n\nfinder\n/tmp/image.jpg",

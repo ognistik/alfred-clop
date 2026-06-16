@@ -367,12 +367,42 @@ smart crop: true
 Each explicit input line is one exact file, folder, or URL value. The blank
 separator prevents directive syntax from conflicting with URL schemes, aspect
 ratios, spaces, or punctuation in inputs. Omitted optional booleans default to
-false unless a future field explicitly inherits a workflow setting. Required
-action values such as crop size remain required when no global default exists.
-Global execution settings such as copying results and recursive folder
-processing continue to resolve through `Environment`; shorthand does not
-duplicate them as per-request fields unless the product later deliberately
-adds typed overrides.
+false unless a field explicitly inherits a workflow setting. Required action
+values such as crop size remain required when no global default exists. Global
+execution settings such as Clop UI, copying results, and recursive folder
+processing continue to resolve through `Environment`. The shorthand exposes
+only deliberate advanced overrides, and those are headless-only.
+
+Headless `execute` requests may override output behavior for one run:
+
+```text
+execute: Optimize
+output: template
+
+/path/image.png
+```
+
+```text
+execute: Optimize
+output template: %P/%f-custom
+
+/path/image.png
+```
+
+```text
+execute: Optimize
+output: false
+
+/path/image.png
+```
+
+`output: default` and omitted `output` both inherit the workflow's current
+configuration. `output: template` forces original preservation with the active
+workflow template. `output template: ...` forces preservation with a one-off
+template. `output: false` forces in-place behavior for that run. Menu routes
+must reject these execution overrides rather than storing them in interactive
+state. Commands without CLI output support, such as Strip Metadata, must
+reject output overrides before launching Clop.
 
 Menu shortcuts mirror the workflow:
 
@@ -380,6 +410,8 @@ Menu shortcuts mirror the workflow:
 - `crop:`
 - `downscale:`
 - `convert image:`, `convert video:`, and `convert audio:`
+- `execute: Convert` for headless conversion, where `format:` infers image,
+  video, or audio conversion
 - `crop pdf:`
 - `uncrop pdf:`
 - `strip metadata:`
@@ -388,6 +420,10 @@ Menu shortcuts mirror the workflow:
 builds a complete typed action request. Actions whose execution parameter
 model is not implemented must fail clearly rather than accepting speculative
 syntax.
+
+External Trigger requests never address workflow action presets. Presets are a
+discoverable UI convenience inside parameter menus; automation should remain
+portable and explicit.
 
 `menu: Configuration` opens the shared Script Filter with the `:`
 Configuration namespace prefilled. It still requires an input source so
@@ -748,6 +784,11 @@ Alfred's workflow configuration, Command-Return reveals the active settings
 folder, and the real `settings.json` path remains available to Quick Look and
 Alfred file actions.
 
+Large Type on Configuration rows should be human-readable rather than raw JSON:
+show the settings path, current output template, and preset counts with up to
+five examples per category. The Output Template editor is the exception; its
+Large Type remains the concise token reference.
+
 Do not create a separate workflow recipe system. Clop saved and inline
 pipelines are the multi-step automation feature. Keep pipeline expressions
 opaque until their grammar is stable enough to model safely.
@@ -882,6 +923,21 @@ format, treating JPG and JPEG as equivalent. Keep all built-in targets for
 folders, ambiguous input, mixed image extensions, video, and audio. Never hide
 a saved same-format preset because its explicit compression represents
 intentional recompression.
+
+For headless automation, prefer the generic shorthand:
+
+```text
+execute: Convert
+format: mp3
+bitrate: 128
+
+/path/audio.wav
+```
+
+The workflow infers image, video, or audio conversion from `format:` and then
+validates the normalized input before launching Clop. A request whose format
+does not match the input must return an Alfred error immediately. Automation
+does not support invoking conversion presets by name.
 
 Offer legacy local conversion as a clearly labeled image-only alternative for
 AVIF, HEIC, and WebP. Its 0-100 quality scale and overwrite behavior are
@@ -1397,8 +1453,10 @@ Run tests against a temporary copy, never the original fixture. Capture:
   `recursiveFolders` setting; treat budget-limited scans as ambiguous.
 - Use `menu` for both the main action menu and action parameter menus; ignore
   accidental action values on menu routes.
-- Inherit workflow execution settings for automation; Clop pipelines retain
-  their own step behavior and receive only supported shared execution options.
+- Inherit workflow execution settings for automation by default; allow only
+  documented headless External Trigger overrides such as one-run output
+  behavior. Clop pipelines retain their own step behavior and receive only
+  supported shared execution options.
 - Provide configurable Hotkeys for menu, standard optimization, and aggressive
   optimization using clipboard or Alfred's selected input.
 - Keep `--gui` and `--copy` as independent execution options.

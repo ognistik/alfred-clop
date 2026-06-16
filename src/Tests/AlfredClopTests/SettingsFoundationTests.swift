@@ -465,6 +465,59 @@ struct SettingsFoundationTests {
     }
 
     @Test
+    func configurationLargeTypeShowsReadableSettingsSummary() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let store = try PresetStore(environment: environment)
+        _ = try store.save(.crop(CropActionPreset(size: try #require(
+            CropSizeParser.parse("16:9")
+        ))))
+        _ = try store.save(.downscale(DownscaleActionPreset(factor: 0.5)))
+        for format in ["webp", "avif", "heic", "jxl", "jpeg", "png"] {
+            _ = try store.save(.conversion(ConversionActionPreset(
+                choice: ConversionChoice(
+                    media: .image,
+                    format: format,
+                    setting: .compression(70)
+                )
+            )))
+        }
+
+        let menu = ConfigurationMenu.namespaceResponse(
+            query: ":",
+            environment: environment
+        )
+        let largeType = try #require(menu.items.first?.text?.largetype)
+
+        #expect(largeType.contains("SETTINGS\n\(store.fileURL.path)"))
+        #expect(largeType.contains("OUTPUT TEMPLATE\n%P/%f-clop"))
+        #expect(largeType.contains("PRESETS\nCrop / Resize: 1"))
+        #expect(largeType.contains("Crop / Resize: 1"))
+        #expect(largeType.contains("- 16:9"))
+        #expect(largeType.contains("- 16:9\n\nDownscale: 1"))
+        #expect(largeType.contains("- 50%"))
+        #expect(largeType.contains("- 50%\n\nConvert Image: 6"))
+        #expect(largeType.contains("- WebP · Compression 70"))
+        #expect(largeType.contains("... and 1 more"))
+
+        let templateState = try JSONOutput.string(
+            for: MenuState.configuration(mode: .configurationOutputTemplate),
+            prettyPrinted: false
+        )
+        let templateEditor = ConfigurationMenu.response(
+            stateJSON: templateState,
+            query: "",
+            environment: environment
+        )
+        #expect(
+            templateEditor.items.first?.text?.largetype?
+                .contains("%P  Source folder") == true
+        )
+    }
+
+    @Test
     func configurationNamespaceFiltersAndOpensTemplateEditor() throws {
         let directory = try makeTemporaryDirectory()
         let environment = Environment(values: [
@@ -569,7 +622,7 @@ struct SettingsFoundationTests {
         #expect(response.items.allSatisfy {
             $0.quickLookURL == filePath
                 && $0.action?.file == .single(filePath)
-                && $0.text?.largetype == nil
+                && $0.text?.largetype?.contains("OUTPUT TEMPLATE\n%P/%f-processed") == true
         })
         #expect(response.items.first {
             $0.title == "Reset output template"
