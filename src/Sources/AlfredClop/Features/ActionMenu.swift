@@ -998,7 +998,7 @@ enum ActionMenu {
             : "⇧↩ Output Template"
         switch definition.action {
         case .optimise:
-            return "⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard"
+            return nil
         case .uncropPDF:
             return preserveHint
         case .stripMetadata, .crop, .downscale, .convertImage, .convertVideo,

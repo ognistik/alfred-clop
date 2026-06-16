@@ -169,7 +169,7 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[0].subtitle == "Passed file · Compress · ⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard")
+        #expect(response.items[0].subtitle == "Passed file · Compress")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.arguments.rawValue
@@ -260,7 +260,7 @@ struct ActionMenuTests {
             context: .clipboard
         )
 
-        #expect(response.items[0].subtitle == "Copied file · Compress · ⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard")
+        #expect(response.items[0].subtitle == "Copied file · Compress")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.clipboard.rawValue
@@ -565,7 +565,7 @@ struct ActionMenuTests {
 
         #expect(
             response.items[0].subtitle
-                == "Passed folder: 3 files · Compress · ⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard"
+                == "Passed folder: 3 files · Compress"
         )
     }
 
