@@ -175,13 +175,18 @@ struct SettingsFoundationTests {
             environment: environment
         )
         let optimizeItem = try #require(optimize.items.first)
-        let normal = try operation(optimizeItem.arg)
+        let menuRequest = try JSONDecoder().decode(
+            ParameterStepRequest.self,
+            from: Data((try #require(optimizeItem.arg)).utf8)
+        )
         let command = try operation(optimizeItem.mods?.command?.arg)
+        let option = try operation(optimizeItem.mods?.option?.arg)
         let shift = try operation(optimizeItem.mods?.shift?.arg)
 
-        #expect(normal.action == .optimise(aggressive: true))
-        #expect(command.action == .optimise(aggressive: false))
-        #expect(normal.execution.output == .sameFolder(template: "%P/%f-clop"))
+        #expect(menuRequest.action == .optimise)
+        #expect(command.action == .optimise(aggressive: true))
+        #expect(option.action == .optimise(aggressive: false))
+        #expect(command.execution.output == .sameFolder(template: "%P/%f-clop"))
         #expect(shift.execution.output == .inPlace)
 
         let request = ParameterStepRequest(

@@ -23,7 +23,7 @@ enum ActionCatalog {
             subtitle: "Compress",
             aliases: ["compress", "shrink", "small", "optimise", "optimize"],
             supportedKinds: [.image, .video, .audio, .pdf],
-            requiresParameters: false,
+            requiresParameters: true,
             supportsURLs: true,
             supportsFolders: true
         ),
@@ -747,10 +747,6 @@ enum ActionMenu {
         environment: Environment,
         fileManager: FileManager
     ) -> ScriptFilterMods? {
-        guard !definition.requiresParameters else {
-            return nil
-        }
-
         let configuredAggressive = environment.aggressiveByDefault
         let configuredPreserve = environment.preserveOriginal
         let template = (try? PresetStore(
@@ -808,26 +804,36 @@ enum ActionMenu {
             subtitle: preservationText
         )
 
+        if definition.requiresParameters && definition.action != .optimise {
+            return nil
+        }
         if definition.action == .stripMetadata {
             return nil
         }
         guard definition.action == .optimise else {
             return ScriptFilterMods(shift: shift)
         }
-        let commandText = configuredAggressive
-            ? "Standard"
-            : "Aggressive"
         return ScriptFilterMods(
             command: modifier(
-                aggressive: !configuredAggressive,
+                aggressive: true,
                 preserve: configuredPreserve,
-                subtitle: commandText
+                subtitle: "Aggressive"
+            ),
+            option: modifier(
+                aggressive: false,
+                preserve: configuredPreserve,
+                subtitle: "Standard"
             ),
             shift: shift,
             commandShift: modifier(
-                aggressive: !configuredAggressive,
+                aggressive: true,
                 preserve: invertedPreserve,
-                subtitle: "\(commandText) · \(preservationText)"
+                subtitle: "Aggressive · \(preservationText)"
+            ),
+            optionShift: modifier(
+                aggressive: false,
+                preserve: invertedPreserve,
+                subtitle: "Standard · \(preservationText)"
             )
         )
     }
@@ -854,6 +860,8 @@ enum ActionMenu {
         )
         let state: MenuState
         switch definition.action {
+        case .optimise:
+            state = .optimise(request)
         case .crop:
             state = .crop(request)
         case .downscale:
@@ -862,7 +870,7 @@ enum ActionMenu {
             state = .conversion(request)
         case .cropPDF:
             state = MenuState(mode: .actions, parameterRequest: request)
-        case .optimise, .uncropPDF, .stripMetadata:
+        case .uncropPDF, .stripMetadata:
             preconditionFailure("Immediate actions do not have parameter state")
         }
 
@@ -990,10 +998,7 @@ enum ActionMenu {
             : "⇧↩ Output Template"
         switch definition.action {
         case .optimise:
-            let aggressiveHint = environment.aggressiveByDefault
-                ? "⌘↩ Standard"
-                : "⌘↩ Aggressive"
-            return "\(aggressiveHint), \(preserveHint)"
+            return "⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard"
         case .uncropPDF:
             return preserveHint
         case .stripMetadata, .crop, .downscale, .convertImage, .convertVideo,

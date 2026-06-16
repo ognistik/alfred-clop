@@ -341,6 +341,7 @@ struct ParameterStepRequest: Codable, Equatable {
 
 enum MenuMode: String, Codable, Equatable {
     case actions
+    case optimise
     case crop
     case cropPresetRemoval
     case downscale
@@ -390,6 +391,13 @@ struct MenuState: Codable, Equatable {
     static let actions = MenuState(
         mode: .actions
     )
+
+    static func optimise(_ request: ParameterStepRequest) -> MenuState {
+        MenuState(
+            mode: .optimise,
+            parameterRequest: request
+        )
+    }
 
     static func crop(_ request: ParameterStepRequest) -> MenuState {
         MenuState(

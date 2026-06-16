@@ -211,6 +211,22 @@ enum ClopRequestDispatcher {
             ambiguousKinds: selection.ambiguousKinds
         )
         switch action {
+        case .optimise:
+            let state = MenuState.optimise(parameterRequest)
+            guard let stateJSON = try? JSONOutput.string(
+                for: state,
+                prettyPrinted: false
+            ) else {
+                return feedback(
+                    title: "Unable to open Optimize",
+                    subtitle: "The controls menu state could not be encoded."
+                )
+            }
+            return OptimizeParameterMenu.response(
+                stateJSON: stateJSON,
+                query: query,
+                environment: environment
+            )
         case .crop:
             let state = MenuState.crop(parameterRequest)
             guard let stateJSON = try? JSONOutput.string(
@@ -264,7 +280,7 @@ enum ClopRequestDispatcher {
                 title: "This action needs more information",
                 subtitle: "Its parameter menu is not available yet."
             )
-        case .optimise, .uncropPDF, .stripMetadata:
+        case .uncropPDF, .stripMetadata:
             return ActionMenu.response(
                 for: selection,
                 query: query,

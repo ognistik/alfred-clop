@@ -169,7 +169,7 @@ struct ActionMenuTests {
             context: .arguments
         )
 
-        #expect(response.items[0].subtitle == "Passed file · Compress · ⌘↩ Aggressive, ⇧↩ Output Template")
+        #expect(response.items[0].subtitle == "Passed file · Compress · ⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.arguments.rawValue
@@ -260,7 +260,7 @@ struct ActionMenuTests {
             context: .clipboard
         )
 
-        #expect(response.items[0].subtitle == "Copied file · Compress · ⌘↩ Aggressive, ⇧↩ Output Template")
+        #expect(response.items[0].subtitle == "Copied file · Compress · ⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard")
         #expect(
             response.variables?[ActionMenu.inputContextVariable]
                 == ActionInputContext.clipboard.rawValue
@@ -467,22 +467,32 @@ struct ActionMenuTests {
     }
 
     @Test
-    func immediateActionEncodesOperationRequest() throws {
+    func optimizeRoutesToTypedOptimizeMenuState() throws {
         let response = ActionMenu.response(
             for: InputSelection(inputs: ["/tmp/image.png"], mediaKinds: [.image]),
             query: "optimize"
         )
+        let item = try #require(response.items.first)
         let argument = try #require(response.items.first?.arg)
         let request = try JSONDecoder().decode(
-            OperationRequest.self,
+            ParameterStepRequest.self,
             from: Data(argument.utf8)
+        )
+        let stateJSON = try #require(
+            item.variables?[ActionMenu.menuStateVariable]
+        )
+        let state = try JSONDecoder().decode(
+            MenuState.self,
+            from: Data(stateJSON.utf8)
         )
 
         #expect(request.inputs == ["/tmp/image.png"])
-        #expect(request.action == .optimise(aggressive: false))
+        #expect(request.action == .optimise)
+        #expect(state.mode == .optimise)
+        #expect(state.parameterRequest?.action == .optimise)
         #expect(
             response.items.first?.variables?[ActionMenu.requestKindVariable]
-                == "operation"
+                == "parameterStep"
         )
     }
 
@@ -555,7 +565,7 @@ struct ActionMenuTests {
 
         #expect(
             response.items[0].subtitle
-                == "Passed folder: 3 files · Compress · ⌘↩ Aggressive, ⇧↩ Output Template"
+                == "Passed folder: 3 files · Compress · ⏎ Menu, ⌘⏎ Aggressive, ⌥⏎ Standard"
         )
     }
 

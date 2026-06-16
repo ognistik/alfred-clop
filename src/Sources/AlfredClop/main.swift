@@ -282,6 +282,11 @@ enum AlfredClopCommand {
             }
 
             switch state.mode {
+            case .optimise:
+                return OptimizeParameterMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
             case .crop, .cropPresetRemoval:
                 return CropParameterMenu.response(
                     stateJSON: stateJSON,
