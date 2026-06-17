@@ -8,4 +8,5 @@ enum ClopAction: String, Codable, CaseIterable, Equatable {
     case cropPDF
     case uncropPDF
     case stripMetadata
+    case pipeline
 }

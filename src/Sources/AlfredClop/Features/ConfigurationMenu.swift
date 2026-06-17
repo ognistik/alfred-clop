@@ -5,6 +5,8 @@ enum ConfigurationMenu {
     static let templatePrefix = ":template "
     static let presetsPrefix = ":presets"
     static let presetsAutocomplete = ":presets "
+    static let pipelinesPrefix = ":pipelines"
+    static let pipelinesAutocomplete = ":pipelines "
 
     private enum PresetCategory: String, CaseIterable, Equatable {
         case optimize
@@ -77,12 +79,107 @@ enum ConfigurationMenu {
         }
     }
 
+    private enum PipelineCategory: String, CaseIterable, Equatable {
+        case image
+        case video
+        case audio
+        case pdf
+        case allFile
+        case all
+
+        var title: String {
+            switch self {
+            case .image:
+                return "Image Pipelines"
+            case .video:
+                return "Video Pipelines"
+            case .audio:
+                return "Audio Pipelines"
+            case .pdf:
+                return "PDF Pipelines"
+            case .allFile:
+                return "All-File Pipelines"
+            case .all:
+                return "All Pipelines"
+            }
+        }
+
+        var autocomplete: String {
+            "\(pipelinesPrefix) \(canonicalQuery) "
+        }
+
+        var canonicalQuery: String {
+            switch self {
+            case .image:
+                return "image"
+            case .video:
+                return "video"
+            case .audio:
+                return "audio"
+            case .pdf:
+                return "pdf"
+            case .allFile:
+                return "all-file"
+            case .all:
+                return "all"
+            }
+        }
+
+        var aliases: [String] {
+            switch self {
+            case .image:
+                return ["image", "img"]
+            case .video:
+                return ["video", "vid"]
+            case .audio:
+                return ["audio", "aud"]
+            case .pdf:
+                return ["pdf"]
+            case .allFile:
+                return ["all-file", "all file", "any"]
+            case .all:
+                return ["all"]
+            }
+        }
+
+        var fileType: PipelineFileType? {
+            switch self {
+            case .image:
+                return .image
+            case .video:
+                return .video
+            case .audio:
+                return .audio
+            case .pdf:
+                return .pdf
+            case .allFile, .all:
+                return nil
+            }
+        }
+
+        var matchText: String {
+            "\(title) \(aliases.joined(separator: " "))"
+        }
+
+        func accepts(_ pipeline: SavedPipeline) -> Bool {
+            switch self {
+            case .all:
+                return true
+            case .allFile:
+                return pipeline.fileType == nil
+            case .image, .video, .audio, .pdf:
+                return pipeline.fileType == fileType
+            }
+        }
+    }
+
     static func namespaceResponse(
         query: String,
         environment: Environment = Environment(),
         fileManager: FileManager = .default,
         writer: any AtomicDataWriting = FoundationAtomicDataWriter(),
-        cache: ClipboardImageCache? = nil
+        cache: ClipboardImageCache? = nil,
+        pipelineProvider: any ClopPipelineProviding = ClopPipelineProvider()
     ) -> ScriptFilterResponse {
         let namespaceQuery = String(query.dropFirst())
         do {
@@ -119,6 +216,20 @@ enum ConfigurationMenu {
                     store: store
                 )
             }
+            if normalized == "pipelines"
+                || normalized.hasPrefix("pipelines ") {
+                let pipelineQuery = normalized == "pipelines"
+                    ? ""
+                    : String(namespaceQuery.dropFirst("pipelines ".count))
+                return withSettingsAffordance(
+                    pipelinesMenu(
+                        provider: pipelineProvider,
+                        query: pipelineQuery,
+                        category: nil
+                    ),
+                    store: store
+                )
+            }
             return withSettingsAffordance(
                 menu(
                     store: store,
@@ -128,7 +239,8 @@ enum ConfigurationMenu {
                     cache: cache ?? ClipboardImageCache(
                         environment: environment,
                         fileManager: fileManager
-                    )
+                    ),
+                    pipelineProvider: pipelineProvider
                 ),
                 store: store
             )
@@ -146,7 +258,8 @@ enum ConfigurationMenu {
         environment: Environment = Environment(),
         fileManager: FileManager = .default,
         writer: any AtomicDataWriting = FoundationAtomicDataWriter(),
-        cache: ClipboardImageCache? = nil
+        cache: ClipboardImageCache? = nil,
+        pipelineProvider: any ClopPipelineProviding = ClopPipelineProvider()
     ) -> ScriptFilterResponse {
         guard let state = try? JSONDecoder().decode(
             MenuState.self,
@@ -172,7 +285,8 @@ enum ConfigurationMenu {
                     cache: cache ?? ClipboardImageCache(
                         environment: environment,
                         fileManager: fileManager
-                    )
+                    ),
+                    pipelineProvider: pipelineProvider
                 )
             case .configurationOutputTemplate:
                 response = outputTemplateMenu(
@@ -225,7 +339,8 @@ enum ConfigurationMenu {
                     cache: cache ?? ClipboardImageCache(
                         environment: environment,
                         fileManager: fileManager
-                    )
+                    ),
+                    pipelineProvider: pipelineProvider
                 )
             case .configurationResetOutputConfirmation:
                 response = confirmation(
@@ -243,7 +358,8 @@ enum ConfigurationMenu {
                     cache: cache ?? ClipboardImageCache(
                         environment: environment,
                         fileManager: fileManager
-                    )
+                    ),
+                    pipelineProvider: pipelineProvider
                 )
             case .configurationResetPresetsConfirmation:
                 let count = try store.load().presets.count
@@ -279,6 +395,55 @@ enum ConfigurationMenu {
                     title: "Removed \(removed.fileCount) cached clipboard images",
                     subtitle: "Reclaimed \(formattedBytes(removed.byteCount))."
                 )
+            case .configurationPipelines:
+                response = pipelinesMenu(
+                    provider: pipelineProvider,
+                    query: query,
+                    category: nil
+                )
+            case .configurationPipelineCategory:
+                response = pipelinesMenu(
+                    provider: pipelineProvider,
+                    query: query,
+                    category: pipelineCategory(from: state.configurationValue)
+                )
+            case .configurationPipelineAdd:
+                guard let add = state.pipelineAction?.add else {
+                    return error(
+                        "Unable to add pipeline",
+                        "The pipeline add state is invalid."
+                    )
+                }
+                try pipelineProvider.addPipeline(add)
+                response = pipelinesMenu(
+                    provider: pipelineProvider,
+                    query: "",
+                    category: nil
+                )
+            case .configurationPipelineDeleteConfirmation:
+                guard let pipeline = state.pipelineAction?.pipeline else {
+                    return error(
+                        "Unable to delete pipeline",
+                        "The pipeline delete state is invalid."
+                    )
+                }
+                response = pipelineDeleteConfirmation(
+                    pipeline,
+                    returnQuery: state.configurationValue
+                )
+            case .configurationPipelineDelete:
+                guard let pipeline = state.pipelineAction?.pipeline else {
+                    return error(
+                        "Unable to delete pipeline",
+                        "The pipeline delete state is invalid."
+                    )
+                }
+                try pipelineProvider.deletePipeline(named: pipeline.name)
+                response = pipelinesMenu(
+                    provider: pipelineProvider,
+                    query: state.configurationValue ?? "",
+                    category: nil
+                )
             default:
                 return error(
                     "Unable to open Configuration",
@@ -299,7 +464,8 @@ enum ConfigurationMenu {
         environment: Environment = Environment(),
         fileManager: FileManager = .default,
         writer: any AtomicDataWriting = FoundationAtomicDataWriter(),
-        cache: ClipboardImageCache? = nil
+        cache: ClipboardImageCache? = nil,
+        pipelineProvider: any ClopPipelineProviding = ClopPipelineProvider()
     ) -> String? {
         guard let state = try? JSONDecoder().decode(
             MenuState.self,
@@ -343,6 +509,24 @@ enum ConfigurationMenu {
                     fileManager: fileManager
                 )).removeAll()
                 message = "Cleared \(removed.fileCount) cached clipboard \(removed.fileCount == 1 ? "image" : "images")"
+            case .configurationPipelineAdd:
+                guard let add = state.pipelineAction?.add else {
+                    return environment.errorNotifications
+                        ? "Unable to update settings: The pipeline add state is invalid."
+                        : nil
+                }
+                try pipelineProvider.addPipeline(add)
+                message = add.replace
+                    ? "Replaced pipeline \(add.name)"
+                    : "Added pipeline \(add.name)"
+            case .configurationPipelineDelete:
+                guard let pipeline = state.pipelineAction?.pipeline else {
+                    return environment.errorNotifications
+                        ? "Unable to update settings: The pipeline delete state is invalid."
+                        : nil
+                }
+                try pipelineProvider.deletePipeline(named: pipeline.name)
+                message = "Deleted pipeline \(pipeline.name)"
             default:
                 return environment.errorNotifications
                     ? "Unable to update settings: The Configuration action is invalid."
@@ -372,6 +556,10 @@ enum ConfigurationMenu {
             return category.autocomplete
         case .configurationResetPresets:
             return presetsAutocomplete
+        case .configurationPipelineDelete:
+            return "\(pipelinesAutocomplete)\(state.configurationValue ?? "")"
+        case .configurationPipelineAdd:
+            return pipelinesAutocomplete
         default:
             return namespacePrefix
         }
@@ -382,7 +570,8 @@ enum ConfigurationMenu {
         query: String,
         environment: Environment,
         fileManager: FileManager,
-        cache: ClipboardImageCache
+        cache: ClipboardImageCache,
+        pipelineProvider: any ClopPipelineProviding
     ) -> ScriptFilterResponse {
         let document: SettingsDocument
         do {
@@ -412,6 +601,7 @@ enum ConfigurationMenu {
         if !document.presets.isEmpty {
             items.append(managePresetsItem(count: document.presets.count))
         }
+        items.append(managePipelinesItem(provider: pipelineProvider))
 
         let summary = cache.summary()
         if summary.fileCount > 0 {
@@ -480,6 +670,337 @@ enum ConfigurationMenu {
             quickLookURL: filePath,
             action: ScriptFilterAction(file: filePath)
         )
+    }
+
+    private static func managePipelinesItem(
+        provider: any ClopPipelineProviding
+    ) -> ScriptFilterItem {
+        let countText: String
+        if let count = try? provider.listPipelines().count {
+            countText = "\(count) Saved \(count == 1 ? "Pipeline" : "Pipelines")"
+        } else {
+            countText = "Manage saved Clop pipelines"
+        }
+        return ScriptFilterItem(
+            title: "Manage pipelines",
+            subtitle: countText,
+            arg: Self.pipelinesAutocomplete,
+            valid: true,
+            autocomplete: Self.pipelinesAutocomplete,
+            match: "manage add replace remove delete pipelines",
+            variables: queryTransitionVariables()
+        )
+    }
+
+    private static func pipelinesMenu(
+        provider: any ClopPipelineProviding,
+        query: String,
+        category: PipelineCategory?
+    ) -> ScriptFilterResponse {
+        let savedPipelines: [SavedPipeline]
+        do {
+            savedPipelines = try provider.listPipelines()
+        } catch let caughtError {
+            return error(
+                "Unable to read saved pipelines",
+                caughtError.localizedDescription
+            )
+        }
+
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isPipelineAddQuery(trimmed) {
+            return addPipelineResponse(
+                trimmed,
+                pipelines: savedPipelines
+            )
+        }
+        if let route = pipelineCategoryRoute(from: trimmed) {
+            return categoryPipelineMenu(
+                savedPipelines,
+                category: route.category,
+                query: route.query
+            )
+        }
+        if let category {
+            return categoryPipelineMenu(
+                savedPipelines,
+                category: category,
+                query: trimmed
+            )
+        }
+
+        var items: [ScriptFilterItem]
+        if trimmed.isEmpty {
+            items = [addPipelineGuideItem()]
+            items += PipelineCategory.allCases.compactMap { category in
+                let count = pipelines(in: savedPipelines, category: category).count
+                guard count > 0 || category == .all else { return nil }
+                return pipelineCategoryItem(category, count: count)
+            }
+            return ScriptFilterResponse(items: items, skipKnowledge: true)
+        }
+
+        let categoryItems = PipelineCategory.allCases.compactMap { category -> ScriptFilterItem? in
+            let count = pipelines(in: savedPipelines, category: category).count
+            guard count > 0 || category == .all else { return nil }
+            return pipelineCategoryItem(category, count: count)
+        }
+        let pipelineItems = savedPipelines
+            .sorted(by: pipelineDisplayOrder)
+            .map { pipelineItem($0, returnQuery: trimmed) }
+        items = categoryItems + pipelineItems
+
+        let search = FuzzySearch<ScriptFilterItem>(
+            query: trimmed,
+            targetText: {
+                [$0.title, $0.match].compactMap(\.self)
+                    .joined(separator: " ")
+            }
+        )
+        let matches = search.sorted(items)
+        guard !matches.isEmpty else {
+            return addPipelinePromptItem(query: trimmed)
+        }
+        return ScriptFilterResponse(
+            items: [addPipelineGuideItem()] + matches.map {
+                items[$0.targetIndex]
+            },
+            skipKnowledge: true
+        )
+    }
+
+    private static func categoryPipelineMenu(
+        _ allPipelines: [SavedPipeline],
+        category: PipelineCategory,
+        query: String
+    ) -> ScriptFilterResponse {
+        let categoryPipelines = pipelines(in: allPipelines, category: category)
+            .sorted(by: pipelineDisplayOrder)
+        guard !categoryPipelines.isEmpty else {
+            return message(
+                title: "No \(category.title.lowercased())",
+                subtitle: "Add a pipeline or choose another filter."
+            )
+        }
+
+        let items = categoryPipelines.map {
+            pipelineItem(
+                $0,
+                returnQuery: "\(category.canonicalQuery) \(query)"
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }
+        guard !query.isEmpty else {
+            return ScriptFilterResponse(items: items, skipKnowledge: true)
+        }
+
+        let search = FuzzySearch<ScriptFilterItem>(
+            query: query,
+            targetText: {
+                [$0.title, $0.match].compactMap(\.self)
+                    .joined(separator: " ")
+            }
+        )
+        let matches = search.sorted(items)
+        guard !matches.isEmpty else {
+            return error(
+                "No matching \(category.title.lowercased())",
+                "Try another pipeline name."
+            )
+        }
+        return ScriptFilterResponse(items: matches.map {
+            items[$0.targetIndex]
+        }, skipKnowledge: true)
+    }
+
+    private static func pipelineCategoryItem(
+        _ category: PipelineCategory,
+        count: Int
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: category.title,
+            subtitle: "\(count) Saved \(count == 1 ? "Pipeline" : "Pipelines")",
+            arg: category.autocomplete,
+            valid: true,
+            autocomplete: category.autocomplete,
+            match: category.matchText,
+            variables: queryTransitionVariables(),
+            text: ScriptFilterText(largetype: pipelineAddReference)
+        )
+    }
+
+    private static func pipelineItem(
+        _ pipeline: SavedPipeline,
+        returnQuery: String
+    ) -> ScriptFilterItem {
+        let confirmState = MenuState.configuration(
+            mode: .configurationPipelineDeleteConfirmation,
+            value: returnQuery,
+            pipelineAction: PipelineMenuAction(
+                kind: .confirmDelete,
+                pipeline: pipeline
+            )
+        )
+        let confirmJSON = encoded(confirmState)
+        return ScriptFilterItem(
+            uid: "configuration.pipeline.\(pipeline.id ?? pipeline.name).\(pipeline.fileType?.rawValue ?? "all")",
+            title: pipeline.name,
+            subtitle: "\(pipelineTypeDescription(for: pipeline)) · ⌘L Details · ⌘↩ Delete",
+            arg: "",
+            valid: false,
+            autocomplete: "\(pipelinesPrefix) \(pipeline.name)",
+            match: "\(pipeline.name) \(pipeline.fileType?.rawValue ?? "all") \(pipeline.rawText)",
+            variables: queryTransitionVariables(),
+            mods: ScriptFilterMods(command: ScriptFilterModifier(
+                arg: confirmJSON,
+                subtitle: "Delete Pipeline",
+                valid: true,
+                variables: transitionVariables(confirmJSON)
+            )),
+            text: ScriptFilterText(largetype: pipelineDetails(pipeline))
+        )
+    }
+
+    private static func pipelineDeleteConfirmation(
+        _ pipeline: SavedPipeline,
+        returnQuery: String?
+    ) -> ScriptFilterResponse {
+        let removeState = MenuState.configuration(
+            mode: .configurationPipelineDelete,
+            value: returnQuery,
+            pipelineAction: PipelineMenuAction(
+                kind: .delete,
+                pipeline: pipeline
+            )
+        )
+        let removeJSON = encoded(removeState)
+        return ScriptFilterResponse(
+            items: [
+                ScriptFilterItem(
+                    title: "Delete Pipeline \(pipeline.name)?",
+                    subtitle: "Return confirms · Cannot be undone · ⌘↩ Confirm and close",
+                    arg: removeJSON,
+                    valid: true,
+                    variables: returnMutationVariables(removeJSON),
+                    mods: closeModifier(removeJSON),
+                    text: ScriptFilterText(largetype: pipelineDetails(pipeline))
+                ),
+                ScriptFilterItem(
+                    title: "Cancel",
+                    subtitle: "Return keeps pipeline",
+                    arg: "\(pipelinesAutocomplete)\(returnQuery ?? "")",
+                    valid: true,
+                    variables: queryTransitionVariables()
+                )
+            ],
+            skipKnowledge: true
+        )
+    }
+
+    private static func addPipelineResponse(
+        _ query: String,
+        pipelines: [SavedPipeline]
+    ) -> ScriptFilterResponse {
+        let value = normalizedAddValue(query)
+        guard let request = PipelineAddParser.parse(value) else {
+            return ScriptFilterResponse(items: [
+                ScriptFilterItem(
+                    title: "Type pipeline name and steps",
+                    subtitle: "Use Name => steps ; img skip hide · ⌘L Reference",
+                    arg: "",
+                    valid: false,
+                    text: ScriptFilterText(largetype: pipelineAddReference)
+                )
+            ], skipKnowledge: true)
+        }
+
+        let existing = pipelines.contains {
+            $0.name.caseInsensitiveCompare(request.name) == .orderedSame
+        }
+        let addJSON = encoded(.configuration(
+            mode: .configurationPipelineAdd,
+            pipelineAction: PipelineMenuAction(kind: .add, add: request)
+        ))
+        var replace = request
+        replace.replace = true
+        let replaceJSON = encoded(.configuration(
+            mode: .configurationPipelineAdd,
+            pipelineAction: PipelineMenuAction(kind: .add, add: replace)
+        ))
+
+        let subtitle = "\(pipelineAddSummary(request)) · ⌘L Reference"
+        if existing {
+            return ScriptFilterResponse(items: [
+                ScriptFilterItem(
+                    title: "Pipeline \(request.name) already exists",
+                    subtitle: "\(subtitle) · ⌘↩ Replace",
+                    arg: "",
+                    valid: false,
+                    mods: ScriptFilterMods(command: ScriptFilterModifier(
+                        arg: replaceJSON,
+                        subtitle: "Replace Pipeline",
+                        valid: true,
+                        variables: returnMutationVariables(replaceJSON)
+                    )),
+                    text: ScriptFilterText(largetype: pipelineAddDetails(request))
+                )
+            ], skipKnowledge: true)
+        }
+
+        return ScriptFilterResponse(items: [
+            ScriptFilterItem(
+                title: "Add Pipeline \(request.name)",
+                subtitle: subtitle,
+                arg: addJSON,
+                valid: true,
+                variables: returnMutationVariables(addJSON),
+                mods: ScriptFilterMods(command: ScriptFilterModifier(
+                    arg: replaceJSON,
+                    subtitle: "Replace if Pipeline Exists",
+                    valid: true,
+                    variables: returnMutationVariables(replaceJSON)
+                )),
+                text: ScriptFilterText(largetype: pipelineAddDetails(request))
+            )
+        ], skipKnowledge: true)
+    }
+
+    private static func addPipelineGuideItem() -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Add pipeline",
+            subtitle: "Use Name => steps ; img skip hide · ⌘L Reference",
+            arg: "\(pipelinesAutocomplete)add ",
+            valid: true,
+            autocomplete: "\(pipelinesAutocomplete)add ",
+            match: "add create pipeline image video audio pdf skip hide",
+            variables: queryTransitionVariables(),
+            text: ScriptFilterText(largetype: pipelineAddReference)
+        )
+    }
+
+    private static func addPipelinePromptItem(query: String) -> ScriptFilterResponse {
+        ScriptFilterResponse(items: [
+            ScriptFilterItem(
+                title: "Add a new pipeline",
+                subtitle: "Use Name => steps ; img skip hide · ⌘L Reference",
+                arg: "\(pipelinesAutocomplete)\(query)",
+                valid: true,
+                autocomplete: "\(pipelinesAutocomplete)\(query)",
+                variables: queryTransitionVariables(),
+                text: ScriptFilterText(largetype: pipelineAddReference)
+            )
+        ], skipKnowledge: true)
+    }
+
+    private static func isPipelineAddQuery(_ query: String) -> Bool {
+        let normalized = query.lowercased()
+        return normalized.hasPrefix("add ") || query.contains("=>")
+    }
+
+    private static func normalizedAddValue(_ query: String) -> String {
+        query.lowercased().hasPrefix("add ")
+            ? String(query.dropFirst("add ".count))
+            : query
     }
 
     private static func outputTemplateMenu(
@@ -905,6 +1426,142 @@ enum ConfigurationMenu {
         value.flatMap(PresetCategory.init(rawValue:))
     }
 
+    private static func pipelineCategory(from value: String?) -> PipelineCategory? {
+        value.flatMap(PipelineCategory.init(rawValue:))
+    }
+
+    private static func pipelineCategoryRoute(
+        from query: String
+    ) -> (category: PipelineCategory, query: String)? {
+        let normalized = query.lowercased()
+        for category in PipelineCategory.allCases {
+            for alias in category.aliases where normalized == alias
+                || normalized.hasPrefix("\(alias) ") {
+                let value = normalized == alias
+                    ? ""
+                    : String(query.dropFirst(alias.count + 1))
+                return (category, value)
+            }
+        }
+        return nil
+    }
+
+    private static func pipelines(
+        in pipelines: [SavedPipeline],
+        category: PipelineCategory
+    ) -> [SavedPipeline] {
+        pipelines.filter(category.accepts)
+    }
+
+    private static func pipelineDisplayOrder(
+        _ lhs: SavedPipeline,
+        _ rhs: SavedPipeline
+    ) -> Bool {
+        let lhsType = lhs.fileType?.rawValue ?? "all"
+        let rhsType = rhs.fileType?.rawValue ?? "all"
+        let typeComparison = lhsType.localizedStandardCompare(rhsType)
+        if typeComparison != .orderedSame {
+            return typeComparison == .orderedAscending
+        }
+        return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+    }
+
+    private static func pipelineTypeDescription(
+        for pipeline: SavedPipeline
+    ) -> String {
+        guard let fileType = pipeline.fileType else {
+            return "All-file pipeline"
+        }
+        return "\(fileType.title) pipeline"
+    }
+
+    private static func pipelineDetails(_ pipeline: SavedPipeline) -> String {
+        [
+            pipeline.name,
+            "",
+            pipelineTypeDescription(for: pipeline),
+            pipelineSettingsDescription(
+                skipOptimisation: pipeline.skipOptimisation,
+                hideResult: pipeline.hideResult
+            ),
+            "",
+            "Steps",
+            pipeline.rawText
+        ].joined(separator: "\n")
+    }
+
+    private static func pipelineAddDetails(_ request: PipelineAddRequest) -> String {
+        [
+            "Add Pipeline \(request.name)",
+            "",
+            pipelineTypeDescription(for: SavedPipeline(
+                name: request.name,
+                fileType: request.fileType,
+                rawText: request.steps,
+                skipOptimisation: request.skipOptimisation,
+                hideResult: request.hideResult
+            )),
+            pipelineSettingsDescription(
+                skipOptimisation: request.skipOptimisation,
+                hideResult: request.hideResult
+            ),
+            "",
+            "Steps",
+            request.steps,
+            "",
+            pipelineAddReference
+        ].joined(separator: "\n")
+    }
+
+    private static func pipelineAddSummary(
+        _ request: PipelineAddRequest
+    ) -> String {
+        [
+            request.fileType?.title ?? "All file types",
+            request.skipOptimisation ? "Skip optimization" : nil,
+            request.hideResult ? "Hide result" : nil
+        ].compactMap(\.self).joined(separator: " · ")
+    }
+
+    private static func pipelineSettingsDescription(
+        skipOptimisation: Bool,
+        hideResult: Bool
+    ) -> String {
+        var parts = [
+            skipOptimisation
+                ? "Steps only"
+                : "Includes implicit optimization"
+        ]
+        if hideResult {
+            parts.append("Hides Clop result")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static var pipelineAddReference: String {
+        """
+        Pipeline add syntax
+
+        Use:
+        Name => steps ; options
+
+        Options:
+        img or image
+        vid or video
+        aud or audio
+        pdf
+        all
+        skip
+        hide
+
+        Examples:
+        to WebP => convert(to: webp) ; img skip
+        2x silent => changeSpeed(factor: 2.0) -> removeAudio ; vid skip hide
+
+        Steps are passed directly to Clop.
+        """
+    }
+
     private static func presetDisplayOrder(
         _ lhs: ActionPreset,
         _ rhs: ActionPreset
@@ -1212,5 +1869,64 @@ enum ConfigurationMenu {
 
     private static func formattedBytes(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
+private enum PipelineAddParser {
+    static func parse(_ value: String) -> PipelineAddRequest? {
+        let parts = value.components(separatedBy: "=>")
+        guard parts.count >= 2 else {
+            return nil
+        }
+        let name = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let remainder = parts.dropFirst().joined(separator: "=>")
+        guard !name.isEmpty else {
+            return nil
+        }
+
+        let stepParts = remainder.components(separatedBy: ";")
+        let steps = stepParts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !steps.isEmpty else {
+            return nil
+        }
+
+        let optionText = stepParts.dropFirst().joined(separator: " ")
+        var fileType: PipelineFileType?
+        var sawAll = false
+        var skipOptimisation = false
+        var hideResult = false
+        for rawOption in optionText.split(whereSeparator: \.isWhitespace) {
+            switch rawOption.lowercased() {
+            case "img", "image":
+                guard fileType == nil, !sawAll else { return nil }
+                fileType = .image
+            case "vid", "video":
+                guard fileType == nil, !sawAll else { return nil }
+                fileType = .video
+            case "aud", "audio":
+                guard fileType == nil, !sawAll else { return nil }
+                fileType = .audio
+            case "pdf":
+                guard fileType == nil, !sawAll else { return nil }
+                fileType = .pdf
+            case "all":
+                guard fileType == nil, !sawAll else { return nil }
+                sawAll = true
+            case "skip":
+                skipOptimisation = true
+            case "hide":
+                hideResult = true
+            default:
+                return nil
+            }
+        }
+
+        return PipelineAddRequest(
+            name: name,
+            steps: steps,
+            fileType: fileType,
+            skipOptimisation: skipOptimisation,
+            hideResult: hideResult
+        )
     }
 }

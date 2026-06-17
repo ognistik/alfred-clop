@@ -10,6 +10,7 @@ enum ExecuteMode {
         "PDF crop complete",
         "PDF uncrop complete",
         "Metadata removed",
+        "Pipeline complete",
         "Clop operation complete"
     ]
 
@@ -85,6 +86,12 @@ enum ExecuteMode {
             return feedback(
                 title: "Invalid PDF crop controls",
                 subtitle: "Choose a ratio, device, or paper size with supported controls.",
+                valid: false
+            )
+        } catch ClopCommandBuilderError.invalidPipeline {
+            return feedback(
+                title: "Invalid pipeline",
+                subtitle: "Choose a saved pipeline and try again.",
                 valid: false
             )
         } catch ClopCommandBuilderError.unsupportedAction {
@@ -249,6 +256,12 @@ enum ExecuteMode {
                 subtitle: "Clop processed \(files).",
                 valid: false
             )
+        case .pipeline:
+            return feedback(
+                title: "Pipeline complete",
+                subtitle: "Clop processed \(files).",
+                valid: false
+            )
         }
     }
 
@@ -297,6 +310,8 @@ enum ExecuteMode {
             return "PDF uncrop"
         case .stripMetadata:
             return "Metadata removal"
+        case .pipeline:
+            return "Pipeline"
         }
     }
 

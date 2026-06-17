@@ -11,6 +11,7 @@ enum ClopRequestDispatcher {
             "PDF crop complete",
             "PDF uncrop complete",
             "Metadata removed",
+            "Pipeline complete",
             "Clop operation complete"
         ].contains(title)
     }
@@ -308,6 +309,22 @@ enum ClopRequestDispatcher {
                 query: query,
                 environment: environment
             )
+        case .pipeline:
+            let state = MenuState.pipeline(parameterRequest)
+            guard let stateJSON = try? JSONOutput.string(
+                for: state,
+                prettyPrinted: false
+            ) else {
+                return feedback(
+                    title: "Unable to open Pipeline",
+                    subtitle: "The menu state could not be encoded."
+                )
+            }
+            return PipelineMenu.response(
+                stateJSON: stateJSON,
+                query: query,
+                environment: environment
+            )
         case .uncropPDF, .stripMetadata:
             return ActionMenu.response(
                 for: selection,
@@ -347,6 +364,8 @@ enum ClopRequestDispatcher {
             menuAction = .uncropPDF
         case .stripMetadata:
             menuAction = .stripMetadata
+        case .pipeline:
+            menuAction = .pipeline
         }
         return ActionCatalog.validActions(for: selection)
             .contains(where: { $0.action == menuAction })

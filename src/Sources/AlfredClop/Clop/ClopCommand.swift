@@ -20,6 +20,7 @@ enum ClopCommandBuilderError: Error, Equatable {
     case invalidConversion
     case invalidOptimizeControls
     case invalidCropPDFControls
+    case invalidPipeline
     case unsupportedAction
     case unsupportedBackupBehavior
     case invalidOutputTemplate(OutputTemplateError)
@@ -46,7 +47,8 @@ struct ClopCommandBuilder {
             throw ClopCommandBuilderError.unsupportedBackupBehavior
         }
         var resolvedRequest = request
-        if let template = request.execution.output.template {
+        if let template = request.execution.output.template,
+           !request.action.isPipeline {
             do {
                 let outputExtension: String?
                 if case .convert(let choice) = request.action {
@@ -154,6 +156,15 @@ struct ClopCommandBuilder {
                 cropPDF: cropPDF
             )
             expectsJSON = false
+        case .pipeline(let pipeline):
+            guard !pipeline.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw ClopCommandBuilderError.invalidPipeline
+            }
+            arguments = pipelineArguments(
+                for: resolvedRequest,
+                pipeline: pipeline
+            )
+            expectsJSON = true
         }
 
         return ClopCommand(
@@ -478,5 +489,34 @@ struct ClopCommandBuilder {
         for execution: ExecutionOptions
     ) -> [String] {
         execution.recursiveFolders ? ["--recursive"] : []
+    }
+
+    private func pipelineArguments(
+        for request: OperationRequest,
+        pipeline: PipelineRunRequest
+    ) -> [String] {
+        var arguments = [
+            "pipeline",
+            "run",
+            "--json",
+            "--no-progress",
+            "--skip-errors"
+        ]
+        if request.execution.showClopUI {
+            arguments.append("--gui")
+        }
+        if request.execution.recursiveFolders {
+            arguments.append("--recursive")
+        }
+        return arguments + [pipeline.name] + request.inputs
+    }
+}
+
+private extension ActionRequest {
+    var isPipeline: Bool {
+        if case .pipeline = self {
+            return true
+        }
+        return false
     }
 }

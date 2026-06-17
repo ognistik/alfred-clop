@@ -532,9 +532,9 @@ shelveWith, uploadWith, openWith
 | `--force` | Replace a pipeline with the same name |
 
 Pipelines make multi-step conversion and processing possible in one Clop
-request. Alfred Clop should still defer a pipeline UI until its core single
-actions are complete, but it no longer needs to implement those chains as
-multiple CLI processes.
+request. Alfred Clop exposes saved-pipeline listing, execution, creation, and
+deletion while keeping pipeline step expressions opaque user input; inline
+pipeline execution remains a CLI capability rather than an Alfred workflow UI.
 
 ## Output templates
 

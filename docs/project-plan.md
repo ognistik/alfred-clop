@@ -53,7 +53,6 @@ feature being deferred must still have an explicit place in this plan.
 - PDF page layout and extend-with-empty-paper controls
 - Saved pipeline discovery, inspection, execution, creation, replacement, and
   deletion
-- Inline pipeline execution
 - Folder and recursive processing
 - URL inputs where supported by the selected command
 - Include/exclude type filters where supported
@@ -70,7 +69,7 @@ feature being deferred must still have an explicit place in this plan.
 - User-defined action presets for reusable values inside parameter menus
 - A Configuration menu for workflow-owned settings, storage, reset, and
   maintenance
-- Discoverable management of Clop's native saved and inline pipelines instead
+- Discoverable management of Clop's native saved pipelines instead
   of a separate workflow-owned recipe system
 - Live progress UI
 - Automatic update/release mechanism
@@ -94,7 +93,7 @@ The project tracks CLI coverage by command family:
 | `crop-pdf` | Device, paper, ratio/resolution, layout, extend, recursive, and output |
 | `uncrop-pdf` | Single/batch input, recursive folders, and output |
 | `strip-exif` | Image/video batches, folders, recursion, and type filters |
-| `pipeline` | List, show, run, add, replace, and delete saved pipelines; run inline pipelines |
+| `pipeline` | List, show, run, add, replace, and delete saved pipelines |
 
 Whenever a future Clop release changes `--help`, update
 `docs/clop-cli-reference.md` first and then reconcile this table, capability
@@ -234,7 +233,7 @@ unvalidated flag bag. Expected request families include:
 - media-specific conversion;
 - reversible PDF crop and uncrop;
 - metadata stripping;
-- saved and inline pipeline execution.
+- saved pipeline execution.
 
 Pipeline administration should use separate request types because list/show
 are read operations while add/delete mutate Clop's pipeline library.
@@ -441,8 +440,9 @@ choices:
   prefilled;
 - `execute`: run one complete typed operation without showing Alfred.
 
-Saved and inline Clop pipelines are typed actions within `menu` or `execute`;
-they do not introduce a separate workflow route or recipe identifier.
+Saved Clop pipelines are typed actions within `menu` or `execute`; they do not
+introduce a separate workflow route or recipe identifier. Inline pipeline
+execution remains out of Alfred Clop's interactive surface.
 
 Typed JSON remains an advanced compatibility API for integrations that need a
 versioned structured contract. It is decoded into the same `ClopRequest`
@@ -696,8 +696,7 @@ Suggested top-level actions:
 5. PDF Crop
 6. PDF Uncrop
 7. Strip Metadata
-8. Run Pipeline
-9. Manage Pipelines
+8. Pipeline
 
 Main action rows should normally lead to the action's menu so presets and
 controls have a consistent home. Fast execution remains available through
@@ -869,9 +868,9 @@ show the settings path, current output template, and preset counts with up to
 five examples per category. The Output Template editor is the exception; its
 Large Type remains the concise token reference.
 
-Do not create a separate workflow recipe system. Clop saved and inline
-pipelines are the multi-step automation feature. Keep pipeline expressions
-opaque until their grammar is stable enough to model safely.
+Do not create a separate workflow recipe system. Clop's native saved pipelines
+are the multi-step automation feature Alfred Clop exposes. Keep pipeline
+expressions opaque until their grammar is stable enough to model safely.
 
 ### Configuration menu
 
@@ -1147,19 +1146,76 @@ workflow cache directory. Refresh when the Clop app version changes.
 
 ### Pipelines
 
-For selected inputs, list compatible saved pipelines from
-`clop pipeline list --json`, then execute the chosen name. Also provide an
-advanced inline pipeline action that accepts the pipeline expression as one
-opaque argument.
+For selected, copied, or passed inputs, `Pipeline` opens a saved-pipeline
+runner backed by `clop pipeline list --json`. The runner executes existing
+saved pipelines only; it must not expose inline pipeline execution from the
+normal action menu.
+
+When the current input has one clear media type, filter saved pipelines to
+pipelines whose declared `fileType` matches that media type plus pipelines with
+no file-type restriction. In that clear filtered view, subtitles should avoid
+repeating the accepted media type. For mixed clear input or ambiguous broad
+input, use shallow media filter rows inspired by the Optimize controls menu:
+image, video, audio, or PDF as applicable. All-file pipelines should appear
+inside the relevant media branches instead of as a competing top-level branch
+when the input media is known. Typing in the pipeline runner searches runnable
+pipelines by name and related metadata. When input is ambiguous, preserve
+honest broad choices and let Clop own final compatibility.
+
+Pipeline row subtitles should stay compact, such as
+`Selected file · ⌘L Details`. Use Large Type for the pipeline name, accepted
+file type, raw step text, saved Clop settings such as skip optimization or hide
+result, and the current inputs. Do not put long raw pipeline expressions in
+ordinary subtitles.
+
+Pipeline execution must pass only options supported by `pipeline run`:
+`--gui`, `--no-progress`, `--recursive`, `--skip-errors`, and `--json` where
+appropriate. Do not apply workflow output templates, copy-result settings,
+aggressive optimization modifiers, or other workflow-owned operation switches
+to pipeline runs; pipelines use their saved Clop settings.
 
 Pipeline management should support:
 
-- listing saved pipelines and folder automations;
+- listing saved pipelines regardless of current input;
 - showing a saved pipeline's steps;
-- adding or replacing a named pipeline;
+- adding a named pipeline from a text grammar;
+- replacing a named pipeline only through an explicit modifier or confirmation;
 - choosing an optional image, video, PDF, or audio restriction;
 - toggling implicit optimization and floating results;
 - deleting with an explicit confirmation step.
+
+Pipeline management lives under the Configuration namespace as `:pipelines`.
+It follows the `:presets` browser pattern: an empty query shows category/filter
+rows, typing searches globally, and recognized category prefixes narrow the
+list without forcing the user through a branch. Normal pipeline rows are
+informational and expose details through Large Type; destructive actions use
+modifiers and confirmation, then return to the same filtered list.
+
+Use this add grammar:
+
+```text
+:pipelines NAME => STEPS ; OPTIONS
+```
+
+`NAME` is the saved pipeline name. `STEPS` is passed through exactly to Clop;
+Alfred Clop does not parse or validate the pipeline step grammar. `OPTIONS` is
+optional and space-separated:
+
+- `img` or `image`;
+- `vid` or `video`;
+- `aud` or `audio`;
+- `pdf`;
+- `all`, meaning no `--file-type`;
+- `skip`, meaning `--skip-optimisation`;
+- `hide`, meaning `--hide-result`.
+
+The older `:pipelines add NAME => STEPS ; OPTIONS` form may remain accepted as
+a compatibility shortcut, but the visible workflow guidance should teach the
+shorter form.
+
+Return adds a new pipeline. If a pipeline with the same name already exists,
+normal Return must fail safely or show a non-destructive row; Command-Return
+may replace using `--force`.
 
 Do not attempt to parse or visually compose every pipeline step until Clop
 publishes a stable complete grammar. Preserve inline step text exactly.
@@ -1532,7 +1588,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 - typed optimization controls for each media kind;
 - crop-PDF layout and extend behavior;
 - recursive and type-filter behavior;
-- saved and inline pipeline execution;
+- saved pipeline execution;
 - pipeline list/show JSON and add/delete lifecycle;
 - legacy conversion with Clop stopped;
 - async submission semantics.
@@ -1617,7 +1673,7 @@ Run tests against a temporary copy, never the original fixture. Capture:
 ### 7. Pipelines
 
 - Add saved pipeline list and detail views.
-- Run saved and inline pipelines.
+- Run saved pipelines.
 - Add, replace, and delete saved pipelines with confirmation.
 - Preserve Clop's file-type, implicit-optimization, and result-visibility
   settings.

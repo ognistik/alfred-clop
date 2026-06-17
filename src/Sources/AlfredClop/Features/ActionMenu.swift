@@ -106,6 +106,16 @@ enum ActionCatalog {
             requiresParameters: false,
             supportsURLs: false,
             supportsFolders: true
+        ),
+        ActionDefinition(
+            action: .pipeline,
+            title: "Pipeline",
+            subtitle: "Run saved Clop pipeline",
+            aliases: ["pipeline", "pipelines", "workflow", "recipe"],
+            supportedKinds: [.image, .video, .audio, .pdf],
+            requiresParameters: true,
+            supportsURLs: false,
+            supportsFolders: true
         )
     ]
 
@@ -697,7 +707,7 @@ enum ActionMenu {
             case .stripMetadata:
                 action = .stripMetadata
             case .crop, .downscale, .convertImage, .convertVideo,
-                 .convertAudio, .cropPDF:
+                 .convertAudio, .cropPDF, .pipeline:
                 preconditionFailure("Parameter actions must use ParameterStepRequest")
             }
 
@@ -870,6 +880,8 @@ enum ActionMenu {
             state = .conversion(request)
         case .cropPDF:
             state = .cropPDF(request)
+        case .pipeline:
+            state = .pipeline(request)
         case .uncropPDF, .stripMetadata:
             preconditionFailure("Immediate actions do not have parameter state")
         }
@@ -961,6 +973,8 @@ enum ActionMenu {
             requirement = "PDF only"
         case .stripMetadata:
             requirement = "Images or videos only"
+        case .pipeline:
+            requirement = "Files or folders only"
         case .optimise:
             requirement = nil
         }
@@ -1002,7 +1016,7 @@ enum ActionMenu {
         case .uncropPDF:
             return preserveHint
         case .stripMetadata, .crop, .downscale, .convertImage, .convertVideo,
-             .convertAudio, .cropPDF:
+             .convertAudio, .cropPDF, .pipeline:
             return nil
         }
     }

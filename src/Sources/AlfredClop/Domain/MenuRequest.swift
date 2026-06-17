@@ -351,6 +351,7 @@ enum MenuMode: String, Codable, Equatable {
     case conversionPresetRemoval
     case cropPDF
     case cropPDFPresetRemoval
+    case pipeline
     case configuration
     case configurationOutputTemplate
     case configurationPresets
@@ -364,6 +365,11 @@ enum MenuMode: String, Codable, Equatable {
     case configurationResetPresets
     case configurationCacheCleanupConfirmation
     case configurationCacheCleanup
+    case configurationPipelines
+    case configurationPipelineCategory
+    case configurationPipelineAdd
+    case configurationPipelineDeleteConfirmation
+    case configurationPipelineDelete
 }
 
 enum PresetMenuActionKind: String, Codable, Equatable {
@@ -382,17 +388,20 @@ struct MenuState: Codable, Equatable {
     var parameterRequest: ParameterStepRequest?
     var presetAction: PresetMenuAction?
     var configurationValue: String?
+    var pipelineAction: PipelineMenuAction?
 
     init(
         mode: MenuMode,
         parameterRequest: ParameterStepRequest? = nil,
         presetAction: PresetMenuAction? = nil,
-        configurationValue: String? = nil
+        configurationValue: String? = nil,
+        pipelineAction: PipelineMenuAction? = nil
     ) {
         self.mode = mode
         self.parameterRequest = parameterRequest
         self.presetAction = presetAction
         self.configurationValue = configurationValue
+        self.pipelineAction = pipelineAction
     }
 
     static let actions = MenuState(
@@ -492,6 +501,13 @@ struct MenuState: Codable, Equatable {
         )
     }
 
+    static func pipeline(_ request: ParameterStepRequest) -> MenuState {
+        MenuState(
+            mode: .pipeline,
+            parameterRequest: request
+        )
+    }
+
     static func cropPDF(
         _ request: ParameterStepRequest,
         action: PresetMenuAction
@@ -507,9 +523,14 @@ struct MenuState: Codable, Equatable {
 
     static func configuration(
         mode: MenuMode = .configuration,
-        value: String? = nil
+        value: String? = nil,
+        pipelineAction: PipelineMenuAction? = nil
     ) -> MenuState {
-        MenuState(mode: mode, configurationValue: value)
+        MenuState(
+            mode: mode,
+            configurationValue: value,
+            pipelineAction: pipelineAction
+        )
     }
 
 }

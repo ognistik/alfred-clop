@@ -17,6 +17,7 @@ enum ActionRequest: Codable, Equatable {
     case cropPDF(CropPDFRequest)
     case uncropPDF
     case stripMetadata
+    case pipeline(PipelineRunRequest)
 
     private enum CodingKeys: String, CodingKey {
         case type
@@ -35,6 +36,7 @@ enum ActionRequest: Codable, Equatable {
         case value
         case pageLayout
         case cropPDF
+        case pipeline
     }
 
     private enum ActionType: String, Codable {
@@ -46,6 +48,7 @@ enum ActionRequest: Codable, Equatable {
         case cropPDF
         case uncropPDF
         case stripMetadata
+        case pipeline
     }
 
     func encode(to encoder: Encoder) throws {
@@ -94,6 +97,9 @@ enum ActionRequest: Codable, Equatable {
             try container.encode(ActionType.uncropPDF, forKey: .type)
         case .stripMetadata:
             try container.encode(ActionType.stripMetadata, forKey: .type)
+        case let .pipeline(request):
+            try container.encode(ActionType.pipeline, forKey: .type)
+            try container.encode(request, forKey: .pipeline)
         }
     }
 
@@ -168,6 +174,10 @@ enum ActionRequest: Codable, Equatable {
             self = .uncropPDF
         case .stripMetadata:
             self = .stripMetadata
+        case .pipeline:
+            self = .pipeline(
+                try container.decode(PipelineRunRequest.self, forKey: .pipeline)
+            )
         }
     }
 }

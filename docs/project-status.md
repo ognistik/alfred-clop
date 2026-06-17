@@ -92,6 +92,19 @@ root queries such as `A5`, `B11`, and `Half Letter portrait` resolve to the
 specific paper size value passed to `--paper-size`, and cached dynamic paper
 lists are invalidated through the target-list cache schema.
 
+The Pipeline checkpoint is implemented. The main action menu now exposes a
+saved-pipeline runner that lists Clop pipelines from `pipeline list --json`,
+filters clear single-media input to compatible saved pipelines plus all-file
+pipelines, shows shallow media filters for mixed or ambiguous input, and runs
+chosen pipelines with only the shared options supported by `pipeline run`.
+Pipeline management lives in Configuration under `:pipelines`; it supports
+category browsing, global search, Large Type details, adding named pipelines
+with `NAME => STEPS ; OPTIONS`, Command-Return replacement, and confirmed
+deletion that returns to the same filtered list. At the top level,
+non-matching searches stay in creation mode so users can continue into the
+add syntax, while category branches remain focused on filtering and deleting
+existing pipelines.
+
 ## Completed
 
 ### Swift foundation
@@ -544,13 +557,21 @@ lists are invalidated through the target-list cache schema.
   the mutation and closes Alfred
 - Conditional clipboard-image cleanup reports file count and space usage,
   requires confirmation, and removes only workflow-owned cache files
+- `Manage pipelines` opens `:pipelines`, where category rows group saved Clop
+  pipelines by file type, typed searches match across all pipelines, and
+  Large Type shows raw steps without crowding subtitles
+- `:pipelines NAME => STEPS ; OPTIONS` saves Clop pipelines with optional
+  `img`, `vid`, `aud`, `pdf`, `all`, `skip`, and `hide` controls; existing
+  names require the explicit Command-Return replacement path
+- Pipeline deletion uses a visible confirmation and Cancel row, then returns
+  to the source pipeline filter
 - Return uses configured aggressive and preservation defaults
 - Command-Return and Shift-Return invert those defaults in fully resolved
   operation requests
 - Crop-capable values expose Smart Crop as a typed control that can be saved in
   presets; resize-only forms reject it
-- Pipeline delivery remains owned by Clop; no workflow recipe system or
-  pipeline output override was added
+- Pipeline delivery remains owned by Clop; no workflow recipe system, inline
+  action-menu execution, or pipeline output/copy/aggressive override was added
 - Configured settings are authoritative and malformed active files never fall
   back to another location
 - No migration metadata, automatic moves, fallback reads, or location-change

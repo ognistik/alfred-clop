@@ -311,6 +311,11 @@ enum AlfredClopCommand {
                     stateJSON: stateJSON,
                     query: query
                 )
+            case .pipeline:
+                return PipelineMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
             case .configuration,
                  .configurationOutputTemplate,
                  .configurationPresets,
@@ -323,7 +328,12 @@ enum AlfredClopCommand {
                  .configurationResetPresetsConfirmation,
                  .configurationResetPresets,
                  .configurationCacheCleanupConfirmation,
-                 .configurationCacheCleanup:
+                 .configurationCacheCleanup,
+                 .configurationPipelines,
+                 .configurationPipelineCategory,
+                 .configurationPipelineAdd,
+                 .configurationPipelineDeleteConfirmation,
+                 .configurationPipelineDelete:
                 return ConfigurationMenu.response(
                     stateJSON: stateJSON,
                     query: query

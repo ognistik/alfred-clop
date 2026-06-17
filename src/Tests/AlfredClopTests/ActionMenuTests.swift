@@ -37,7 +37,8 @@ struct ActionMenuTests {
             .optimise,
             .crop,
             .downscale,
-            .stripMetadata
+            .stripMetadata,
+            .pipeline
         ])
     }
 
@@ -45,7 +46,8 @@ struct ActionMenuTests {
     func imageAndPDFIntersectionIsCorrect() {
         #expect(actions(for: [.image, .pdf]) == [
             .optimise,
-            .crop
+            .crop,
+            .pipeline
         ])
     }
 
@@ -81,7 +83,8 @@ struct ActionMenuTests {
             "Convert Audio",
             "Crop PDF (Reversible)",
             "Uncrop PDF",
-            "Strip Metadata"
+            "Strip Metadata",
+            "Pipeline"
         ])
         #expect(response.items[1].subtitle.contains("Image, video, or PDF only"))
     }

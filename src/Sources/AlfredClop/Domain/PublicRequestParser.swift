@@ -354,6 +354,12 @@ enum PublicRequestParser {
             )
         case .cropPDF:
             return try cropPDFExecution(values: values)
+        case .pipeline:
+            try rejectUnknown(values, allowed: ["name"])
+            guard let name = values["name"], !name.isEmpty else {
+                throw PublicRequestError.missingParameter("name")
+            }
+            return .pipeline(PipelineRunRequest(name: name))
         }
     }
 
@@ -793,7 +799,9 @@ enum PublicRequestParser {
         "crop pdf": .cropPDF,
         "crop pdf (reversible)": .cropPDF,
         "uncrop pdf": .uncropPDF,
-        "strip metadata": .stripMetadata
+        "strip metadata": .stripMetadata,
+        "pipeline": .pipeline,
+        "pipelines": .pipeline
     ]
 
     private static let executionOverrideKeys: Set<String> = [
