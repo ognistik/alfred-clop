@@ -407,8 +407,8 @@ content.
 - Video Optimize accepts `70` compression, `au` / `auto` compression,
   `hw` / `hardware`, `sw` / `software`, `ll` / `lossless`, and `ad` /
   `adaptive` encoders, `m` / `mute`, and playback speeds such as `2x` or
-  `1.5x`; compact subtitles use spaced slash separators such as
-  `Use 5-100 / au + hw / sw / ll / ad + m + 2x`
+  `1.5x`; compact subtitles keep encoder detail in Large Type and use
+  `Use 5-100 / au + encoder + m + 2x`
 - PDF Optimize accepts `ad` / `adaptive`, supported bare DPI values, and
   `dpi 150` forms
 - Audio Optimize accepts `70` compression, `b128`, and `bitrate 128`

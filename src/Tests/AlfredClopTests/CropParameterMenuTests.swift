@@ -60,7 +60,7 @@ struct CropParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Type crop or resize parameters")
-        #expect(response.items[0].subtitle == "Examples: 1200x630 / 16:9 / 1920 / w128 / h720 · ⇥ Controls, ⌃↩ Save Preset")
+        #expect(response.items[0].subtitle == "Examples: 1200x630 / 16:9 / 1920 / w128 / h720 · ⇥ Controls · ⌃↩ Save Preset")
         #expect(response.items[0].autocomplete == "controls: ")
         #expect(response.items[0].mods?.control?.arg == "controls: ")
         #expect(response.items[0].mods?.control?.subtitle == "Save Preset")

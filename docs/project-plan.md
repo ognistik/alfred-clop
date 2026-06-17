@@ -542,20 +542,21 @@ Optimize may use the broad default request. Media-specific Optimize requests
 may provide only the controls exposed by the Alfred controls grammar:
 
 ```text
-execute: Optimize Video
+execute: Optimize
+media: video
 compression: auto
 encoder: software
-mute: true
-speed: 2x
+remove audio: true
+playback speed: 2
 
 /path/video.mov
 ```
 
 Supported media-specific Optimize fields are image `compression`, video
-`compression`, `encoder`, `mute`, and `speed`, PDF `dpi`, and audio
-`compression` or `bitrate`. Optimize crop and downscale flags are intentionally
-not part of Alfred Clop's product surface because those workflows belong to
-Crop / Resize and Downscale.
+`compression`, `encoder`, `remove audio`, and `playback speed`, PDF `dpi`,
+and audio `compression` or `bitrate`. Optimize crop and downscale flags are
+intentionally not part of Alfred Clop's product surface because those
+workflows belong to Crop / Resize and Downscale.
 
 A `menu` route without an action opens the main menu. A `menu` route with an
 action opens that action's clean parameter menu. Action parameter values are
@@ -1084,7 +1085,7 @@ Optimize controls accept either spaces or commas between tokens. Teach compact
 tokens first in Alfred subtitles with spaced slash separators, for example:
 
 ```text
-Use 5-100 / au + hw / sw / ll / ad + m + 2x
+Use 5-100 / au + encoder + m + 2x
 ```
 
 Large Type may show full words and examples such as `70 m`, `70, hw`,
@@ -1297,7 +1298,7 @@ Examples:
 ```text
 Selected folder: 14 files · Compress · ⌘⏎ Aggressive, ⇧⏎ Output Template
 Copied file · Long edge 1920 · ⌃⏎ Save Preset
-Passed file · Crop to 16:9 · ⌥⏎ Smart Crop, ⌃⏎ Save Preset
+Passed file · Crop to 16:9 · ⌥⏎ Smart Crop · ⌃⏎ Save Preset
 Selected file · Saved Preset · ⌃⏎ Remove Preset
 Copied file · Use compression 5-100 · ⏎ Run Defaults · ⌘L Reference
 ```

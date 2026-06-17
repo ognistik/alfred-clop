@@ -1058,7 +1058,7 @@ enum CropParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Type crop or resize parameters",
-            subtitle: "Examples: 1200x630 / 16:9 / 1920 / w128 / h720 · ⇥ Controls, ⌃↩ Save Preset",
+            subtitle: "Examples: 1200x630 / 16:9 / 1920 / w128 / h720 · ⇥ Controls · ⌃↩ Save Preset",
             arg: "",
             valid: false,
             autocomplete: controlsPrefix,
@@ -1175,7 +1175,7 @@ enum CropParameterMenu {
         }
         switch size.kind {
         case .exactDimensions, .aspectRatio:
-            return "⌥↩ Smart Crop, ⌃↩ Save Preset"
+            return "⌥↩ Smart Crop · ⌃↩ Save Preset"
         case .longEdge, .fixedWidth, .fixedHeight:
             return "⌃↩ Save Preset"
         }

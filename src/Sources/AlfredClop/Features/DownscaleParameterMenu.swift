@@ -823,7 +823,7 @@ enum DownscaleParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Type a downscale factor",
-            subtitle: "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⇥ Controls, ⌃↩ Save Preset",
+            subtitle: "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⇥ Controls · ⌃↩ Save Preset",
             arg: "",
             valid: false,
             autocomplete: controlsPrefix,

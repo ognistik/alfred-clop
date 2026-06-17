@@ -80,7 +80,7 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Type a downscale factor")
-        #expect(response.items[0].subtitle == "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⇥ Controls, ⌃↩ Save Preset")
+        #expect(response.items[0].subtitle == "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⇥ Controls · ⌃↩ Save Preset")
         #expect(response.items[0].autocomplete == "controls: ")
         #expect(response.items[0].valid == false)
     }

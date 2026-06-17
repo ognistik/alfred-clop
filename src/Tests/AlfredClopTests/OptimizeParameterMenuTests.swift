@@ -77,7 +77,7 @@ struct OptimizeParameterMenuTests {
 
         #expect(item.title == "Type video controls")
         #expect(item.subtitle.contains(
-            "Use 5-100 / au + hw / sw / ll / ad + m + 2x"
+            "Use 5-100 / au + encoder + m + 2x"
         ))
         #expect(item.text?.largetype?.contains("Video Optimize controls") == true)
         #expect(item.text?.largetype?.contains("spaces or commas") == true)
@@ -226,7 +226,7 @@ struct OptimizeParameterMenuTests {
 
         #expect(partial.items.first?.title == "Type video controls")
         #expect(partial.items.first?.subtitle.contains(
-            "Use 5-100 / au + hw / sw / ll / ad + m + 2x"
+            "Use 5-100 / au + encoder + m + 2x"
         ) == true)
         #expect(partial.items.dropFirst().map(\.title).contains(
             "Video · Compression 100"
