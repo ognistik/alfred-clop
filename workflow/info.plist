@@ -677,7 +677,8 @@ fi</string>
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>feedback="$(./alfred-clop configure --menu-state "${1:-}")"
+				<string>return_query="$(./alfred-clop configure --menu-state "${1:-}" --return-query)"
+feedback="$(./alfred-clop configure --menu-state "${1:-}")"
 if [[ -n "$feedback" ]]; then
   title="Alfred Clop"
   message="$feedback"
@@ -687,7 +688,7 @@ on run argv
 end run
 APPLESCRIPT
 fi
-printf ':'</string>
+printf '%s' "${return_query:-:}"</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>

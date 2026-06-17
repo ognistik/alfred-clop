@@ -260,6 +260,10 @@ enum AlfredClopCommand {
             printText("Unable to update settings: Missing Configuration state.")
             return
         }
+        if arguments.contains("--return-query") {
+            printText(ConfigurationMenu.mutationReturnQuery(stateJSON: stateJSON))
+            return
+        }
         if let feedback = ConfigurationMenu.quietMutationFeedback(
             stateJSON: stateJSON
         ) {
@@ -309,6 +313,10 @@ enum AlfredClopCommand {
                 )
             case .configuration,
                  .configurationOutputTemplate,
+                 .configurationPresets,
+                 .configurationPresetCategory,
+                 .configurationPresetRemovalConfirmation,
+                 .configurationRemovePreset,
                  .configurationSaveOutput,
                  .configurationResetOutputConfirmation,
                  .configurationResetOutput,

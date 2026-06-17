@@ -823,12 +823,13 @@ returns to the same parameter menu with the remaining presets visible.
 Selecting Cancel keeps the preset and returns to the same clean parameter
 menu. Never delete a preset immediately from the modifier action.
 
-Presets live only in the submenu for their action. Crop presets appear in Crop
-/ Resize, downscale presets in Downscale, conversion presets in the relevant
-Convert menu, and Optimize presets appear in the Optimize menu and the
-relevant media Optimize controls editor. Add and remove them there; do not
-duplicate preset management in Configuration or expose presets through the
-External Trigger.
+Presets are created and executed in the submenu for their action. Crop presets
+appear in Crop / Resize, downscale presets in Downscale, conversion presets in
+the relevant Convert menu, and Optimize presets appear in the Optimize menu and
+the relevant media Optimize controls editor. Configuration may also provide a
+dedicated preset-management browser for viewing all saved presets and removing
+individual or all presets without requiring compatible input. Do not expose
+presets through the External Trigger.
 
 Workflow settings storage:
 
@@ -897,12 +898,18 @@ Expected responsibilities:
   preferences;
 - show `Reset output template` only when the active template differs from the
   built-in value;
-- offer a separate confirmed `Remove all action presets` action only when at
+- offer `Manage action presets` only when at least one preset exists. It opens
+  `:presets`, groups presets by action family, supports global filtering across
+  all categories, and lets users remove individual presets with a visible
+  Cancel row. Category rows should complete to visible `:presets ... ` queries
+  with a trailing space on Tab or Return instead of entering an opaque menu
+  state, so Backspace can return to the previous level;
+- offer confirmed `Remove all action presets` inside `:presets` only when at
   least one preset exists. Never couple global preset removal to output reset;
-- final output-template saves, resets, global preset removal, and cache cleanup
-  leave Alfred immediately on Return. Command-Return applies the same mutation
-  and returns to the `:` namespace. Concise success notifications follow the
-  Completion notifications setting;
+- final output-template saves, resets, preset removals, global preset removal,
+  and cache cleanup apply and keep Alfred open on Return. Command-Return
+  applies the same mutation and closes Alfred. Concise success notifications
+  follow the Completion notifications setting;
 - provide an explicit maintenance action to remove workflow-owned materialized
   clipboard images from the workflow cache and temporary fallback directory.
   Show the action only when matching cached images exist, include the image
@@ -910,10 +917,11 @@ Expected responsibilities:
   and space reclaimed.
 
 Use the precise label `Reset output template` and state the built-in template
-that will be restored. The separate preset-removal confirmation must state the
-number of presets that will be removed. Individual preset removal remains in
-each action menu. Cache cleanup must delete only files created by this
-workflow's clipboard image materializer.
+that will be restored. The global preset-removal confirmation must state the
+number of presets that will be removed. Individual preset removal remains
+available in each action menu and is also available from `:presets`. Cache
+cleanup must delete only files created by this workflow's clipboard image
+materializer.
 
 Every Configuration namespace row that represents workflow-owned settings or a
 settings mutation should expose the active `settings.json` path through Quick
@@ -927,7 +935,7 @@ The output-template editor follows these rules:
 - the Output Template result autocompletes to `:template ` and the remainder
   of the Script Filter query is the live editor input;
 - every root Configuration command provides a stable `:` autocomplete value,
-  such as `:settings`, `:reset output`, `:remove presets`, or `:clear cache`;
+  such as `:settings`, `:reset output`, `:presets`, or `:clear cache`;
 - plain text produces two complete safe choices: a suffix beside the original
   and a prefix beside the original;
 - input containing `%`, `/`, or beginning with `~` is treated only as an

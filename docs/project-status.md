@@ -524,13 +524,24 @@ lists are invalidated through the target-list cache schema.
   path, current output template, and preset counts plus up to five examples per
   category; the Output Template editor keeps the token reference in Large Type
 - Root Configuration commands provide stable Tab autocomplete values such as
-  `:settings`, `:reset output`, `:remove presets`, and `:clear cache`
+  `:settings`, `:reset output`, `:presets`, and `:clear cache`
 - `Reset output template` appears only for a customized template and restores
   `%P/%f-clop` without changing presets or Alfred preferences
-- Separate global preset removal appears only when presets exist and requires
-  confirmation with the preset count
-- Final template saves/resets, global preset removal, and cache cleanup close
-  Alfred on Return; Command-Return applies the mutation and returns to `:`
+- `Manage action presets` appears only when presets exist and opens `:presets`,
+  where category rows group saved presets by action family, typed searches can
+  match individual presets across all categories, and `⌘L` shows concise filter
+  shortcuts such as `img`, `vid`, `aud`, `pdf`, `resize`, and `down`
+- Preset category rows complete to visible `:presets ... ` queries with a
+  trailing space on Tab or Return, so Backspace returns naturally to the
+  previous preset-management level
+- Individual preset removal from `:presets` uses the same confirmation pattern
+  as action menus, including a visible Cancel row that returns to the source
+  preset list
+- Global preset removal now lives inside `:presets`, appears only when presets
+  exist, and requires confirmation with the preset count
+- Final template saves/resets, preset removals, global preset removal, and
+  cache cleanup apply and keep Alfred open on Return; Command-Return applies
+  the mutation and closes Alfred
 - Conditional clipboard-image cleanup reports file count and space usage,
   requires confirmation, and removes only workflow-owned cache files
 - Return uses configured aggressive and preservation defaults

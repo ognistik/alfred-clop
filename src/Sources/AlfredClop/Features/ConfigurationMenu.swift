@@ -3,6 +3,79 @@ import Foundation
 enum ConfigurationMenu {
     static let namespacePrefix = ":"
     static let templatePrefix = ":template "
+    static let presetsPrefix = ":presets"
+    static let presetsAutocomplete = ":presets "
+
+    private enum PresetCategory: String, CaseIterable, Equatable {
+        case optimize
+        case crop
+        case cropPDF
+        case downscale
+        case convertImage
+        case convertVideo
+        case convertAudio
+
+        var title: String {
+            switch self {
+            case .optimize:
+                return "Optimize Presets"
+            case .crop:
+                return "Crop / Resize Presets"
+            case .cropPDF:
+                return "Crop PDF Presets"
+            case .downscale:
+                return "Downscale Presets"
+            case .convertImage:
+                return "Convert Image Presets"
+            case .convertVideo:
+                return "Convert Video Presets"
+            case .convertAudio:
+                return "Convert Audio Presets"
+            }
+        }
+
+        var autocomplete: String {
+            "\(presetsPrefix) \(canonicalQuery) "
+        }
+
+        var canonicalQuery: String {
+            switch self {
+            case .optimize:
+                return "optimize"
+            case .crop:
+                return "crop"
+            case .cropPDF:
+                return "crop pdf"
+            case .downscale:
+                return "downscale"
+            case .convertImage:
+                return "convert image"
+            case .convertVideo:
+                return "convert video"
+            case .convertAudio:
+                return "convert audio"
+            }
+        }
+
+        var matchText: String {
+            switch self {
+            case .optimize:
+                return "optimize opt presets"
+            case .crop:
+                return "crop resize presets"
+            case .cropPDF:
+                return "crop pdf pdf presets"
+            case .downscale:
+                return "downscale down presets"
+            case .convertImage:
+                return "convert image img presets"
+            case .convertVideo:
+                return "convert video vid presets"
+            case .convertAudio:
+                return "convert audio aud presets"
+            }
+        }
+    }
 
     static func namespaceResponse(
         query: String,
@@ -28,6 +101,20 @@ enum ConfigurationMenu {
                     outputTemplateMenu(
                         query: templateQuery,
                         store: store
+                    ),
+                    store: store
+                )
+            }
+            if normalized == "presets"
+                || normalized.hasPrefix("presets ") {
+                let presetQuery = normalized == "presets"
+                    ? ""
+                    : String(namespaceQuery.dropFirst("presets ".count))
+                return withSettingsAffordance(
+                    presetsMenu(
+                        store: store,
+                        query: presetQuery,
+                        category: nil
                     ),
                     store: store
                 )
@@ -92,6 +179,42 @@ enum ConfigurationMenu {
                     query: query,
                     store: store
                 )
+            case .configurationPresets:
+                response = presetsMenu(
+                    store: store,
+                    query: query,
+                    category: nil
+                )
+            case .configurationPresetCategory:
+                response = presetsMenu(
+                    store: store,
+                    query: query,
+                    category: category(from: state.configurationValue)
+                )
+            case .configurationPresetRemovalConfirmation:
+                guard let action = state.presetAction else {
+                    return error(
+                        "Unable to remove preset",
+                        "The preset removal state is invalid."
+                    )
+                }
+                response = presetRemovalConfirmation(
+                    action: action,
+                    category: category(from: state.configurationValue)
+                )
+            case .configurationRemovePreset:
+                guard let action = state.presetAction else {
+                    return error(
+                        "Unable to remove preset",
+                        "The preset removal state is invalid."
+                    )
+                }
+                _ = try store.remove(action.preset)
+                response = presetsMenu(
+                    store: store,
+                    query: "",
+                    category: category(from: state.configurationValue)
+                )
             case .configurationSaveOutput:
                 try store.updateOutputTemplate(state.configurationValue ?? "")
                 response = menu(
@@ -130,10 +253,11 @@ enum ConfigurationMenu {
                     nextMode: .configurationResetPresets
                 )
             case .configurationResetPresets:
-                let count = try store.removeAllPresets()
-                response = message(
-                    title: "Removed \(count) action presets",
-                    subtitle: "Output template and Alfred preferences unchanged"
+                _ = try store.removeAllPresets()
+                response = presetsMenu(
+                    store: store,
+                    query: "",
+                    category: nil
                 )
             case .configurationCacheCleanupConfirmation:
                 let activeCache = cache ?? ClipboardImageCache(
@@ -203,6 +327,16 @@ enum ConfigurationMenu {
             case .configurationResetPresets:
                 let count = try store.removeAllPresets()
                 message = "Removed \(count) action \(count == 1 ? "preset" : "presets")"
+            case .configurationRemovePreset:
+                guard let action = state.presetAction else {
+                    return environment.errorNotifications
+                        ? "Unable to update settings: The preset removal state is invalid."
+                        : nil
+                }
+                let removed = try store.remove(action.preset)
+                message = removed
+                    ? "Removed \(presetDisplayValue(action.preset))"
+                    : "Preset already removed"
             case .configurationCacheCleanup:
                 let removed = (cache ?? ClipboardImageCache(
                     environment: environment,
@@ -219,6 +353,27 @@ enum ConfigurationMenu {
             return environment.errorNotifications
                 ? "Unable to update settings: \(error.localizedDescription)"
                 : nil
+        }
+    }
+
+    static func mutationReturnQuery(stateJSON: String) -> String {
+        guard let state = try? JSONDecoder().decode(
+            MenuState.self,
+            from: Data(stateJSON.utf8)
+        ) else {
+            return namespacePrefix
+        }
+
+        switch state.mode {
+        case .configurationRemovePreset:
+            guard let category = category(from: state.configurationValue) else {
+                return presetsAutocomplete
+            }
+            return category.autocomplete
+        case .configurationResetPresets:
+            return presetsAutocomplete
+        default:
+            return namespacePrefix
         }
     }
 
@@ -255,7 +410,7 @@ enum ConfigurationMenu {
             items.append(resetOutputItem())
         }
         if !document.presets.isEmpty {
-            items.append(removePresetsItem(count: document.presets.count))
+            items.append(managePresetsItem(count: document.presets.count))
         }
 
         let summary = cache.summary()
@@ -414,8 +569,8 @@ enum ConfigurationMenu {
             subtitle: "\(templateExample(template)) · ⌘L Reference",
             arg: stateJSON,
             valid: true,
-            variables: mutationVariables(stateJSON),
-            mods: stayOpenModifier(stateJSON)
+            variables: returnMutationVariables(stateJSON),
+            mods: closeModifier(stateJSON)
         )
     }
 
@@ -468,6 +623,18 @@ enum ConfigurationMenu {
         )
     }
 
+    private static func managePresetsItem(count: Int) -> ScriptFilterItem {
+        return ScriptFilterItem(
+            title: "Manage action presets",
+            subtitle: "\(count) Saved \(count == 1 ? "Preset" : "Presets") across all action menus",
+            arg: Self.presetsAutocomplete,
+            valid: true,
+            autocomplete: Self.presetsAutocomplete,
+            match: "manage remove reset delete action presets",
+            variables: queryTransitionVariables()
+        )
+    }
+
     private static func removePresetsItem(count: Int) -> ScriptFilterItem {
         let stateJSON = encoded(.configuration(
             mode: .configurationResetPresetsConfirmation
@@ -477,10 +644,310 @@ enum ConfigurationMenu {
             subtitle: "\(count) Saved \(count == 1 ? "Preset" : "Presets") across all action menus",
             arg: stateJSON,
             valid: true,
-            autocomplete: ":remove presets",
+            autocomplete: "\(presetsPrefix) remove all",
             match: "remove reset delete action presets",
             variables: transitionVariables(stateJSON)
         )
+    }
+
+    private static func presetsMenu(
+        store: PresetStore,
+        query: String,
+        category: PresetCategory?
+    ) -> ScriptFilterResponse {
+        let document: SettingsDocument
+        do {
+            document = try store.load()
+        } catch let caughtError {
+            return error(
+                "Unable to read saved presets",
+                caughtError.localizedDescription
+            )
+        }
+
+        guard !document.presets.isEmpty else {
+            return message(
+                title: "No saved action presets",
+                subtitle: "Save presets from an action menu first."
+            )
+        }
+
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let categoryRoute = presetCategoryRoute(from: trimmed) {
+            return categoryPresetMenu(
+                document.presets,
+                category: categoryRoute.category,
+                query: categoryRoute.query
+            )
+        }
+        if let category {
+            return categoryPresetMenu(
+                document.presets,
+                category: category,
+                query: trimmed
+            )
+        }
+
+        var items: [ScriptFilterItem]
+        if trimmed.isEmpty {
+            items = PresetCategory.allCases.compactMap { category -> ScriptFilterItem? in
+                let count = presets(in: document.presets, category: category).count
+                guard count > 0 else { return nil }
+                return categoryItem(category, count: count)
+            }
+            items.append(removePresetsItem(count: document.presets.count))
+            return ScriptFilterResponse(items: items)
+        }
+
+        let categoryItems = PresetCategory.allCases.compactMap { category -> ScriptFilterItem? in
+            let count = presets(in: document.presets, category: category).count
+            guard count > 0 else { return nil }
+            return categoryItem(category, count: count)
+        }
+        let presetItems = document.presets
+            .sorted(by: presetDisplayOrder)
+            .map { presetItem($0, sourceCategory: nil) }
+        items = categoryItems + presetItems + [
+            removePresetsItem(count: document.presets.count)
+        ]
+
+        let search = FuzzySearch<ScriptFilterItem>(
+            query: trimmed,
+            targetText: {
+                [$0.title, $0.match].compactMap(\.self)
+                    .joined(separator: " ")
+            }
+        )
+        let matches = search.sorted(items)
+        guard !matches.isEmpty else {
+            return error(
+                "No matching action presets",
+                "Try a preset value or category name."
+            )
+        }
+        return ScriptFilterResponse(items: matches.map {
+            items[$0.targetIndex]
+        })
+    }
+
+    private static func categoryPresetMenu(
+        _ allPresets: [ActionPreset],
+        category: PresetCategory,
+        query: String
+    ) -> ScriptFilterResponse {
+        let categoryPresets = presets(in: allPresets, category: category)
+            .sorted(by: presetDisplayOrder)
+        guard !categoryPresets.isEmpty else {
+            return message(
+                title: "No \(category.title.lowercased())",
+                subtitle: "Save presets from that action menu first."
+            )
+        }
+
+        let items = categoryPresets.map {
+            presetItem($0, sourceCategory: category)
+        }
+        guard !query.isEmpty else {
+            return ScriptFilterResponse(items: items)
+        }
+
+        let search = FuzzySearch<ScriptFilterItem>(
+            query: query,
+            targetText: {
+                [$0.title, $0.match].compactMap(\.self)
+                    .joined(separator: " ")
+            }
+        )
+        let matches = search.sorted(items)
+        guard !matches.isEmpty else {
+            return error(
+                "No matching \(category.title.lowercased())",
+                "Try another preset value."
+            )
+        }
+        return ScriptFilterResponse(items: matches.map {
+            items[$0.targetIndex]
+        })
+    }
+
+    private static func categoryItem(
+        _ category: PresetCategory,
+        count: Int
+    ) -> ScriptFilterItem {
+        return ScriptFilterItem(
+            title: category.title,
+            subtitle: "\(count) Saved \(count == 1 ? "Preset" : "Presets") · ⌘L Filter Shortcuts",
+            arg: category.autocomplete,
+            valid: true,
+            autocomplete: category.autocomplete,
+            match: category.matchText,
+            variables: queryTransitionVariables(),
+            text: ScriptFilterText(largetype: presetCategoryReference)
+        )
+    }
+
+    private static func presetItem(
+        _ preset: ActionPreset,
+        sourceCategory: PresetCategory?
+    ) -> ScriptFilterItem {
+        let state = MenuState(
+            mode: .configurationPresetRemovalConfirmation,
+            presetAction: PresetMenuAction(
+                kind: .confirmRemoval,
+                preset: preset
+            ),
+            configurationValue: sourceCategory?.rawValue
+        )
+        let stateJSON = encoded(state)
+        let categoryTitle = category(for: preset).title
+        return ScriptFilterItem(
+            uid: "configuration.\(presetStableUID(preset))",
+            title: presetDisplayValue(preset),
+            subtitle: "Saved \(categoryTitle.dropLast(" Presets".count)) Preset · Return to review removal",
+            arg: stateJSON,
+            valid: true,
+            autocomplete: "\(presetsPrefix) \(presetDisplayValue(preset))",
+            match: "\(categoryTitle) \(presetDisplayValue(preset))",
+            variables: transitionVariables(stateJSON)
+        )
+    }
+
+    private static func presetRemovalConfirmation(
+        action: PresetMenuAction,
+        category: PresetCategory?
+    ) -> ScriptFilterResponse {
+        let removeState = MenuState(
+            mode: .configurationRemovePreset,
+            presetAction: PresetMenuAction(kind: .remove, preset: action.preset),
+            configurationValue: category?.rawValue
+        )
+        let removeJSON = encoded(removeState)
+        return ScriptFilterResponse(
+            items: [
+                ScriptFilterItem(
+                    title: "Remove Preset \(presetDisplayValue(action.preset))?",
+                    subtitle: "Return confirms · Cannot be undone · ⌘↩ Confirm and close",
+                    arg: removeJSON,
+                    valid: true,
+                    variables: returnMutationVariables(removeJSON),
+                    mods: closeModifier(removeJSON)
+                ),
+                ScriptFilterItem(
+                    title: "Cancel",
+                    subtitle: "Return keeps preset",
+                    arg: category?.autocomplete ?? Self.presetsAutocomplete,
+                    valid: true,
+                    variables: queryTransitionVariables()
+                )
+            ],
+            skipKnowledge: true
+        )
+    }
+
+    private static func presetCategoryRoute(
+        from query: String
+    ) -> (category: PresetCategory, query: String)? {
+        let routes: [(aliases: [String], category: PresetCategory)] = [
+            (["crop pdf", "pdf"], .cropPDF),
+            (["convert image", "image", "img"], .convertImage),
+            (["convert video", "video", "vid"], .convertVideo),
+            (["convert audio", "audio", "aud"], .convertAudio),
+            (["optimize", "opt"], .optimize),
+            (["crop", "resize"], .crop),
+            (["downscale", "down"], .downscale)
+        ]
+        let normalized = query.lowercased()
+        for route in routes {
+            for alias in route.aliases {
+                if normalized == alias {
+                    return (route.category, "")
+                }
+                if normalized.hasPrefix(alias + " ") {
+                    let remaining = String(query.dropFirst(alias.count))
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    return (route.category, remaining)
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func presets(
+        in presets: [ActionPreset],
+        category: PresetCategory
+    ) -> [ActionPreset] {
+        presets.filter { self.category(for: $0) == category }
+    }
+
+    private static func category(for preset: ActionPreset) -> PresetCategory {
+        switch preset {
+        case .optimize:
+            return .optimize
+        case .crop:
+            return .crop
+        case .cropPDF:
+            return .cropPDF
+        case .downscale:
+            return .downscale
+        case .conversion(let value):
+            switch value.choice.media {
+            case .image:
+                return .convertImage
+            case .video:
+                return .convertVideo
+            case .audio:
+                return .convertAudio
+            }
+        }
+    }
+
+    private static func category(from value: String?) -> PresetCategory? {
+        value.flatMap(PresetCategory.init(rawValue:))
+    }
+
+    private static func presetDisplayOrder(
+        _ lhs: ActionPreset,
+        _ rhs: ActionPreset
+    ) -> Bool {
+        let lhsCategory = category(for: lhs).title
+        let rhsCategory = category(for: rhs).title
+        let categoryComparison = lhsCategory.localizedStandardCompare(rhsCategory)
+        if categoryComparison != .orderedSame {
+            return categoryComparison == .orderedAscending
+        }
+        return presetDisplayValue(lhs).localizedStandardCompare(
+            presetDisplayValue(rhs)
+        ) == .orderedAscending
+    }
+
+    private static func presetDisplayValue(_ preset: ActionPreset) -> String {
+        switch preset {
+        case .crop(let value):
+            return value.displayValue
+        case .downscale(let value):
+            return value.displayValue
+        case .conversion(let value):
+            return value.displayValue
+        case .optimize(let value):
+            return value.displayValue
+        case .cropPDF(let value):
+            return value.displayValue
+        }
+    }
+
+    private static func presetStableUID(_ preset: ActionPreset) -> String {
+        switch preset {
+        case .crop(let value):
+            return value.stableUID
+        case .downscale(let value):
+            return value.stableUID
+        case .conversion(let value):
+            return value.stableUID
+        case .optimize(let value):
+            return value.stableUID
+        case .cropPDF(let value):
+            return value.stableUID
+        }
     }
 
     private static func isAdvancedInput(_ value: String) -> Bool {
@@ -536,6 +1003,41 @@ enum ConfigurationMenu {
     Clop adds the output extension automatically.
     """
 
+    private static let presetCategoryReference = """
+    PRESET FILTER SHORTCUTS
+
+    Optimize Presets
+    optimize
+    opt
+
+    Crop / Resize Presets
+    crop
+    resize
+
+    Crop PDF Presets
+    crop pdf
+    pdf
+
+    Downscale Presets
+    downscale
+    down
+
+    Convert Image Presets
+    convert image
+    image
+    img
+
+    Convert Video Presets
+    convert video
+    video
+    vid
+
+    Convert Audio Presets
+    convert audio
+    audio
+    aud
+    """
+
     private static func confirmation(
         title: String,
         subtitle: String,
@@ -545,11 +1047,11 @@ enum ConfigurationMenu {
         return ScriptFilterResponse(items: [
             ScriptFilterItem(
                 title: title,
-                subtitle: subtitle,
+                subtitle: "\(subtitle) · ⌘↩ Apply and close",
                 arg: stateJSON,
                 valid: true,
-                variables: mutationVariables(stateJSON),
-                mods: stayOpenModifier(stateJSON)
+                variables: returnMutationVariables(stateJSON),
+                mods: closeModifier(stateJSON)
             )
         ])
     }
@@ -673,6 +1175,14 @@ enum ConfigurationMenu {
         ]
     }
 
+    private static func queryTransitionVariables() -> [String: String] {
+        [
+            ActionMenu.requestKindVariable:
+                WorkflowRequestKind.parameterStepQuery.rawValue,
+            ActionMenu.menuStateVariable: ""
+        ]
+    }
+
     private static func mutationVariables(_ stateJSON: String) -> [String: String] {
         [
             ActionMenu.requestKindVariable:
@@ -681,18 +1191,22 @@ enum ConfigurationMenu {
         ]
     }
 
-    private static func stayOpenModifier(
+    private static func returnMutationVariables(_ stateJSON: String) -> [String: String] {
+        [
+            ActionMenu.requestKindVariable:
+                WorkflowRequestKind.configurationMutationReturn.rawValue,
+            ActionMenu.menuStateVariable: stateJSON
+        ]
+    }
+
+    private static func closeModifier(
         _ stateJSON: String
     ) -> ScriptFilterMods {
         ScriptFilterMods(command: ScriptFilterModifier(
             arg: stateJSON,
-            subtitle: "Apply · Return to Configuration",
+            subtitle: "Apply and close",
             valid: true,
-            variables: [
-                ActionMenu.requestKindVariable:
-                    WorkflowRequestKind.configurationMutationReturn.rawValue,
-                ActionMenu.menuStateVariable: stateJSON
-            ]
+            variables: mutationVariables(stateJSON)
         ))
     }
 

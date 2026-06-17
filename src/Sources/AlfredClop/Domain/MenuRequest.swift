@@ -353,6 +353,10 @@ enum MenuMode: String, Codable, Equatable {
     case cropPDFPresetRemoval
     case configuration
     case configurationOutputTemplate
+    case configurationPresets
+    case configurationPresetCategory
+    case configurationPresetRemovalConfirmation
+    case configurationRemovePreset
     case configurationSaveOutput
     case configurationResetOutputConfirmation
     case configurationResetOutput

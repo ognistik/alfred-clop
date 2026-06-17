@@ -235,7 +235,7 @@ struct SettingsFoundationTests {
             $0.title == "Reset output template"
         })
         let presets = try #require(menu.items.first {
-            $0.title == "Remove all action presets"
+            $0.title == "Manage action presets"
         })
         #expect(reset.mods == nil)
         #expect(presets.subtitle.contains("1 Saved Preset"))
@@ -249,12 +249,12 @@ struct SettingsFoundationTests {
         )
         #expect(
             confirmation.items.first?.variables?[ActionMenu.requestKindVariable]
-                == WorkflowRequestKind.configurationMutation.rawValue
+                == WorkflowRequestKind.configurationMutationReturn.rawValue
         )
         #expect(
             confirmation.items.first?.mods?.command?
                 .variables?[ActionMenu.requestKindVariable]
-                == WorkflowRequestKind.configurationMutationReturn.rawValue
+                == WorkflowRequestKind.configurationMutation.rawValue
         )
         #expect(ConfigurationMenu.quietMutationFeedback(
             stateJSON: try #require(confirmation.items.first?.arg),
@@ -277,12 +277,19 @@ struct SettingsFoundationTests {
             $0.title == "Reset output template"
         })
         #expect(afterReset.items.contains {
-            $0.title == "Remove all action presets"
+            $0.title == "Manage action presets"
         })
 
+        let presetMenu = ConfigurationMenu.namespaceResponse(
+            query: ":presets",
+            environment: environment
+        )
+        let removeAll = try #require(presetMenu.items.first {
+            $0.title == "Remove all action presets"
+        })
         let presetConfirmation = ConfigurationMenu.response(
             stateJSON: try #require(
-                presets.variables?[ActionMenu.menuStateVariable]
+                removeAll.variables?[ActionMenu.menuStateVariable]
             ),
             query: "",
             environment: environment
@@ -572,9 +579,189 @@ struct SettingsFoundationTests {
         #expect(
             editor.items.allSatisfy {
                 $0.mods?.command?.variables?[ActionMenu.requestKindVariable]
+                    == WorkflowRequestKind.configurationMutation.rawValue
+            }
+        )
+        #expect(
+            editor.items.allSatisfy {
+                $0.variables?[ActionMenu.requestKindVariable]
                     == WorkflowRequestKind.configurationMutationReturn.rawValue
             }
         )
+    }
+
+    @Test
+    func presetsNamespaceShowsCategoriesAndShortcutReference() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let store = try PresetStore(environment: environment)
+        _ = try store.save(.crop(CropActionPreset(size: try #require(
+            CropSizeParser.parse("128x0")
+        ))))
+        _ = try store.save(.downscale(DownscaleActionPreset(factor: 0.5)))
+        _ = try store.save(.conversion(ConversionActionPreset(
+            choice: ConversionChoice(
+                media: .image,
+                format: "webp",
+                setting: .compression(80)
+            )
+        )))
+
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":presets",
+            environment: environment
+        )
+
+        #expect(response.items.map(\.title).contains("Crop / Resize Presets"))
+        #expect(response.items.map(\.title).contains("Downscale Presets"))
+        #expect(response.items.map(\.title).contains("Convert Image Presets"))
+        #expect(response.items.map(\.title).contains("Remove all action presets"))
+        let image = try #require(response.items.first {
+            $0.title == "Convert Image Presets"
+        })
+        #expect(image.autocomplete == ":presets convert image ")
+        #expect(
+            image.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.parameterStepQuery.rawValue
+        )
+        #expect(image.variables?[ActionMenu.menuStateVariable] == "")
+        #expect(image.text?.largetype?.contains("PRESET FILTER SHORTCUTS") == true)
+        #expect(image.text?.largetype?.contains("img") == true)
+    }
+
+    @Test
+    func presetsNamespaceSearchesAllPresetsOrRoutesToCategory() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let store = try PresetStore(environment: environment)
+        _ = try store.save(.crop(CropActionPreset(size: try #require(
+            CropSizeParser.parse("1200x630")
+        ))))
+        _ = try store.save(.cropPDF(CropPDFActionPreset(request: CropPDFRequest(
+            target: .aspectRatio("4:3")
+        ))))
+        _ = try store.save(.downscale(DownscaleActionPreset(factor: 0.5)))
+
+        let global = ConfigurationMenu.namespaceResponse(
+            query: ":presets 1200",
+            environment: environment
+        )
+        #expect(global.items.contains {
+            $0.title.contains("1200x630")
+                && $0.subtitle.contains("Return to review removal")
+        })
+        #expect(!global.items.contains {
+            $0.title == "Downscale Presets"
+        })
+
+        let crop = ConfigurationMenu.namespaceResponse(
+            query: ":presets crop",
+            environment: environment
+        )
+        #expect(crop.items.contains { $0.title.contains("1200x630") })
+        #expect(!crop.items.contains { $0.title == "Crop PDF Presets" })
+        #expect(!crop.items.contains { $0.title == "Convert Image Presets" })
+        #expect(!crop.items.contains { $0.title.contains("4:3") })
+
+        let pdf = ConfigurationMenu.namespaceResponse(
+            query: ":presets pdf",
+            environment: environment
+        )
+        #expect(pdf.items.contains { $0.title.contains("4:3") })
+        #expect(!pdf.items.contains { $0.title.contains("1200x630") })
+
+        let removal = ConfigurationMenu.namespaceResponse(
+            query: ":presets remo",
+            environment: environment
+        )
+        #expect(removal.items.first?.title == "Remove all action presets")
+        #expect(!removal.items.contains { $0.title == "Optimize Presets" })
+    }
+
+    @Test
+    func presetManagementCanCancelOrRemoveIndividualPreset() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        let store = try PresetStore(environment: environment)
+        let crop = ActionPreset.crop(CropActionPreset(size: try #require(
+            CropSizeParser.parse("1200x630")
+        )))
+        let downscale = ActionPreset.downscale(DownscaleActionPreset(factor: 0.5))
+        _ = try store.save(crop)
+        _ = try store.save(downscale)
+
+        let root = ConfigurationMenu.namespaceResponse(
+            query: ":presets",
+            environment: environment
+        )
+        let cropCategory = try #require(root.items.first {
+            $0.title == "Crop / Resize Presets"
+        })
+        #expect(cropCategory.arg == ":presets crop ")
+        #expect(cropCategory.autocomplete == ":presets crop ")
+        let cropList = ConfigurationMenu.response(
+            stateJSON: try JSONOutput.string(
+                for: MenuState.configuration(mode: .configurationPresets),
+                prettyPrinted: false
+            ),
+            query: "crop",
+            environment: environment
+        )
+        let cropPreset = try #require(cropList.items.first {
+            $0.title.contains("1200x630")
+        })
+        let confirmation = ConfigurationMenu.response(
+            stateJSON: try #require(
+                cropPreset.variables?[ActionMenu.menuStateVariable]
+            ),
+            query: "",
+            environment: environment
+        )
+
+        #expect(confirmation.items.map(\.title).contains("Cancel"))
+        #expect(
+            confirmation.items.first?.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.configurationMutationReturn.rawValue
+        )
+        #expect(
+            confirmation.items.first?.mods?.command?
+                .variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.configurationMutation.rawValue
+        )
+
+        let cancel = try #require(confirmation.items.first {
+            $0.title == "Cancel"
+        })
+        let cancelled = ConfigurationMenu.response(
+            stateJSON: try JSONOutput.string(
+                for: MenuState.configuration(mode: .configurationPresets),
+                prettyPrinted: false
+            ),
+            query: "crop",
+            environment: environment
+        )
+        #expect(cancel.arg == ":presets crop ")
+        #expect(cancelled.items.contains { $0.title.contains("1200x630") })
+        #expect(try store.load().presets.count == 2)
+        #expect(
+            ConfigurationMenu.mutationReturnQuery(
+                stateJSON: try #require(confirmation.items.first?.arg)
+            ) == ":presets crop "
+        )
+
+        let removed = ConfigurationMenu.response(
+            stateJSON: try #require(confirmation.items.first?.arg),
+            query: "",
+            environment: environment
+        )
+        #expect(!removed.items.contains { $0.title.contains("1200x630") })
+        #expect(try store.load().presets == [downscale])
     }
 
     @Test
@@ -623,7 +810,7 @@ struct SettingsFoundationTests {
         let filePath = directory.appendingPathComponent("settings.json").path
 
         #expect(response.items.map(\.title).contains("Reset output template"))
-        #expect(response.items.map(\.title).contains("Remove all action presets"))
+        #expect(response.items.map(\.title).contains("Manage action presets"))
         #expect(response.items.allSatisfy {
             $0.quickLookURL == filePath
                 && $0.action?.file == .single(filePath)
@@ -633,8 +820,8 @@ struct SettingsFoundationTests {
             $0.title == "Reset output template"
         }?.autocomplete == ":reset output")
         #expect(response.items.first {
-            $0.title == "Remove all action presets"
-        }?.autocomplete == ":remove presets")
+            $0.title == "Manage action presets"
+        }?.autocomplete == ":presets ")
     }
 
     @Test
