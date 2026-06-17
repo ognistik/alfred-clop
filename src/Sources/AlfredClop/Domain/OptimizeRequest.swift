@@ -348,13 +348,13 @@ enum OptimizeControlParser {
     static func grammarHint(for media: OptimizeMediaKind) -> String {
         switch media {
         case .image:
-            return "Type 5-100 or ad"
+            return "Use compression 5-100 / ad"
         case .video:
-            return "Type 5-100/au, hw/sw/ll/ad, m, or 2x"
+            return "Use 5-100 / au / hw / sw / ll / ad / m / 2x"
         case .pdf:
-            return "Type DPI or ad"
+            return "Use DPI 300 / 250 / 150 / ad"
         case .audio:
-            return "Type 5-100 or b128"
+            return "Use compression 5-100 / bitrate (e.g. b128)"
         }
     }
 

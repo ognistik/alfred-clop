@@ -17,7 +17,12 @@ struct CropPresetMenuTests {
         #expect(first.items[0].title == "Type crop or resize parameters")
         #expect(
             first.items.dropFirst().map(\.title)
-                == ["16:9", "1920", "h720", "w128"]
+                == [
+                    "Crop to 16:9",
+                    "Long edge 1920",
+                    "Height 720, auto width",
+                    "Width 128, auto height"
+                ]
         )
         #expect(first.items.dropFirst().allSatisfy { $0.uid != nil })
         #expect(first.items.map(\.uid) == second.items.map(\.uid))
@@ -32,12 +37,14 @@ struct CropPresetMenuTests {
         let response = fixture.response(query: "1200x630")
         let operation = try operationRequest(
             from: try #require(response.items.first(where: {
-                $0.title == "Use 1200x630"
+                $0.title == "Crop to 1200x630"
             }))
         )
 
-        #expect(response.items[0].title == "Use 1200x630")
-        #expect(!response.items.contains { $0.title == "w128" })
+        #expect(response.items[0].title == "Crop to 1200x630")
+        #expect(!response.items.contains {
+            $0.title == "Width 128, auto height"
+        })
         #expect(operation.action == .crop(
             size: "1200x630",
             smartCrop: false,
@@ -104,15 +111,18 @@ struct CropPresetMenuTests {
 
         #expect(
             response.items.map(\.title)
-                == ["Long edge 128", "w128"]
+                == ["Long edge 128", "Width 128, auto height"]
         )
         #expect(response.items.allSatisfy {
             $0.title != "Type crop or resize parameters"
         })
-        #expect(response.items[0].mods?.control?.subtitle == "Save Preset 128")
+        #expect(
+            response.items[0].mods?.control?.subtitle
+                == "Save Preset Long edge 128"
+        )
         #expect(
             response.items[1].mods?.control?.subtitle
-                == "Remove Preset w128"
+                == "Remove Preset Width 128, auto height"
         )
     }
 
@@ -128,9 +138,9 @@ struct CropPresetMenuTests {
         )
 
         #expect(response.items.map(\.title) == [
-            "Use 1200x630 · Mute Video",
-            "1200x630 · Adaptive · Mute Video",
-            "1200x630 · No Adaptive · Mute Video"
+            "Crop to 1200x630 · Mute Video",
+            "Crop to 1200x630 · Adaptive · Mute Video",
+            "Crop to 1200x630 · No Adaptive · Mute Video"
         ])
         #expect(operation.action == .crop(
             size: "1200x630",
@@ -153,11 +163,11 @@ struct CropPresetMenuTests {
 
         #expect(root.items.map(\.title) == [
             "Type crop or resize parameters",
-            "w128"
+            "Width 128, auto height"
         ])
         #expect(filtered.items.map(\.title) == [
             "Long edge 128",
-            "w128"
+            "Width 128, auto height"
         ])
         #expect(!root.items.contains { $0.title.contains("Mute Video") })
         #expect(!filtered.items.contains { $0.title.contains("Mute Video") })
@@ -175,10 +185,10 @@ struct CropPresetMenuTests {
         try ambiguousFixture.save("w128 m")
 
         #expect(videoFixture.response(query: "").items.contains {
-            $0.title == "w128 · Mute Video"
+            $0.title == "Width 128, auto height · Mute Video"
         })
         #expect(ambiguousFixture.response(query: "").items.contains {
-            $0.title == "w128 · Mute Video"
+            $0.title == "Width 128, auto height · Mute Video"
         })
     }
 
@@ -192,14 +202,20 @@ struct CropPresetMenuTests {
         let typedItem = try #require(response.items.first)
         let operation = try operationRequest(from: typedItem)
 
-        #expect(response.items.map(\.title) == ["Long edge 19", "1920"])
+        #expect(response.items.map(\.title) == [
+            "Long edge 19",
+            "Long edge 1920"
+        ])
         #expect(typedItem.autocomplete == "19")
         #expect(operation.action == .crop(
             size: "19",
             smartCrop: false,
             longEdge: true
         ))
-        #expect(typedItem.mods?.control?.subtitle == "Save Preset 19")
+        #expect(
+            typedItem.mods?.control?.subtitle
+                == "Save Preset Long edge 19"
+        )
     }
 
     @Test
@@ -221,7 +237,10 @@ struct CropPresetMenuTests {
 
         let response = fixture.response(query: "w")
 
-        #expect(response.items.map(\.title) == ["w128", "w1920"])
+        #expect(response.items.map(\.title) == [
+            "Width 128, auto height",
+            "Width 1920, auto height"
+        ])
         #expect(response.items.allSatisfy { $0.valid })
     }
 
@@ -233,7 +252,7 @@ struct CropPresetMenuTests {
 
         let response = fixture.response(query: "1200x630")
 
-        #expect(response.items.map(\.title) == ["Use 1200x630"])
+        #expect(response.items.map(\.title) == ["Crop to 1200x630"])
     }
 
     @Test
@@ -262,7 +281,10 @@ struct CropPresetMenuTests {
 
         #expect(saved.items[0].title == "Type crop or resize parameters")
         #expect(combined.subtitle.contains("Saved Preset"))
-        #expect(combined.title == "w128 · No Adaptive · Mute Video")
+        #expect(
+            combined.title
+                == "Width 128, auto height · No Adaptive · Mute Video"
+        )
         #expect(operation.inputs == fixture.inputs)
         #expect(operation.action == .crop(
             size: "128x0",
@@ -295,7 +317,10 @@ struct CropPresetMenuTests {
             query: ""
         )
         #expect(confirmation.items.count == 2)
-        #expect(confirmation.items[0].title == "Remove Preset w128?")
+        #expect(
+            confirmation.items[0].title
+                == "Remove Preset Width 128, auto height?"
+        )
         #expect(confirmation.items[1].title == "Cancel")
         #expect(confirmation.items[1].subtitle == "Return keeps preset")
         #expect(try fixture.store.load().presets.count == 2)
@@ -304,8 +329,12 @@ struct CropPresetMenuTests {
             confirmation.items[1].variables?[ActionMenu.menuStateVariable]
         )
         let cancelled = fixture.response(stateJSON: cancelStateJSON, query: "")
-        #expect(cancelled.items.contains { $0.title == "w128" })
-        #expect(cancelled.items.contains { $0.title == "h720" })
+        #expect(cancelled.items.contains {
+            $0.title == "Width 128, auto height"
+        })
+        #expect(cancelled.items.contains {
+            $0.title == "Height 720, auto width"
+        })
         #expect(try fixture.store.load().presets.count == 2)
 
         let removeStateJSON = try #require(
@@ -317,8 +346,12 @@ struct CropPresetMenuTests {
         )
 
         #expect(returnedMenu.items[0].title == "Type crop or resize parameters")
-        #expect(!returnedMenu.items.contains { $0.title == "w128" })
-        #expect(returnedMenu.items.contains { $0.title == "h720" })
+        #expect(!returnedMenu.items.contains {
+            $0.title == "Width 128, auto height"
+        })
+        #expect(returnedMenu.items.contains {
+            $0.title == "Height 720, auto width"
+        })
         #expect(try fixture.store.load().presets.count == 1)
     }
 

@@ -25,10 +25,10 @@ struct ConversionParameterMenuTests {
             format: "webp"
         )))
         #expect(webp.autocomplete == "webp ")
-        #expect(webp.subtitle.contains("⇥ Controls, ⌃↩ Save Preset"))
+        #expect(webp.subtitle.contains("⇥ Controls"))
         #expect(
             webp.mods?.control?.subtitle
-                == "Save Preset for WebP"
+                == "Controls"
         )
         #expect(webp.mods?.shift != nil)
     }
@@ -53,9 +53,10 @@ struct ConversionParameterMenuTests {
 
         #expect(
             empty.items.first?.title
-                == "Convert to WebP · Clop Defaults"
+                == "Convert to WebP with Clop Defaults"
         )
-        #expect(empty.items.first?.subtitle.contains("Compression 5-100") == true)
+        #expect(empty.items.first?.subtitle.contains("Use compression 5-100") == true)
+        #expect(empty.items.first?.subtitle.contains("⏎ Run Defaults") == true)
         #expect(typed.items.first?.title == "Convert to WebP · Compression 70")
         #expect(try decodedOperation(typed.items.first?.arg).action == .convert(
             ConversionChoice(
@@ -68,6 +69,28 @@ struct ConversionParameterMenuTests {
             typed.items.first?.mods?.control?.subtitle
                 == "Save Preset WebP · Compression 70"
         )
+    }
+
+    @Test
+    func imageBranchDistinguishesPartialAndInvalidCompression() throws {
+        let fixture = try fixture(
+            action: .convertImage,
+            input: "/tmp/photo.png"
+        )
+
+        let partial = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "webp 1",
+            environment: fixture.environment
+        )
+        let invalid = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "webp 500",
+            environment: fixture.environment
+        )
+
+        #expect(partial.items.first?.title == "Type compression value")
+        #expect(invalid.items.first?.title == "Invalid conversion control")
     }
 
     @Test
@@ -102,7 +125,7 @@ struct ConversionParameterMenuTests {
         )
         #expect(
             controls.items.first?.title
-                == "Convert to WebP · Clop Defaults"
+                == "Convert to WebP with Clop Defaults"
         )
         #expect(!controls.items.contains {
             $0.title == "Back to conversion formats"
@@ -133,6 +156,9 @@ struct ConversionParameterMenuTests {
         )
 
         #expect(ambiguous.items.first?.title == "Invalid conversion control")
+        #expect(ambiguous.items.first?.subtitle.contains(
+            "Use compression (e.g. c70) / bitrate (e.g. b128)"
+        ) == true)
         #expect(try decodedOperation(compression.items.first?.arg).action == .convert(
             ConversionChoice(
                 media: .audio,
@@ -198,11 +224,12 @@ struct ConversionParameterMenuTests {
             $0.title == "Convert to WebP"
         })
         #expect(!saved.items.contains {
-            $0.title == "Convert to WebP · Clop Defaults"
+            $0.title == "Convert to WebP with Clop Defaults"
         })
         let preset = try #require(saved.items.first {
             $0.title == "WebP · Compression 70"
         })
+        #expect(preset.autocomplete == "webp 70")
         let exact = ConversionParameterMenu.response(
             stateJSON: fixture.stateJSON,
             query: "webp 70",
@@ -255,8 +282,56 @@ struct ConversionParameterMenuTests {
             $0.title == "Convert to WebP"
         })
         #expect(!removed.items.contains {
-            $0.title == "Convert to WebP · Clop Defaults"
+            $0.title == "Convert to WebP with Clop Defaults"
         })
+    }
+
+    @Test
+    func formatBranchKeepsGuidanceBeforeMatchingPresets() throws {
+        let fixture = try fixture(
+            action: .convertAudio,
+            input: "/tmp/audio.wav"
+        )
+        _ = try fixture.store.save(.conversion(ConversionActionPreset(
+            choice: ConversionChoice(
+                media: .audio,
+                format: "mp3",
+                setting: .bitrate(128)
+            )
+        )))
+
+        let response = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "mp3 b",
+            environment: fixture.environment
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Type audio conversion control",
+            "MP3 · 128 kbps"
+        ])
+        #expect(response.items.first?.subtitle.contains(
+            "Use compression (e.g. c70) / bitrate (e.g. b128)"
+        ) == true)
+        #expect(response.items[1].autocomplete == "mp3 b128")
+    }
+
+    @Test
+    func largeTypeUsesConsistentInputHeadingSpacing() throws {
+        let fixture = try fixture(
+            action: .convertImage,
+            input: "/tmp/photo.png"
+        )
+
+        let response = ConversionParameterMenu.response(
+            stateJSON: fixture.stateJSON,
+            query: "webp ",
+            environment: fixture.environment
+        )
+        let largeType = try #require(response.items.first?.text?.largetype)
+
+        #expect(largeType.contains("\n\nInputs\n/tmp/photo.png"))
+        #expect(!largeType.contains("\n\nInputs\n\n/tmp/photo.png"))
     }
 
     @Test

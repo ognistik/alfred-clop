@@ -726,7 +726,7 @@ non-executable instructional item:
 
 ```text
 Type crop or resize parameters
-Examples: 1200x630, 16:9, 1920, w128, h720 · Controls
+Examples: 1200x630 / 16:9 / 1920 / w128 / h720 · Controls
 ```
 
 Once the user types, show one primary interpreted result:
@@ -954,6 +954,13 @@ Only user-created presets should appear as additional choices. A valid typed
 factor remains the first result when it partially matches a preset; exact
 normalized matches combine into one saved result.
 
+Downscale still needs a full controls branch for the remaining broad Clop
+`downscale` options. Verified candidates include adaptive image optimization,
+type filtering, recursive folders, and the shared execution options documented
+for broad commands. Add this as a separate bounded task after fixture probes,
+using the same shallow `controls:` pattern as Crop / Resize and Optimize
+instead of expanding the current factor-only grammar opportunistically.
+
 ### Convert
 
 First choose a target valid for the selected media kind:
@@ -1031,7 +1038,7 @@ The first Optimize menu row runs Clop defaults for the current input. Its
 subtitle should be compact, for example:
 
 ```text
-Copied file · Clop Defaults · ⇥ Controls, ⌃↩ Save Preset
+Copied file · Use compression 5-100 / ad · ⏎ Run Defaults · ⇥ Controls
 ```
 
 Tab or Control-Return on that default row autocompletes a controls prefix such
@@ -1039,8 +1046,10 @@ as `controls: ` for homogeneous input. In controls mode, the first row becomes
 the focused grammar reference and should expose a larger reference through
 Alfred Large Type when useful. Once the user types a valid control expression,
 the primary interpreted row supports Return to run, Tab to normalize for
-editing, and Control-Return to save the complete media-specific preset. Saved
-presets support Return to run and Control-Return to open removal confirmation.
+editing, and Control-Return to save the complete media-specific preset. Do not
+repeat `⌘L Reference` on complete valid rows; reserve that hint for empty,
+partial, or invalid guidance rows. Saved presets support Return to run and
+Control-Return to open removal confirmation.
 
 For homogeneous image, video, PDF, or audio input, typing directly in the
 Optimize menu is also interpreted as that media's controls, so the user does
@@ -1067,10 +1076,10 @@ Optimize media controls:
 | Audio | compression `5...100`, or bitrate such as `b128` / `bitrate 128` |
 
 Optimize controls accept either spaces or commas between tokens. Teach compact
-tokens first in Alfred subtitles, for example:
+tokens first in Alfred subtitles with spaced slash separators, for example:
 
 ```text
-5-100/au, hw/sw/ll/ad, m, 2x
+Use 5-100 / au / hw / sw / ll / ad / m / 2x
 ```
 
 Large Type may show full words and examples such as `70 m`, `70, hw`,
@@ -1231,9 +1240,43 @@ should remain visible whenever available. Prefer one `·` separator between
 segments; avoid mixing hyphen separators and full explanatory sentences in the
 same row.
 
+When examples appear inline, separate alternatives with a spaced slash:
+`1200x630 / 16:9 / 1920 / w128 / h720`. Do not mix comma-separated examples
+and unspaced slash examples across equivalent rows.
+
 Use short, noun-like effect labels when they are clear enough in context:
-`Exact 1200x630`, `Crop to 16:9`, `Long edge 1920`, `Fixed width 128`,
+`Crop to 1200x630`, `Crop to 16:9`, `Long edge 1920`,
+`Width 128, auto height`,
 `Downscale to 50%`, `Compression 70`, or `Clop Defaults`.
+
+Titles should carry the action that Return will perform. Subtitles should
+carry source context, compact syntax/reference hints, and modifiers. Saved
+preset subtitles should stay especially compact:
+`Input · Saved Preset · Remove Preset`. Do not repeat the action in the
+subtitle when the title already says it.
+
+Empty, partial, and invalid guide rows should use the same compact syntax hint
+family in the subtitle instead of repeating the title's `Type...` instruction.
+Prefer `Use ...` hints:
+
+```text
+Selected file · Use compression 5-100 / auto · ⌘L Reference
+Selected file · Use compression (e.g. c70) / bitrate (e.g. b128) · ⌘L Reference
+Selected file · Use size + ad / m · ⌘L Reference
+Selected PDF · Use target + p / l / a / e · ⌘L Reference
+```
+
+Use `+` for optional controls added after a required base value, `/` for
+alternatives, and `(e.g. ...)` when a short token is only an example pattern
+rather than the only accepted value. Valid typed rows should not carry generic
+syntax hints; their titles already describe the action or effect.
+
+Executable default rows should say so when Return runs defaults and the row
+also invites typing or branching, using `⏎ Run Defaults` consistently. Use this
+only where the row is both executable and plausibly confused with a guide row,
+such as Optimize defaults and Convert target defaults. In target-specific
+Convert branches, the top default row should be titled
+`Convert to HEIC with Clop Defaults` or the equivalent target name.
 
 Expose keyboard affordances only where they help discover a non-obvious path:
 empty parameter menus, typed parameter rows, saved preset rows, conversion
@@ -1250,9 +1293,17 @@ Examples:
 Selected folder: 14 files · Compress · ⌘⏎ Aggressive, ⇧⏎ Output Template
 Copied file · Long edge 1920 · ⌃⏎ Save Preset
 Passed file · Crop to 16:9 · ⌥⏎ Smart Crop, ⌃⏎ Save Preset
-Selected file · Saved Preset · Long edge 1920 · ⌃⏎ Remove Preset
-Copied file · Clop Defaults · ⇥ Controls, ⌃↩ Save Preset
+Selected file · Saved Preset · ⌃⏎ Remove Preset
+Copied file · Use compression 5-100 · ⏎ Run Defaults · ⌘L Reference
 ```
+
+Large Type references for parameter menus should include syntax help plus the
+current input paths or URLs when useful. Show at most five inputs and then a
+single `... and N more` line so references stay readable for large batches.
+Keep this cap consistent across processing rows and menu-specific references.
+When a reference has an input section, format it as `Inputs` immediately
+followed by the input block, with no extra blank line between the heading and
+the first path or count line.
 
 For Crop / Resize results that perform an actual crop, Option-Return enables
 Smart Crop, centering the crop around detected visual features.

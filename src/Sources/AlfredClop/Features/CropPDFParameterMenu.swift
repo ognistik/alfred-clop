@@ -227,11 +227,14 @@ enum CropPDFParameterMenu {
             return response(
                 items: [ScriptFilterItem(
                     title: "Type a ratio or resolution",
-                    subtitle: "\(inputDescription(for: request)) · Examples: 16:9, 1200x630 · ⌘L Reference",
+                    subtitle: "\(inputDescription(for: request)) · Examples: 16:9 / 1200x630 · ⌘L Reference",
                     arg: "",
                     valid: false,
                     text: ScriptFilterText(
-                        largetype: ratioReference()
+                        largetype: largeTypeReference(
+                            ratioReference(),
+                            request: request
+                        )
                     )
                 )] + branchPresets,
                 request: request,
@@ -341,7 +344,10 @@ enum CropPDFParameterMenu {
                 arg: "",
                 valid: false,
                 text: ScriptFilterText(
-                    largetype: listReference(kind: kind, values: values)
+                    largetype: largeTypeReference(
+                        listReference(kind: kind, values: values),
+                        request: request
+                    )
                 )
             )
             return response(
@@ -536,7 +542,10 @@ enum CropPDFParameterMenu {
                 request: request
             ),
             text: ScriptFilterText(
-                largetype: CropPDFControlParser.largeTypeReference
+                largetype: largeTypeReference(
+                    CropPDFControlParser.largeTypeReference,
+                    request: request
+                )
             )
         )
     }
@@ -582,8 +591,12 @@ enum CropPDFParameterMenu {
             title: title(for: preset.request),
             subtitle: ([
                 inputDescription(for: request),
-                targetDescription(for: preset.request.target),
-                controlsDescription(for: preset.request),
+                savedPreset == nil
+                    ? targetDescription(for: preset.request.target)
+                    : nil,
+                savedPreset == nil
+                    ? controlsDescription(for: preset.request)
+                    : nil,
                 rowHint(
                     for: preset.request,
                     savedPreset: savedPreset != nil,
@@ -619,7 +632,10 @@ enum CropPDFParameterMenu {
                 }
             ),
             text: ScriptFilterText(
-                largetype: CropPDFControlParser.largeTypeReference
+                largetype: largeTypeReference(
+                    CropPDFControlParser.largeTypeReference,
+                    request: request
+                )
             )
         )
     }
@@ -645,11 +661,14 @@ enum CropPDFParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: title,
-            subtitle: "\(inputDescription(for: request)) · Use 16:9 or 1200x630 · p/l/a/e controls · ⌘L Reference",
+            subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · Use target + p / l / a / e · ⌘L Reference",
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: CropPDFControlParser.largeTypeReference
+                largetype: largeTypeReference(
+                    CropPDFControlParser.largeTypeReference,
+                    request: request
+                )
             )
         )
     }
@@ -832,6 +851,16 @@ enum CropPDFParameterMenu {
         16:9 l
         1200x630 p e
         """
+    }
+
+    private static func largeTypeReference(
+        _ reference: String,
+        request: ParameterStepRequest
+    ) -> String {
+        ScriptFilterAffordance.referenceLargeType(
+            reference,
+            inputs: request.inputs
+        )
     }
 
     private static func listReference(

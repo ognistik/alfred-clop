@@ -52,7 +52,8 @@ struct ClopRequestDispatcherTests {
                 prettyPrinted: false
             ),
             clipboard: DispatcherClipboard(),
-            finder: DispatcherFinder()
+            finder: DispatcherFinder(),
+            environment: try dispatcherEnvironment()
         )
 
         #expect(response.items.map(\.title).contains("Optimize"))
@@ -74,7 +75,8 @@ struct ClopRequestDispatcherTests {
                 prettyPrinted: false
             ),
             clipboard: DispatcherClipboard(),
-            finder: DispatcherFinder()
+            finder: DispatcherFinder(),
+            environment: try dispatcherEnvironment()
         )
 
         #expect(response.items.first?.title == "Type crop or resize parameters")
@@ -95,7 +97,8 @@ struct ClopRequestDispatcherTests {
                 prettyPrinted: false
             ),
             clipboard: DispatcherClipboard(),
-            finder: DispatcherFinder()
+            finder: DispatcherFinder(),
+            environment: try dispatcherEnvironment()
         )
 
         #expect(response.items.map(\.title).prefix(3) == [
@@ -178,13 +181,15 @@ struct ClopRequestDispatcherTests {
             requestJSON: requestJSON,
             query: ":",
             clipboard: DispatcherClipboard(),
-            finder: DispatcherFinder()
+            finder: DispatcherFinder(),
+            environment: try dispatcherEnvironment()
         )
         let actions = ClopRequestDispatcher.response(
             requestJSON: requestJSON,
             query: "",
             clipboard: DispatcherClipboard(),
-            finder: DispatcherFinder()
+            finder: DispatcherFinder(),
+            environment: try dispatcherEnvironment()
         )
 
         #expect(configuration.items.first?.title == "Output Template")
@@ -213,7 +218,8 @@ struct ClopRequestDispatcherTests {
                 prettyPrinted: false
             ),
             clipboard: DispatcherClipboard(),
-            finder: DispatcherFinder()
+            finder: DispatcherFinder(),
+            environment: try dispatcherEnvironment()
         )
 
         #expect(response.items.first?.title.hasPrefix("Convert to ") == true)
@@ -805,4 +811,11 @@ private func dispatcherBuilder() -> ClopCommandBuilder {
             errors: []
         )
     ))
+}
+
+private func dispatcherEnvironment() throws -> Environment {
+    let directory = try makeTemporaryDirectory()
+    return Environment(values: [
+        PresetStore.workflowDataEnvironmentKey: directory.path
+    ])
 }

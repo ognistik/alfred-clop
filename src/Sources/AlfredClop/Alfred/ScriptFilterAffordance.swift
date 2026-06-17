@@ -59,12 +59,12 @@ struct ScriptFilterAffordance {
         return item
     }
 
-    private static func inputLargeType(_ inputs: [String]) -> String? {
+    static func inputLargeType(_ inputs: [String]) -> String? {
         guard !inputs.isEmpty else {
             return nil
         }
 
-        let maximumVisibleInputs = 50
+        let maximumVisibleInputs = 5
         if inputs.count == 1 {
             return inputs[0]
         }
@@ -72,9 +72,19 @@ struct ScriptFilterAffordance {
         var lines = ["\(inputs.count) inputs", ""]
         lines.append(contentsOf: inputs.prefix(maximumVisibleInputs))
         if inputs.count > maximumVisibleInputs {
-            lines.append("…and \(inputs.count - maximumVisibleInputs) more")
+            lines.append("... and \(inputs.count - maximumVisibleInputs) more")
         }
         return lines.joined(separator: "\n")
+    }
+
+    static func referenceLargeType(
+        _ reference: String,
+        inputs: [String]
+    ) -> String {
+        guard let inputReference = inputLargeType(inputs) else {
+            return reference
+        }
+        return "\(reference)\n\nInputs\n\(inputReference)"
     }
 
     private static func kind(

@@ -23,7 +23,7 @@ enum OptimizeParameterMenu {
             )
         }
 
-        let store: PresetStore
+        let store: PresetStore?
         do {
             store = try PresetStore(
                 environment: environment,
@@ -31,13 +31,18 @@ enum OptimizeParameterMenu {
                 writer: writer
             )
         } catch {
-            return Self.error(
-                title: "Unable to read saved presets",
-                subtitle: error.localizedDescription
-            )
+            store = nil
         }
 
         if let action = state.presetAction {
+            guard let store else {
+                return Self.error(
+                    title: "Unable to save preset",
+                    subtitle: PresetStoreError
+                        .missingWorkflowDataDirectory
+                        .localizedDescription
+                )
+            }
             switch action.kind {
             case .confirmRemoval:
                 return removalConfirmation(action: action, request: request)
@@ -77,7 +82,7 @@ enum OptimizeParameterMenu {
         request: ParameterStepRequest,
         stateJSON: String,
         query: String,
-        store: PresetStore,
+        store: PresetStore?,
         environment: Environment,
         fileManager: FileManager
     ) -> ScriptFilterResponse {
@@ -178,12 +183,13 @@ enum OptimizeParameterMenu {
     private static func controlsResponse(
         request: ParameterStepRequest,
         controlsQuery: ControlsQuery,
-        store: PresetStore,
+        store: PresetStore?,
         environment: Environment,
         fileManager: FileManager
     ) -> ScriptFilterResponse {
         let presets: [OptimizeActionPreset]
-        do {
+        if let store {
+            do {
             presets = try store.load().presets.compactMap {
                 guard case .optimize(let preset) = $0,
                       preset.request.media == controlsQuery.media else {
@@ -194,11 +200,14 @@ enum OptimizeParameterMenu {
                 $0.displayValue.localizedStandardCompare($1.displayValue)
                     == .orderedAscending
             }
-        } catch {
-            return Self.error(
-                title: "Unable to read saved presets",
-                subtitle: error.localizedDescription
-            )
+            } catch {
+                return Self.error(
+                    title: "Unable to read saved presets",
+                    subtitle: error.localizedDescription
+                )
+            }
+        } else {
+            presets = []
         }
 
         let trimmed = controlsQuery.value.trimmingCharacters(
@@ -261,7 +270,10 @@ enum OptimizeParameterMenu {
                     )
                 })
             } else if matching.isEmpty {
-                items.append(invalidControlItem(media: controlsQuery.media))
+                items.append(invalidControlItem(
+                    media: controlsQuery.media,
+                    request: request
+                ))
             } else {
                 items.append(contentsOf: matching.map {
                     presetItem(
@@ -300,11 +312,7 @@ enum OptimizeParameterMenu {
         return ScriptFilterItem(
             uid: "optimise.defaults",
             title: defaultTitle(for: request),
-            subtitle: [
-                inputDescription(for: request),
-                "Clop Defaults",
-                "⇥ Controls, ⌃↩ Save Preset"
-            ].joined(separator: " · "),
+            subtitle: defaultSubtitle(for: request),
             arg: arg,
             valid: true,
             autocomplete: controlsPrefix(for: request),
@@ -335,7 +343,7 @@ enum OptimizeParameterMenu {
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: OptimizeControlParser.largeTypeReference(for: media)
+                largetype: largeTypeReference(for: media, request: request)
             )
         )
     }
@@ -354,7 +362,7 @@ enum OptimizeParameterMenu {
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: OptimizeControlParser.largeTypeReference(for: media)
+                largetype: largeTypeReference(for: media, request: request)
             )
         )
     }
@@ -372,7 +380,6 @@ enum OptimizeParameterMenu {
             title: "Optimize \(OptimizeControlParser.displayValue(for: optimize))",
             subtitle: [
                 Optional(inputDescription(for: request)),
-                Optional(acceptedControlSubtitle(for: optimize.media)),
                 Optional(savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset"),
                 savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset"
             ].compactMap(\.self).joined(separator: " · "),
@@ -383,6 +390,7 @@ enum OptimizeParameterMenu {
                 fileManager: fileManager
             ),
             valid: true,
+            autocomplete: controlQuery(for: optimize),
             match: OptimizeControlParser.displayValue(for: optimize),
             variables: operationVariables,
             mods: operationModifiers(
@@ -397,8 +405,9 @@ enum OptimizeParameterMenu {
                 )
             ),
             text: ScriptFilterText(
-                largetype: OptimizeControlParser.largeTypeReference(
-                    for: optimize.media
+                largetype: largeTypeReference(
+                    for: optimize.media,
+                    request: request
                 )
             )
         )
@@ -425,6 +434,7 @@ enum OptimizeParameterMenu {
                 fileManager: fileManager
             ),
             valid: true,
+            autocomplete: controlQuery(for: preset.request),
             match: preset.displayValue,
             variables: operationVariables,
             mods: operationModifiers(
@@ -439,8 +449,9 @@ enum OptimizeParameterMenu {
                 )
             ),
             text: ScriptFilterText(
-                largetype: OptimizeControlParser.largeTypeReference(
-                    for: preset.request.media
+                largetype: largeTypeReference(
+                    for: preset.request.media,
+                    request: request
                 )
             )
         )
@@ -448,7 +459,7 @@ enum OptimizeParameterMenu {
 
     private static func rootPresetItems(
         for request: ParameterStepRequest,
-        store: PresetStore,
+        store: PresetStore?,
         environment: Environment,
         fileManager: FileManager
     ) -> [ScriptFilterItem] {
@@ -456,6 +467,7 @@ enum OptimizeParameterMenu {
             OptimizeMediaKind(mediaKind: $0)
         })
         guard !visibleMedia.isEmpty,
+              let store,
               let document = try? store.load() else {
             return []
         }
@@ -494,17 +506,11 @@ enum OptimizeParameterMenu {
         return ScriptFilterMods(
             command: broadOperationModifier(
                 for: request,
-                aggressive: true,
+                aggressive: !environment.aggressiveByDefault,
                 preserveOriginal: preserve,
-                subtitle: "Aggressive",
-                environment: environment,
-                fileManager: fileManager
-            ),
-            option: broadOperationModifier(
-                for: request,
-                aggressive: false,
-                preserveOriginal: preserve,
-                subtitle: "Standard",
+                subtitle: environment.aggressiveByDefault
+                    ? "Standard"
+                    : "Aggressive",
                 environment: environment,
                 fileManager: fileManager
             ),
@@ -519,17 +525,11 @@ enum OptimizeParameterMenu {
             ),
             commandShift: broadOperationModifier(
                 for: request,
-                aggressive: true,
+                aggressive: !environment.aggressiveByDefault,
                 preserveOriginal: invertedPreserve,
-                subtitle: "Aggressive · \(preserveText)",
-                environment: environment,
-                fileManager: fileManager
-            ),
-            optionShift: broadOperationModifier(
-                for: request,
-                aggressive: false,
-                preserveOriginal: invertedPreserve,
-                subtitle: "Standard · \(preserveText)",
+                subtitle: environment.aggressiveByDefault
+                    ? "Standard · \(preserveText)"
+                    : "Aggressive · \(preserveText)",
                 environment: environment,
                 fileManager: fileManager
             )
@@ -542,7 +542,7 @@ enum OptimizeParameterMenu {
     ) -> ScriptFilterModifier {
         ScriptFilterModifier(
             arg: controlsPrefix(for: request),
-            subtitle: "Save Preset",
+            subtitle: "Controls",
             valid: true,
             variables: queryTransitionVariables(
                 stateJSON: stateJSON,
@@ -678,15 +678,13 @@ enum OptimizeParameterMenu {
             return ScriptFilterItem(
                 uid: "optimise.controls.\(media.rawValue)",
                 title: "\(media.displayName) Optimize Controls",
-                subtitle: "\(inputDescription(for: request)) · \(OptimizeControlParser.grammarHint(for: media))",
+                subtitle: "\(inputDescription(for: request)) · Open \(media.displayName.lowercased()) controls · ⌘L Reference",
                 arg: "",
                 valid: false,
                 autocomplete: "\(media.rawValue) controls: ",
                 variables: preservedVariables(for: request, stateJSON: stateJSON),
                 text: ScriptFilterText(
-                    largetype: OptimizeControlParser.largeTypeReference(
-                        for: media
-                    )
+                    largetype: largeTypeReference(for: media, request: request)
                 )
             )
         }
@@ -708,8 +706,9 @@ enum OptimizeParameterMenu {
                     valid: false,
                     autocomplete: "\(media.rawValue) controls: ",
                     text: ScriptFilterText(
-                        largetype: OptimizeControlParser.largeTypeReference(
-                            for: media
+                        largetype: largeTypeReference(
+                            for: media,
+                            request: request
                         )
                     )
                 )
@@ -872,17 +871,123 @@ enum OptimizeParameterMenu {
     }
 
     private static func defaultTitle(for request: ParameterStepRequest) -> String {
+        let singular = request.inputs.count == 1
+            && request.itemKinds?.first != .folder
+            && request.ambiguousKinds?.isEmpty != false
         switch homogeneousKind(for: request) {
         case .image:
-            return "Optimize Images with Defaults"
+            return singular
+                ? "Optimize Image with Defaults"
+                : "Optimize Images with Defaults"
         case .video:
-            return "Optimize Videos with Defaults"
+            return singular
+                ? "Optimize Video with Defaults"
+                : "Optimize Videos with Defaults"
         case .pdf:
-            return "Optimize PDFs with Defaults"
+            return singular
+                ? "Optimize PDF with Defaults"
+                : "Optimize PDFs with Defaults"
         case .audio:
             return "Optimize Audio with Defaults"
         case .folder, .unknown, nil:
             return "Optimize All with Defaults"
+        }
+    }
+
+    private static func defaultSubtitle(
+        for request: ParameterStepRequest
+    ) -> String {
+        var parts = [inputDescription(for: request)]
+        if let media = homogeneousOptimizeMedia(for: request) {
+            parts.append(controlHint(for: media))
+        }
+        parts.append("⏎ Run Defaults")
+        parts.append("⇥ Controls")
+        return parts.joined(separator: " · ")
+    }
+
+    private static func defaultTypingPrompt(
+        for media: OptimizeMediaKind
+    ) -> String {
+        controlHint(for: media)
+    }
+
+    private static func controlHint(
+        for media: OptimizeMediaKind
+    ) -> String {
+        switch media {
+        case .image:
+            return "Use compression 5-100 / ad"
+        case .video:
+            return "Use 5-100 / au / hw / sw / ll / ad / m / 2x"
+        case .pdf:
+            return "Use DPI 300 / 250 / 150 / ad"
+        case .audio:
+            return "Use compression 5-100 / bitrate (e.g. b128)"
+        }
+    }
+
+    private static func controlQuery(for request: OptimizeRequest) -> String {
+        "\(request.media.rawValue) controls: \(controlSyntax(for: request))"
+    }
+
+    private static func controlSyntax(for request: OptimizeRequest) -> String {
+        switch request.controls {
+        case .image(let controls):
+            switch controls.compression {
+            case .value(let value):
+                return "\(value)"
+            case .adaptive:
+                return "ad"
+            case nil:
+                return ""
+            }
+        case .video(let controls):
+            var parts = [String]()
+            switch controls.compression {
+            case .value(let value):
+                parts.append("\(value)")
+            case .automatic:
+                parts.append("au")
+            case nil:
+                break
+            }
+            if let encoder = controls.encoder {
+                switch encoder {
+                case .hardware:
+                    parts.append("hw")
+                case .software:
+                    parts.append("sw")
+                case .lossless:
+                    parts.append("ll")
+                case .adaptive:
+                    parts.append("ad")
+                }
+            }
+            if controls.removeAudio {
+                parts.append("m")
+            }
+            if let speed = controls.playbackSpeed {
+                parts.append("\(OptimizeControlParser.displayNumber(speed))x")
+            }
+            return parts.joined(separator: " ")
+        case .pdf(let controls):
+            switch controls.dpi {
+            case .value(let value):
+                return "\(value)"
+            case .adaptive:
+                return "ad"
+            case nil:
+                return ""
+            }
+        case .audio(let controls):
+            if let compression = controls.compression {
+                return "\(compression)"
+            }
+            if let bitrate = controls.bitrate {
+                return "b\(bitrate)"
+            }
+            return ""
         }
     }
 
@@ -904,28 +1009,43 @@ enum OptimizeParameterMenu {
     ) -> String {
         switch media {
         case .image:
-            return "Compression amount, or ad for adaptive"
+            return controlHint(for: media)
         case .video:
-            return "5-100/au, hw/sw/ll/ad, m, 2x"
+            return controlHint(for: media)
         case .pdf:
-            return "300, 250, 200, 150, 100, 72, 48, or ad"
+            return controlHint(for: media)
         case .audio:
-            return "5-100 compression, b128, or bitrate 128"
+            return controlHint(for: media)
         }
     }
 
     private static func invalidControlItem(
-        media: OptimizeMediaKind
+        media: OptimizeMediaKind,
+        request: ParameterStepRequest
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Invalid Optimize controls",
-            subtitle: "\(emptyControlSubtitle(for: media)) · ⌘L Reference",
+            subtitle: [
+                inputDescription(for: request),
+                emptyControlSubtitle(for: media),
+                "⌘L Reference"
+            ].joined(separator: " · "),
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: OptimizeControlParser.largeTypeReference(for: media)
+                largetype: largeTypeReference(for: media, request: request)
             )
         )
+    }
+
+    private static func largeTypeReference(
+        for media: OptimizeMediaKind,
+        request: ParameterStepRequest
+    ) -> String {
+        let inputReference = ScriptFilterAffordance.inputLargeType(request.inputs)
+            .map { "\n\nInputs\n\($0)" }
+            ?? ""
+        return "\(OptimizeControlParser.largeTypeReference(for: media))\(inputReference)"
     }
 
     private static func acceptedControlSubtitle(
@@ -933,13 +1053,13 @@ enum OptimizeParameterMenu {
     ) -> String {
         switch media {
         case .image:
-            return "5-100 or ad"
+            return controlHint(for: media)
         case .video:
-            return "5-100/au, hw/sw/ll/ad, m, 2x"
+            return controlHint(for: media)
         case .pdf:
-            return "300/250/200/150/100/72/48 or ad"
+            return controlHint(for: media)
         case .audio:
-            return "5-100 or b128"
+            return controlHint(for: media)
         }
     }
 

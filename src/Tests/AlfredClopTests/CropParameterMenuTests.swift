@@ -60,7 +60,7 @@ struct CropParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Type crop or resize parameters")
-        #expect(response.items[0].subtitle == "Examples: 1200x630, 16:9, 1920, w128, h720 · ⇥ Controls, ⌃↩ Save Preset")
+        #expect(response.items[0].subtitle == "Examples: 1200x630 / 16:9 / 1920 / w128 / h720 · ⇥ Controls, ⌃↩ Save Preset")
         #expect(response.items[0].autocomplete == "controls: ")
         #expect(response.items[0].mods?.control?.arg == "controls: ")
         #expect(response.items[0].mods?.control?.subtitle == "Save Preset")
@@ -86,9 +86,9 @@ struct CropParameterMenuTests {
         )
 
         #expect(imageResponse.items[0].title == "Type crop controls")
-        #expect(imageResponse.items[0].subtitle == "Selected 2 files · Size, then ad for adaptive · ⌘L Reference")
+        #expect(imageResponse.items[0].subtitle == "Selected 2 files · Use size + ad · ⌘L Reference")
         #expect(imageResponse.items[0].text?.largetype?.contains("no-ad or no-adaptive") == true)
-        #expect(videoResponse.items[0].subtitle == "Copied 2 files · Size, then ad for adaptive, m for mute · ⌘L Reference")
+        #expect(videoResponse.items[0].subtitle == "Copied 2 files · Use size + ad / m · ⌘L Reference")
     }
 
     @Test(arguments: [
@@ -130,8 +130,8 @@ struct CropParameterMenuTests {
     }
 
     @Test(arguments: [
-        ("1200x630", "Use 1200x630", "Crop to 1200x630"),
-        ("16:9", "Use 16:9", "Crop to 16:9"),
+        ("1200x630", "Crop to 1200x630", "Crop to 1200x630"),
+        ("16:9", "Crop to 16:9", "Crop to 16:9"),
         ("1920", "Long edge 1920", "Long edge 1920"),
         ("w128", "Width 128, auto height", "Fixed width 128"),
         ("h720", "Height 720, auto width", "Fixed height 720"),
@@ -153,9 +153,7 @@ struct CropParameterMenuTests {
         #expect(response.items.count == 1)
         #expect(item.title == title)
         #expect(!item.subtitle.contains(explanation))
-        #expect(item.subtitle.contains(
-            "1200x630/16:9/1920/w128/h720 · ⌘L Reference"
-        ))
+        #expect(!item.subtitle.contains("Examples:"))
         #expect(item.text?.largetype?.contains("Crop / Resize controls") == true)
         #expect(item.text?.largetype?.contains("/tmp/first image.png") == true)
         #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
@@ -269,7 +267,7 @@ struct CropParameterMenuTests {
         let item = try #require(response.items.first(where: { $0.valid }))
 
         #expect(item.title == title)
-        #expect(item.subtitle.contains("1200x630/16:9/1920/w128/h720"))
+        #expect(!item.subtitle.contains("1200x630 / 16:9 / 1920 / w128 / h720"))
         #expect(!item.subtitle.contains("No Adaptive"))
         #expect(!item.subtitle.contains("Adaptive"))
         #expect(!item.subtitle.contains("Mute"))
@@ -287,7 +285,7 @@ struct CropParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Mute only applies to video")
-        #expect(response.items[0].subtitle == "Size, then ad for adaptive · ⌘L Reference")
+        #expect(response.items[0].subtitle == "Selected 2 files · Use size + ad · ⌘L Reference")
         #expect(response.items[0].valid == false)
     }
 
@@ -346,7 +344,7 @@ struct CropParameterMenuTests {
         )
 
         #expect(response.items.count == 1)
-        #expect(response.items[0].title == "Keep typing crop controls")
+        #expect(response.items[0].title == "Type crop controls")
         #expect(response.items[0].valid == false)
     }
 
@@ -366,7 +364,7 @@ struct CropParameterMenuTests {
         #expect(response.items[0].title == "Invalid crop or resize value")
         #expect(
             response.items[0].subtitle
-                == "Use 1200x630, 16:9, 1920, w128, or h720. ⌘L Reference"
+                == "Selected 2 files · Use 1200x630 / 16:9 / 1920 / w128 / h720 · ⌘L Reference"
         )
         #expect(response.items[0].valid == false)
         #expect(response.items[0].arg == "")

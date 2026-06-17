@@ -50,7 +50,7 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Type a downscale factor")
-        #expect(response.items[0].subtitle == "Examples: 50, 50%, 0.5, 75%, 0.75 · ⌃↩ Save Preset")
+        #expect(response.items[0].subtitle == "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⌃↩ Save Preset")
         #expect(response.items[0].valid == false)
     }
 
@@ -80,10 +80,10 @@ struct DownscaleParameterMenuTests {
     }
 
     @Test(arguments: [
-        ("50", 0.5, "Use 50%"),
-        ("50%", 0.5, "Use 50%"),
-        ("0.5", 0.5, "Use 50%"),
-        ("75", 0.75, "Use 75%")
+        ("50", 0.5, "Downscale to 50%"),
+        ("50%", 0.5, "Downscale to 50%"),
+        ("0.5", 0.5, "Downscale to 50%"),
+        ("75", 0.75, "Downscale to 75%")
     ])
     func acceptedSyntaxProducesOneExplanatoryResult(
         input: String,
@@ -99,7 +99,8 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(item.title == title)
-        #expect(item.subtitle.contains("Factor \(DownscaleFactorParser.factorValue(for: factor))"))
+        #expect(!item.subtitle.contains("Factor \(DownscaleFactorParser.factorValue(for: factor))"))
+        #expect(item.subtitle == "Passed 2 files · ⌃↩ Save Preset")
         #expect(operation.action == .downscale(factor: factor))
     }
 
@@ -112,6 +113,8 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Invalid downscale factor")
+        #expect(response.items[0].subtitle == "Passed 2 files · Use 50 / 50% / 0.5 · ⌘L Reference")
+        #expect(response.items[0].text?.largetype?.contains("Inputs\n2 inputs") == true)
         #expect(response.items[0].valid == false)
     }
 
@@ -129,7 +132,7 @@ struct DownscaleParameterMenuTests {
         )
 
         #expect(response.items.count == 1)
-        #expect(response.items[0].title == "Use 50%")
+        #expect(response.items[0].title == "Downscale to 50%")
         #expect(response.items[0].subtitle.contains("Saved Preset"))
         #expect(response.items[0].uid == "downscale.preset.factor.0.5")
     }
@@ -149,7 +152,10 @@ struct DownscaleParameterMenuTests {
         let typedItem = try #require(response.items.first)
         let operation = try operationRequest(from: typedItem)
 
-        #expect(response.items.map(\.title) == ["Use 7%", "75%"])
+        #expect(response.items.map(\.title) == [
+            "Downscale to 7%",
+            "Downscale to 75%"
+        ])
         #expect(operation.action == .downscale(factor: 0.07))
         #expect(typedItem.mods?.control?.subtitle == "Save Preset 7%")
         #expect(
@@ -176,7 +182,7 @@ struct DownscaleParameterMenuTests {
 
         #expect(saved.items.map(\.title) == [
             "Type a downscale factor",
-            "75%"
+            "Downscale to 75%"
         ])
         #expect(try fixture.store.load().presets == [
             .downscale(DownscaleActionPreset(factor: 0.75))
@@ -195,7 +201,7 @@ struct DownscaleParameterMenuTests {
             environment: fixture.environment
         )
         let preset = try #require(response.items.first {
-            $0.title == "75%"
+            $0.title == "Downscale to 75%"
         })
         let confirmationState = try #require(
             preset.mods?.control?.variables?[ActionMenu.menuStateVariable]
@@ -222,7 +228,7 @@ struct DownscaleParameterMenuTests {
 
         #expect(cancelled.items.map(\.title) == [
             "Type a downscale factor",
-            "75%"
+            "Downscale to 75%"
         ])
         #expect(try fixture.store.load().presets == [
             .downscale(DownscaleActionPreset(factor: 0.75))

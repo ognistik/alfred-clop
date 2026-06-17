@@ -294,7 +294,7 @@ enum CropControlParser {
         """
         Crop / Resize controls
 
-        Start with a size:
+        Use a size:
         1200x630 exact crop
         16:9 aspect ratio
         1920 long edge
@@ -531,22 +531,30 @@ enum CropParameterMenu {
         } else if CropControlParser.isPossiblePrefix(trimmedQuery),
                   matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
-                title: "Keep typing crop controls",
-                subtitle: "Start with a size, then add controls. ⌘L Reference",
+                title: "Type crop controls",
+                subtitle: [
+                    inputDescription(for: request),
+                    controlsHelp(for: request),
+                    "⌘L Reference"
+                ].joined(separator: " · "),
                 arg: "",
                 valid: false,
                 text: ScriptFilterText(
-                    largetype: CropControlParser.largeTypeReference
+                    largetype: largeTypeReference(for: request)
                 )
             ))
         } else if matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
                 title: "Invalid crop or resize value",
-                subtitle: "Use 1200x630, 16:9, 1920, w128, or h720. ⌘L Reference",
+                subtitle: [
+                    inputDescription(for: request),
+                    "Use 1200x630 / 16:9 / 1920 / w128 / h720",
+                    "⌘L Reference"
+                ].joined(separator: " · "),
                 arg: "",
                 valid: false,
                 text: ScriptFilterText(
-                    largetype: CropControlParser.largeTypeReference
+                    largetype: largeTypeReference(for: request)
                 )
             ))
         }
@@ -694,23 +702,17 @@ enum CropParameterMenu {
         }
 
         let baseTitle: String
-        let interpretation: String
         switch controls.size.kind {
         case let .exactDimensions(width, height):
-            baseTitle = "Use \(width)x\(height)"
-            interpretation = "Crop to \(width)x\(height)"
+            baseTitle = "Crop to \(width)x\(height)"
         case let .aspectRatio(width, height):
-            baseTitle = "Use \(width):\(height)"
-            interpretation = "Crop to \(width):\(height)"
+            baseTitle = "Crop to \(width):\(height)"
         case let .longEdge(edge):
             baseTitle = "Long edge \(edge)"
-            interpretation = "Long edge \(edge)"
         case let .fixedWidth(width):
             baseTitle = "Width \(width), auto height"
-            interpretation = "Fixed width \(width)"
         case let .fixedHeight(height):
             baseTitle = "Height \(height), auto width"
-            interpretation = "Fixed height \(height)"
         }
         let hints = rowHints(
             for: preset.cropSize,
@@ -723,7 +725,6 @@ enum CropParameterMenu {
             title: actionTitle(baseTitle: baseTitle, controls: controls),
             subtitle: [
                 inputDescription(for: request),
-                isSavedPreset ? interpretation : acceptedSizeSubtitle,
                 isSavedPreset ? "Saved Preset" : hints,
                 isSavedPreset ? Optional("⌃↩ Remove Preset") : nil
             ].compactMap(\.self).joined(separator: " · "),
@@ -771,7 +772,6 @@ enum CropParameterMenu {
             subtitle: [
                 inputDescription(for: request),
                 "Saved Preset",
-                interpretation(for: preset.cropSize),
                 "⌃↩ Remove Preset"
             ].joined(separator: " · "),
             arg: argument,
@@ -1058,7 +1058,7 @@ enum CropParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Type crop or resize parameters",
-            subtitle: "Examples: 1200x630, 16:9, 1920, w128, h720 · ⇥ Controls, ⌃↩ Save Preset",
+            subtitle: "Examples: 1200x630 / 16:9 / 1920 / w128 / h720 · ⇥ Controls, ⌃↩ Save Preset",
             arg: "",
             valid: false,
             autocomplete: controlsPrefix,
@@ -1092,7 +1092,7 @@ enum CropParameterMenu {
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: CropControlParser.largeTypeReference
+                largetype: largeTypeReference(for: request)
             )
         )
     }
@@ -1101,7 +1101,7 @@ enum CropParameterMenu {
         request: ParameterStepRequest
     ) -> ScriptFilterItem {
         ScriptFilterItem(
-            title: "Keep typing crop controls",
+            title: "Type crop controls",
             subtitle: [
                 inputDescription(for: request),
                 controlsHelp(for: request),
@@ -1110,7 +1110,7 @@ enum CropParameterMenu {
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: CropControlParser.largeTypeReference
+                largetype: largeTypeReference(for: request)
             )
         )
     }
@@ -1120,11 +1120,15 @@ enum CropParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Invalid crop controls",
-            subtitle: "\(controlsHelp(for: request)) · ⌘L Reference",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: CropControlParser.largeTypeReference
+                largetype: largeTypeReference(for: request)
             )
         )
     }
@@ -1134,11 +1138,15 @@ enum CropParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Mute only applies to video",
-            subtitle: "\(controlsHelp(for: request)) · ⌘L Reference",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
             arg: "",
             valid: false,
             text: ScriptFilterText(
-                largetype: CropControlParser.largeTypeReference
+                largetype: largeTypeReference(for: request)
             )
         )
     }
@@ -1176,7 +1184,7 @@ enum CropParameterMenu {
     private static func presetDisplayValue(_ preset: ActionPreset) -> String {
         switch preset {
         case let .crop(crop):
-            return crop.displayValue
+            return presetTitle(for: crop)
         case let .downscale(downscale):
             return downscale.displayValue
         case let .conversion(conversion):
@@ -1190,7 +1198,7 @@ enum CropParameterMenu {
 
     private static func presetTitle(for preset: CropActionPreset) -> String {
         actionTitle(
-            baseTitle: baseDisplayValue(for: preset.cropSize),
+            baseTitle: actionDisplayValue(for: preset.cropSize),
             controls: preset.controls
         )
     }
@@ -1214,14 +1222,18 @@ enum CropParameterMenu {
         ].compactMap(\.self)
     }
 
-    private static func baseDisplayValue(for size: CropSize) -> String {
+    private static func actionDisplayValue(for size: CropSize) -> String {
         switch size.kind {
+        case let .exactDimensions(width, height):
+            return "Crop to \(width)x\(height)"
+        case let .aspectRatio(width, height):
+            return "Crop to \(width):\(height)"
+        case let .longEdge(edge):
+            return "Long edge \(edge)"
         case let .fixedWidth(width):
-            return "w\(width)"
+            return "Width \(width), auto height"
         case let .fixedHeight(height):
-            return "h\(height)"
-        case .exactDimensions, .aspectRatio, .longEdge:
-            return size.value
+            return "Height \(height), auto width"
         }
     }
 
@@ -1229,21 +1241,21 @@ enum CropParameterMenu {
         for request: ParameterStepRequest
     ) -> String {
         supportsMuteControl(for: request)
-            ? "Size, then ad for adaptive, m for mute"
-            : "Size, then ad for adaptive"
+            ? "Use size + ad / m"
+            : "Use size + ad"
     }
 
     private static var acceptedSizeSubtitle: String {
-        "1200x630/16:9/1920/w128/h720 · ⌘L Reference"
+        "Examples: 1200x630 / 16:9 / 1920 / w128 / h720"
     }
 
     private static func largeTypeReference(
         for request: ParameterStepRequest
     ) -> String {
-        let inputReference = request.inputs.isEmpty
-            ? ""
-            : "\n\nInputs\n\n\(request.inputs.joined(separator: "\n"))"
-        return "\(CropControlParser.largeTypeReference)\(inputReference)"
+        ScriptFilterAffordance.referenceLargeType(
+            CropControlParser.largeTypeReference,
+            inputs: request.inputs
+        )
     }
 
     private static func supportsMuteControl(

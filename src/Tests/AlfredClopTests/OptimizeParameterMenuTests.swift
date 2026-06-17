@@ -22,8 +22,10 @@ struct OptimizeParameterMenuTests {
             from: Data((try #require(item.arg)).utf8)
         )
 
-        #expect(item.title == "Optimize Images with Defaults")
-        #expect(item.subtitle.contains("⇥ Controls, ⌃↩ Save Preset"))
+        #expect(item.title == "Optimize Image with Defaults")
+        #expect(item.subtitle.contains("⇥ Controls"))
+        #expect(item.subtitle.contains("Use compression 5-100 / ad"))
+        #expect(item.subtitle.contains("⏎ Run Defaults"))
         #expect(item.autocomplete == "controls: ")
         #expect(item.mods?.control?.arg == "controls: ")
         #expect(
@@ -75,7 +77,7 @@ struct OptimizeParameterMenuTests {
 
         #expect(item.title == "Type video controls")
         #expect(item.subtitle.contains(
-            "5-100/au, hw/sw/ll/ad, m, 2x"
+            "Use 5-100 / au / hw / sw / ll / ad / m / 2x"
         ))
         #expect(item.text?.largetype?.contains("Video Optimize controls") == true)
         #expect(item.text?.largetype?.contains("spaces or commas") == true)
@@ -110,7 +112,7 @@ struct OptimizeParameterMenuTests {
             ))
         )))
         #expect(item.mods?.control?.subtitle?.contains("Save Preset") == true)
-        #expect(item.subtitle.contains("5-100/au, hw/sw/ll/ad, m, 2x"))
+        #expect(!item.subtitle.contains("Use 5-100 / au"))
     }
 
     @Test
@@ -211,9 +213,7 @@ struct OptimizeParameterMenuTests {
         )
 
         #expect(response.items.first?.title == "Optimize Video · Compression 5")
-        #expect(response.items.first?.subtitle.contains(
-            "5-100/au, hw/sw/ll/ad, m, 2x"
-        ) == true)
+        #expect(response.items.first?.subtitle == "Selected file · ⌃↩ Save Preset")
         #expect(response.items.dropFirst().map(\.title).contains(
             "Video · Compression 55"
         ))
@@ -226,7 +226,7 @@ struct OptimizeParameterMenuTests {
 
         #expect(partial.items.first?.title == "Type video controls")
         #expect(partial.items.first?.subtitle.contains(
-            "5-100/au, hw/sw/ll/ad, m, 2x"
+            "Use 5-100 / au / hw / sw / ll / ad / m / 2x"
         ) == true)
         #expect(partial.items.dropFirst().map(\.title).contains(
             "Video · Compression 100"
@@ -247,7 +247,7 @@ struct OptimizeParameterMenuTests {
         )
 
         #expect(response.items.first?.title == "Invalid Optimize controls")
-        #expect(response.items.first?.subtitle == "5-100 compression, b128, or bitrate 128 · ⌘L Reference")
+        #expect(response.items.first?.subtitle == "Selected file · Use compression 5-100 / bitrate (e.g. b128) · ⌘L Reference")
     }
 
     @Test
@@ -280,7 +280,7 @@ struct OptimizeParameterMenuTests {
 
         #expect(response.items[0].title == "Type a number from 5 to 100")
         #expect(response.items[0].subtitle.contains(
-            "Compression amount, or ad for adaptive"
+            "Use compression 5-100 / ad"
         ))
         #expect(response.items[0].valid == false)
         #expect(response.items.map(\.title).contains("Image · Adaptive"))
@@ -315,8 +315,11 @@ struct OptimizeParameterMenuTests {
             environment: fixture.environment
         )
 
-        #expect(response.items.map(\.title).contains("Optimize Images with Defaults"))
-        #expect(response.items.map(\.title).contains("Image · Adaptive"))
+        #expect(response.items.map(\.title).contains("Optimize Image with Defaults"))
+        let imagePreset = try #require(response.items.first {
+            $0.title == "Image · Adaptive"
+        })
+        #expect(imagePreset.autocomplete == "image controls: ad")
         #expect(!response.items.map(\.title).contains("Video · Encoder software"))
 
         let filtered = OptimizeParameterMenu.response(
@@ -366,7 +369,7 @@ struct OptimizeParameterMenuTests {
         #expect(exact.items.first?.title == "Optimize Image · Adaptive")
         #expect(
             exact.items.first?.subtitle
-                == "Selected file · 5-100 or ad · Saved Preset · ⌃↩ Remove Preset"
+                == "Selected file · Saved Preset · ⌃↩ Remove Preset"
         )
         #expect(
             exact.items.first?.mods?.control?.subtitle
@@ -397,7 +400,7 @@ struct OptimizeParameterMenuTests {
             query: "controls: 150",
             environment: fixture.environment
         )
-        #expect(afterSave.items.map(\.title).contains("Optimize PDFs with Defaults"))
+        #expect(afterSave.items.map(\.title).contains("Optimize PDF with Defaults"))
         #expect(afterSave.items.map(\.title).contains("PDF · 150 DPI"))
         #expect(!afterSave.items.map(\.title).contains("Type a DPI value"))
         let cleanStateAfterSave = try #require(

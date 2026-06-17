@@ -273,8 +273,21 @@ enum ConversionParameterMenu {
             let matching = relatedPresets.filter {
                 $0.displayValue.localizedCaseInsensitiveContains(trimmed)
             }
-            if matching.isEmpty {
-                items.append(invalidControlItem(for: choice))
+            if isPossibleControlPrefix(trimmed, for: choice) {
+                items.append(partialControlItem(
+                    for: choice,
+                    request: request
+                ))
+                items.append(contentsOf: matching.map {
+                    presetItem(
+                        preset: $0,
+                        request: request,
+                        environment: environment,
+                        fileManager: fileManager
+                    )
+                })
+            } else if matching.isEmpty {
+                items.append(invalidControlItem(for: choice, request: request))
             } else {
                 items.append(contentsOf: matching.map {
                     presetItem(
@@ -308,7 +321,7 @@ enum ConversionParameterMenu {
                 inputDescription(for: request),
                 "Clop Defaults",
                 hasControls
-                    ? Optional("⇥ Controls, ⌃↩ Save Preset")
+                    ? Optional("⇥ Controls")
                     : nil
             ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
@@ -340,11 +353,12 @@ enum ConversionParameterMenu {
         fileManager: FileManager
     ) -> ScriptFilterItem {
         ScriptFilterItem(
-            title: "Convert to \(choice.displayFormat) · Clop Defaults",
+            title: "Convert to \(choice.displayFormat) with Clop Defaults",
             subtitle: [
                 inputDescription(for: request),
-                "Clop Defaults",
-                controlHelp(for: choice)
+                controlHint(for: choice),
+                "⏎ Run Defaults",
+                "⌘L Reference"
             ].joined(separator: " · "),
             arg: operationArgument(
                 choice: choice,
@@ -360,6 +374,9 @@ enum ConversionParameterMenu {
                 environment: environment,
                 fileManager: fileManager,
                 control: nil
+            ),
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: choice, request: request)
             )
         )
     }
@@ -375,14 +392,11 @@ enum ConversionParameterMenu {
         return ScriptFilterItem(
             uid: savedPreset?.stableUID,
             title: "Convert to \(choice.displayValue)",
-            subtitle: [
+            subtitle: ([
                 inputDescription(for: request),
-                savedPreset == nil
-                    ? settingDescription(choice.setting)
-                    : nil,
                 savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset",
-                savedPreset == nil ? nil : "⌃↩ Remove Preset"
-            ].compactMap(\.self).joined(separator: " · "),
+                savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset"
+            ] as [String?]).compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 choice: choice,
                 request: request,
@@ -390,6 +404,7 @@ enum ConversionParameterMenu {
                 fileManager: fileManager
             ),
             valid: true,
+            autocomplete: controlQuery(for: choice),
             match: choice.displayValue,
             variables: operationVariables,
             mods: operationModifiers(
@@ -402,6 +417,9 @@ enum ConversionParameterMenu {
                     preset: preset,
                     request: request
                 )
+            ),
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: choice, request: request)
             )
         )
     }
@@ -427,6 +445,7 @@ enum ConversionParameterMenu {
                 fileManager: fileManager
             ),
             valid: true,
+            autocomplete: controlQuery(for: preset.choice),
             match: preset.displayValue,
             variables: operationVariables,
             mods: operationModifiers(
@@ -479,7 +498,7 @@ enum ConversionParameterMenu {
         let stateJSON = encoded(state)
         return ScriptFilterModifier(
             arg: "\(choice.format) ",
-            subtitle: "Save Preset for \(choice.displayFormat)",
+            subtitle: "Controls",
             valid: true,
             variables: queryTransitionVariables(
                 stateJSON: stateJSON,
@@ -605,24 +624,150 @@ enum ConversionParameterMenu {
     }
 
     private static func invalidControlItem(
-        for choice: ConversionChoice
+        for choice: ConversionChoice,
+        request: ParameterStepRequest
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Invalid conversion control",
-            subtitle: controlHelp(for: choice),
+            subtitle: [
+                inputDescription(for: request),
+                controlHint(for: choice),
+                "⌘L Reference"
+            ].joined(separator: " · "),
             arg: "",
-            valid: false
+            valid: false,
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: choice, request: request)
+            )
+        )
+    }
+
+    private static func partialControlItem(
+        for choice: ConversionChoice,
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: partialControlTitle(for: choice),
+            subtitle: [
+                inputDescription(for: request),
+                controlHint(for: choice),
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: choice, request: request)
+            )
+        )
+    }
+
+    private static func isPossibleControlPrefix(
+        _ value: String,
+        for choice: ConversionChoice
+    ) -> Bool {
+        let normalized = value.lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
+            return false
+        }
+        switch choice.media {
+        case .image:
+            guard normalized.allSatisfy(\.isNumber) else {
+                return false
+            }
+            return Int(normalized).map { $0 <= 100 } ?? false
+        case .video:
+            if normalized.allSatisfy(\.isNumber) {
+                return Int(normalized).map { $0 <= 100 } ?? false
+            }
+            return "auto".hasPrefix(normalized)
+        case .audio:
+            return normalized == "c"
+                || normalized == "b"
+                || "compression".hasPrefix(normalized)
+                || "bitrate".hasPrefix(normalized)
+        }
+    }
+
+    private static func controlQuery(for choice: ConversionChoice) -> String? {
+        guard let setting = choice.setting else {
+            return nil
+        }
+        let value: String
+        switch setting {
+        case .compression(let number):
+            value = choice.media == .audio ? "c\(number)" : "\(number)"
+        case .automaticCompression:
+            value = "auto"
+        case .bitrate(let number):
+            value = "b\(number)"
+        }
+        return "\(choice.format) \(value)"
+    }
+
+    private static func largeTypeReference(
+        for choice: ConversionChoice,
+        request: ParameterStepRequest?
+    ) -> String {
+        let heading = "\(choice.displayFormat) Conversion controls"
+        let body: String
+        switch choice.media {
+        case .image:
+            body = """
+            Type a compression value from 5 to 100.
+
+            Examples:
+            70
+            85
+            """
+        case .video:
+            body = """
+            Type a compression value from 5 to 100, or auto.
+
+            Examples:
+            70
+            auto
+            """
+        case .audio:
+            body = """
+            Use c-number for compression or b-number for bitrate.
+
+            Examples:
+            c70
+            b128
+            bitrate 128
+            """
+        }
+        let reference = "\(heading)\n\n\(body)"
+        return ScriptFilterAffordance.referenceLargeType(
+            reference,
+            inputs: request?.inputs ?? []
         )
     }
 
     private static func controlHelp(for choice: ConversionChoice) -> String {
+        controlHint(for: choice)
+    }
+
+    private static func controlHint(for choice: ConversionChoice) -> String {
         switch choice.media {
         case .image:
-            return "Compression 5-100"
+            return "Use compression 5-100"
         case .video:
-            return "Compression 5-100 or auto"
+            return "Use compression 5-100 / auto"
         case .audio:
-            return "c70 compression or b128 bitrate"
+            return "Use compression (e.g. c70) / bitrate (e.g. b128)"
+        }
+    }
+
+    private static func partialControlTitle(
+        for choice: ConversionChoice
+    ) -> String {
+        switch choice.media {
+        case .image, .video:
+            return "Type compression value"
+        case .audio:
+            return "Type audio conversion control"
         }
     }
 

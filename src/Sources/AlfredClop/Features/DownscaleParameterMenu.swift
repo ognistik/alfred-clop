@@ -225,9 +225,16 @@ enum DownscaleParameterMenu {
         } else if matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
                 title: "Invalid downscale factor",
-                subtitle: "Use 50, 50%, or 0.5. Values must be greater than 0 and less than 100%.",
+                subtitle: [
+                    inputDescription(for: request),
+                    "Use 50 / 50% / 0.5",
+                    "⌘L Reference"
+                ].joined(separator: " · "),
                 arg: "",
-                valid: false
+                valid: false,
+                text: ScriptFilterText(
+                    largetype: largeTypeReference(for: request)
+                )
             ))
         }
 
@@ -253,11 +260,9 @@ enum DownscaleParameterMenu {
         let preset = DownscaleActionPreset(factor: factor.factor)
         return ScriptFilterItem(
             uid: savedPreset?.stableUID,
-            title: "Use \(factor.displayValue)",
+            title: "Downscale to \(factor.displayValue)",
             subtitle: [
                 inputDescription(for: request),
-                "Downscale to \(factor.displayValue)",
-                "Factor \(factor.factorValue)",
                 savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset",
                 savedPreset == nil ? nil : Optional("⌃↩ Remove Preset")
             ].compactMap(\.self).joined(separator: " · "),
@@ -282,7 +287,8 @@ enum DownscaleParameterMenu {
                     preset: preset,
                     request: request
                 )
-            )
+            ),
+            text: ScriptFilterText(largetype: largeTypeReference(for: request))
         )
     }
 
@@ -293,12 +299,10 @@ enum DownscaleParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             uid: preset.stableUID,
-            title: preset.displayValue,
+            title: "Downscale to \(preset.displayValue)",
             subtitle: [
                 inputDescription(for: request),
                 "Saved Preset",
-                "Downscale to \(preset.displayValue)",
-                "Factor \(preset.stableFactor)",
                 "⌃↩ Remove Preset"
             ].joined(separator: " · "),
             arg: operationArgument(
@@ -491,10 +495,34 @@ enum DownscaleParameterMenu {
     private static var instructionItem: ScriptFilterItem {
         ScriptFilterItem(
             title: "Type a downscale factor",
-            subtitle: "Examples: 50, 50%, 0.5, 75%, 0.75 · ⌃↩ Save Preset",
+            subtitle: "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⌃↩ Save Preset",
             arg: "",
             valid: false
         )
+    }
+
+    private static var downscaleReference: String {
+        """
+        Downscale controls
+
+        Type a factor or percentage:
+        50
+        50%
+        0.5
+        75%
+        0.75
+
+        Values must be greater than 0 and less than 100%.
+        """
+    }
+
+    private static func largeTypeReference(
+        for request: ParameterStepRequest
+    ) -> String {
+        let inputReference = ScriptFilterAffordance.inputLargeType(request.inputs)
+            .map { "\n\nInputs\n\($0)" }
+            ?? ""
+        return "\(downscaleReference)\(inputReference)"
     }
 
     private static func presetDisplayValue(_ preset: ActionPreset) -> String {

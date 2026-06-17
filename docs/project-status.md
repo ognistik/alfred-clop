@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 16, 2026
+Last updated: June 17, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -62,6 +62,22 @@ Apple devices, and paper sizes; reads device and paper values from the
 installed Clop CLI; supports inline `controls:` for `auto`, `portrait`,
 `landscape`, and `extend`; infers the likely branch when the user types at the
 root; and stores Crop PDF presets in `settings.json`.
+
+The current polish checkpoint tightened parameter-menu language across
+Optimize, Crop / Resize, Downscale, Convert, and Crop PDF. Inline examples now
+use spaced slash separators, saved preset subtitles avoid repeating actions
+already shown in titles, Crop / Resize preset titles now describe the action
+rather than raw shorthand, Convert target branches keep a guide row above
+matching presets for partial control input, and Convert and Optimize saved
+controls now autocomplete with their visible menu syntax. Default executable
+rows say `Run Defaults` where useful, Optimize default rows use singular media
+names when one clear file is present, Optimize branch rows describe opening
+controls instead of implying root-level typing, empty/partial/invalid guide
+rows use compact `Use ...` syntax hints, valid typed rows avoid generic syntax
+repetition, Large Type input references are capped to five visible inputs with
+consistent `Inputs` spacing, and Optimize's default modifier now inverts the
+configured aggressive default instead of always advertising both Standard and
+Aggressive.
 
 ## Completed
 
@@ -373,8 +389,8 @@ root; and stores Crop PDF presets in `settings.json`.
 - Video Optimize accepts `70` compression, `au` / `auto` compression,
   `hw` / `hardware`, `sw` / `software`, `ll` / `lossless`, and `ad` /
   `adaptive` encoders, `m` / `mute`, and playback speeds such as `2x` or
-  `1.5x`; compact subtitles group the mutually exclusive compression choice
-  as `5-100/au`
+  `1.5x`; compact subtitles use spaced slash separators such as
+  `Use 5-100 / au / hw / sw / ll / ad / m / 2x`
 - PDF Optimize accepts `ad` / `adaptive`, supported bare DPI values, and
   `dpi 150` forms
 - Audio Optimize accepts `70` compression, `b128`, and `bitrate 128`
@@ -618,14 +634,15 @@ The shared controls interaction model is now:
 
 ## Next recommended task
 
-Continue workflow polish with icons, packaging, and release automation, or
-probe any remaining Crop PDF output edge cases with disposable fixtures.
+Implement the missing Downscale controls branch after fixture probes for
+Clop's broad downscale controls, then continue workflow polish with icons,
+packaging, and release automation.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 283 tests.
+- `./scripts/test.sh` passes 286 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).
