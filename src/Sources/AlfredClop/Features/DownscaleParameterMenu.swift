@@ -70,7 +70,173 @@ enum DownscaleFactorParser {
     }
 }
 
+struct DownscaleControls: Equatable {
+    var factor: DownscaleFactor
+    var adaptiveOptimisation: CropAdaptiveOptimisation?
+    var removeAudio: Bool
+}
+
+enum DownscaleControlParser {
+    static func parse(_ input: String) -> DownscaleControls? {
+        let tokens = tokenize(input)
+        guard !tokens.isEmpty else {
+            return nil
+        }
+
+        var factor: DownscaleFactor?
+        var adaptiveOptimisation: CropAdaptiveOptimisation?
+        var removeAudio = false
+        var index = 0
+
+        while index < tokens.count {
+            let token = tokens[index]
+            if let parsedFactor = DownscaleFactorParser.parse(token) {
+                guard factor == nil else { return nil }
+                factor = parsedFactor
+                index += 1
+                continue
+            }
+            if token == "no", index + 1 < tokens.count,
+               isAdaptiveToken(tokens[index + 1]) {
+                guard adaptiveOptimisation == nil else { return nil }
+                adaptiveOptimisation = .disabled
+                index += 2
+                continue
+            }
+            if token == "ad" || token == "adaptive" {
+                guard adaptiveOptimisation == nil else { return nil }
+                adaptiveOptimisation = .enabled
+                index += 1
+                continue
+            }
+            if token == "na" || token == "noad" || token == "no-ad"
+                || token == "no-adaptive" || token == "noadaptive" {
+                guard adaptiveOptimisation == nil else { return nil }
+                adaptiveOptimisation = .disabled
+                index += 1
+                continue
+            }
+            if token == "m" || token == "mu" || token == "mute" {
+                guard !removeAudio else { return nil }
+                removeAudio = true
+                index += 1
+                continue
+            }
+            return nil
+        }
+
+        guard let factor else {
+            return nil
+        }
+        return DownscaleControls(
+            factor: factor,
+            adaptiveOptimisation: adaptiveOptimisation,
+            removeAudio: removeAudio
+        )
+    }
+
+    static func isPossiblePrefix(_ input: String) -> Bool {
+        let tokens = tokenize(input)
+        guard !tokens.isEmpty else {
+            return false
+        }
+        let last = tokens[tokens.count - 1]
+        guard isProperPrefix(
+            last,
+            of: [
+                "ad", "adaptive", "na", "noad", "no-ad",
+                "no-adaptive", "noadaptive", "m", "mu", "mute"
+            ]
+        ) || last == "no" else {
+            return false
+        }
+        let priorTokens = tokens.dropLast()
+        guard !priorTokens.isEmpty else {
+            return false
+        }
+        let priorText = priorTokens.joined(separator: " ")
+        return parse(priorText) != nil
+            || priorTokens.contains {
+                DownscaleFactorParser.parse($0) != nil
+            }
+    }
+
+    static func compactControlTokens(
+        for controls: DownscaleControls
+    ) -> [String] {
+        [
+            controls.adaptiveOptimisation.map {
+                $0 == .enabled ? "ad" : "no-ad"
+            },
+            controls.removeAudio ? "m" : nil
+        ].compactMap(\.self)
+    }
+
+    static func controlDescriptions(
+        for controls: DownscaleControls
+    ) -> [String] {
+        [
+            controls.adaptiveOptimisation.map {
+                $0 == .enabled ? "Adaptive" : "No Adaptive"
+            },
+            controls.removeAudio ? "Mute Video" : nil
+        ].compactMap(\.self)
+    }
+
+    static var largeTypeReference: String {
+        """
+        Downscale controls
+
+        Use a factor or percentage:
+        50
+        50%
+        0.5
+        75%
+        0.75
+
+        Add optional controls after the factor:
+        ad or adaptive
+        m or mute
+
+        Advanced:
+        no-ad or no-adaptive explicitly disables adaptive optimization.
+
+        Examples:
+        50 ad
+        75% mute
+        0.5 no-ad
+        """
+    }
+
+    private static func tokenize(_ input: String) -> [String] {
+        input
+            .lowercased()
+            .replacingOccurrences(of: ",", with: " ")
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+    }
+
+    private static func isAdaptiveToken(_ token: String) -> Bool {
+        token == "ad" || token == "adaptive"
+    }
+
+    private static func isProperPrefix(
+        _ token: String,
+        of candidates: [String]
+    ) -> Bool {
+        guard !candidates.contains(token) else {
+            return false
+        }
+        return !token.isEmpty
+            && candidates.contains { candidate in
+                candidate.hasPrefix(token) && candidate != token
+            }
+    }
+}
+
 enum DownscaleParameterMenu {
+    private static let controlsPrefix = "controls: "
+
     static func response(
         stateJSON: String,
         query: String,
@@ -174,7 +340,9 @@ enum DownscaleParameterMenu {
             presets = try store.load().presets.compactMap { preset in
                 guard case let .downscale(downscale) = preset else { return nil }
                 return downscale
-            }.sorted(by: presetDisplayOrder)
+            }
+            .filter { supportsPreset($0, request: request) }
+            .sorted(by: presetDisplayOrder)
         } catch {
             return storageErrorResponse(
                 request: request,
@@ -188,8 +356,21 @@ enum DownscaleParameterMenu {
             request.inputs,
             itemKinds: request.itemKinds
         )
+        if let controlsQuery = controlsQueryValue(from: trimmedQuery) {
+            return controlsResponse(
+                request: request,
+                stateJSON: stateJSON,
+                query: controlsQuery,
+                presets: presets,
+                environment: environment,
+                affordance: affordance
+            )
+        }
         guard !trimmedQuery.isEmpty else {
-            let items = ([instructionItem] + presets.compactMap {
+            let items = ([instructionItem(
+                request: request,
+                stateJSON: stateJSON
+            )] + presets.compactMap {
                 presetItem(for: $0, request: request, environment: environment)
             }).map(affordance.apply)
             return ScriptFilterResponse(
@@ -204,11 +385,22 @@ enum DownscaleParameterMenu {
         }
         var items = [ScriptFilterItem]()
 
-        if let factor = DownscaleFactorParser.parse(trimmedQuery) {
-            let candidate = DownscaleActionPreset(factor: factor.factor)
+        if let controls = DownscaleControlParser.parse(trimmedQuery) {
+            guard supportsControls(controls, request: request) else {
+                items.append(unsupportedMuteItem(request: request))
+                return ScriptFilterResponse(
+                    items: items.map(affordance.apply),
+                    variables: preservedVariables(
+                        for: request,
+                        stateJSON: stateJSON
+                    ),
+                    skipKnowledge: true
+                )
+            }
+            let candidate = DownscaleActionPreset(controls: controls)
             let exactPreset = presets.first(where: { $0 == candidate })
             items.append(interpretedItem(
-                for: factor,
+                for: controls,
                 request: request,
                 savedPreset: exactPreset,
                 environment: environment
@@ -222,6 +414,9 @@ enum DownscaleParameterMenu {
                         environment: environment
                     )
                 })
+        } else if DownscaleControlParser.isPossiblePrefix(trimmedQuery),
+                  matchingPresets.isEmpty {
+            items.append(partialControlsItem(request: request))
         } else if matchingPresets.isEmpty {
             items.append(ScriptFilterItem(
                 title: "Invalid downscale factor",
@@ -251,16 +446,97 @@ enum DownscaleParameterMenu {
         )
     }
 
+    private static func controlsResponse(
+        request: ParameterStepRequest,
+        stateJSON: String,
+        query: String,
+        presets: [DownscaleActionPreset],
+        environment: Environment,
+        affordance: ScriptFilterAffordance
+    ) -> ScriptFilterResponse {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matchingPresets = trimmedQuery.isEmpty
+            ? presets
+            : presets.filter { presetMatchesQuery($0, query: trimmedQuery) }
+        var items = [ScriptFilterItem]()
+
+        if trimmedQuery.isEmpty {
+            items.append(controlsInstructionItem(request: request))
+            items.append(contentsOf: matchingPresets.map {
+                presetItem(
+                    for: $0,
+                    request: request,
+                    environment: environment,
+                    autocompletePrefix: controlsPrefix
+                )
+            })
+        } else if let controls = DownscaleControlParser.parse(trimmedQuery) {
+            guard supportsControls(controls, request: request) else {
+                items.append(unsupportedMuteItem(request: request))
+                return ScriptFilterResponse(
+                    items: items.map(affordance.apply),
+                    variables: preservedVariables(
+                        for: request,
+                        stateJSON: stateJSON
+                    ),
+                    skipKnowledge: true
+                )
+            }
+            let candidate = DownscaleActionPreset(controls: controls)
+            let exactPreset = presets.first(where: { $0 == candidate })
+            items.append(interpretedItem(
+                for: controls,
+                request: request,
+                savedPreset: exactPreset,
+                environment: environment,
+                autocompletePrefix: controlsPrefix
+            ))
+            items.append(contentsOf: matchingPresets
+                .filter { $0 != exactPreset }
+                .map {
+                    presetItem(
+                        for: $0,
+                        request: request,
+                        environment: environment,
+                        autocompletePrefix: controlsPrefix
+                    )
+                })
+        } else if DownscaleControlParser.isPossiblePrefix(trimmedQuery),
+                  matchingPresets.isEmpty {
+            items.append(partialControlsItem(request: request))
+        } else if matchingPresets.isEmpty {
+            items.append(invalidControlsItem(request: request))
+        }
+
+        if items.isEmpty && !matchingPresets.isEmpty {
+            items.append(contentsOf: matchingPresets.map {
+                presetItem(
+                    for: $0,
+                    request: request,
+                    environment: environment,
+                    autocompletePrefix: controlsPrefix
+                )
+            })
+        }
+
+        return ScriptFilterResponse(
+            items: items.map(affordance.apply),
+            variables: preservedVariables(for: request, stateJSON: stateJSON),
+            skipKnowledge: true
+        )
+    }
+
     private static func interpretedItem(
-        for factor: DownscaleFactor,
+        for controls: DownscaleControls,
         request: ParameterStepRequest,
         savedPreset: DownscaleActionPreset?,
-        environment: Environment
+        environment: Environment,
+        autocompletePrefix: String = ""
     ) -> ScriptFilterItem {
-        let preset = DownscaleActionPreset(factor: factor.factor)
+        let preset = DownscaleActionPreset(controls: controls)
         return ScriptFilterItem(
             uid: savedPreset?.stableUID,
-            title: "Downscale to \(factor.displayValue)",
+            title: actionTitle(for: controls),
             subtitle: [
                 inputDescription(for: request),
                 savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset",
@@ -272,8 +548,8 @@ enum DownscaleParameterMenu {
                 environment: environment
             ),
             valid: true,
-            autocomplete: factor.displayValue,
-            match: "\(factor.displayValue) \(factor.factorValue)",
+            autocomplete: autocompletePrefix + preset.displayValue,
+            match: "\(preset.displayValue) \(preset.stableFactor)",
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -295,11 +571,12 @@ enum DownscaleParameterMenu {
     private static func presetItem(
         for preset: DownscaleActionPreset,
         request: ParameterStepRequest,
-        environment: Environment
+        environment: Environment,
+        autocompletePrefix: String = ""
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             uid: preset.stableUID,
-            title: "Downscale to \(preset.displayValue)",
+            title: presetTitle(for: preset),
             subtitle: [
                 inputDescription(for: request),
                 "Saved Preset",
@@ -311,7 +588,7 @@ enum DownscaleParameterMenu {
                 environment: environment
             ),
             valid: true,
-            autocomplete: preset.displayValue,
+            autocomplete: autocompletePrefix + preset.displayValue,
             match: "\(preset.displayValue) \(preset.stableFactor)",
             variables: [
                 ActionMenu.requestKindVariable:
@@ -391,7 +668,11 @@ enum DownscaleParameterMenu {
         return (try? JSONOutput.string(
             for: OperationRequest(
                 inputs: request.inputs,
-                action: .downscale(factor: preset.factor),
+                action: .downscale(
+                    factor: preset.factor,
+                    adaptiveOptimisation: preset.adaptiveOptimisation,
+                    removeAudio: preset.removeAudio
+                ),
                 execution: execution
             ),
             prettyPrinted: false
@@ -448,9 +729,10 @@ enum DownscaleParameterMenu {
             )
         )
         let stateJSON = (try? encodedState(state)) ?? ""
+        let title = presetTitle(for: preset)
         let subtitle = kind == .save
-            ? "Save Preset \(preset.displayValue)"
-            : "Remove Preset \(preset.displayValue)"
+            ? "Save Preset \(title)"
+            : "Remove Preset \(title)"
 
         return ScriptFilterModifier(
             arg: stateJSON,
@@ -471,6 +753,21 @@ enum DownscaleParameterMenu {
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: nil
         )
+        let haystack = [
+            preset.displayValue,
+            preset.stableFactor,
+            DownscaleControlParser.compactControlTokens(for: preset.controls)
+                .joined(separator: " ")
+        ].joined(separator: " ").folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: nil
+        )
+        let queryTokens = normalizedQuery
+            .replacingOccurrences(of: ",", with: " ")
+            .split(whereSeparator: \.isWhitespace)
+        if queryTokens.count > 1 {
+            return queryTokens.allSatisfy { haystack.contains($0) }
+        }
         return [preset.displayValue, preset.stableFactor].contains { value in
             value.folding(
                 options: [.caseInsensitive, .diacriticInsensitive],
@@ -492,25 +789,167 @@ enum DownscaleParameterMenu {
         return variables
     }
 
-    private static var instructionItem: ScriptFilterItem {
+    private static func queryTransitionVariables(
+        stateJSON: String,
+        request: ParameterStepRequest
+    ) -> [String: String] {
+        var variables = preservedVariables(
+            for: request,
+            stateJSON: stateJSON
+        )
+        variables[ActionMenu.requestKindVariable] =
+            WorkflowRequestKind.parameterStepQuery.rawValue
+        return variables
+    }
+
+    private static func controlsModifier(
+        request: ParameterStepRequest,
+        stateJSON: String
+    ) -> ScriptFilterModifier {
+        ScriptFilterModifier(
+            arg: controlsPrefix,
+            subtitle: "Save Preset",
+            valid: true,
+            variables: queryTransitionVariables(
+                stateJSON: stateJSON,
+                request: request
+            )
+        )
+    }
+
+    private static func instructionItem(
+        request: ParameterStepRequest,
+        stateJSON: String
+    ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Type a downscale factor",
-            subtitle: "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⌃↩ Save Preset",
+            subtitle: "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⇥ Controls, ⌃↩ Save Preset",
             arg: "",
-            valid: false
+            valid: false,
+            autocomplete: controlsPrefix,
+            mods: ScriptFilterMods(
+                control: controlsModifier(
+                    request: request,
+                    stateJSON: stateJSON
+                )
+            )
         )
+    }
+
+    private static func controlsInstructionItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Type downscale controls",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: request)
+            )
+        )
+    }
+
+    private static func partialControlsItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Type downscale controls",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: request)
+            )
+        )
+    }
+
+    private static func invalidControlsItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Invalid downscale controls",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: request)
+            )
+        )
+    }
+
+    private static func unsupportedMuteItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Mute only applies to video",
+            subtitle: [
+                inputDescription(for: request),
+                controlsHelp(for: request),
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: request)
+            )
+        )
+    }
+
+    private static func actionTitle(for controls: DownscaleControls) -> String {
+        (["Downscale to \(controls.factor.displayValue)"]
+            + DownscaleControlParser.controlDescriptions(for: controls))
+            .joined(separator: " · ")
+    }
+
+    private static func presetTitle(
+        for preset: DownscaleActionPreset
+    ) -> String {
+        actionTitle(for: preset.controls)
+    }
+
+    private static func controlsHelp(
+        for request: ParameterStepRequest
+    ) -> String {
+        supportsMuteControl(for: request)
+            ? "Use factor + ad + m"
+            : "Use factor + ad"
     }
 
     private static var downscaleReference: String {
         """
         Downscale controls
 
-        Type a factor or percentage:
+        Use a factor or percentage:
         50
         50%
         0.5
         75%
         0.75
+
+        Add optional controls after the factor:
+        ad or adaptive
+        m or mute
+
+        Advanced:
+        no-ad or no-adaptive explicitly disables adaptive optimization.
+
+        Examples:
+        50 ad
+        75% mute
+        0.5 no-ad
 
         Values must be greater than 0 and less than 100%.
         """
@@ -519,10 +958,55 @@ enum DownscaleParameterMenu {
     private static func largeTypeReference(
         for request: ParameterStepRequest
     ) -> String {
-        let inputReference = ScriptFilterAffordance.inputLargeType(request.inputs)
-            .map { "\n\nInputs\n\($0)" }
-            ?? ""
-        return "\(downscaleReference)\(inputReference)"
+        ScriptFilterAffordance.referenceLargeType(
+            downscaleReference,
+            inputs: request.inputs
+        )
+    }
+
+    private static func supportsMuteControl(
+        for request: ParameterStepRequest
+    ) -> Bool {
+        if request.mediaKinds?.contains(.video) == true {
+            return true
+        }
+        if request.ambiguousKinds?.isEmpty == false {
+            return true
+        }
+        if request.itemKinds?.contains(where: {
+            $0 == .folder || $0 == .remoteURL
+        }) == true {
+            return true
+        }
+        return request.mediaKinds == nil
+    }
+
+    private static func supportsPreset(
+        _ preset: DownscaleActionPreset,
+        request: ParameterStepRequest
+    ) -> Bool {
+        guard preset.removeAudio else {
+            return true
+        }
+        return supportsMuteControl(for: request)
+    }
+
+    private static func supportsControls(
+        _ controls: DownscaleControls,
+        request: ParameterStepRequest
+    ) -> Bool {
+        guard controls.removeAudio else {
+            return true
+        }
+        return supportsMuteControl(for: request)
+    }
+
+    private static func controlsQueryValue(from query: String) -> String? {
+        let marker = "controls:"
+        guard query.lowercased().hasPrefix(marker) else {
+            return nil
+        }
+        return String(query.dropFirst(marker.count))
     }
 
     private static func presetDisplayValue(_ preset: ActionPreset) -> String {
@@ -578,7 +1062,7 @@ enum DownscaleParameterMenu {
     ) -> ScriptFilterResponse {
         ScriptFilterResponse(
             items: [
-                instructionItem,
+                instructionItem(request: request, stateJSON: stateJSON),
                 ScriptFilterItem(
                     title: "Unable to read saved presets",
                     subtitle: detail,

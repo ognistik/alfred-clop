@@ -456,6 +456,32 @@ struct ClopCommandBuilderTests {
         #expect(command.expectsJSON)
     }
 
+    @Test
+    func downscaleAddsOnlyExplicitOptionalControls() throws {
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/movie with spaces.mp4"],
+            action: .downscale(
+                factor: 0.5,
+                adaptiveOptimisation: .disabled,
+                removeAudio: true
+            ),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(command.arguments == [
+            "downscale",
+            "--factor",
+            "0.5",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--no-adaptive-optimisation",
+            "--remove-audio",
+            "--gui",
+            "/tmp/movie with spaces.mp4"
+        ])
+    }
+
     @Test(arguments: [0, 1, 1.2])
     func downscaleRejectsUnsupportedFactors(factor: Double) {
         #expect(throws: ClopCommandBuilderError.invalidDownscaleFactor) {

@@ -954,12 +954,17 @@ Only user-created presets should appear as additional choices. A valid typed
 factor remains the first result when it partially matches a preset; exact
 normalized matches combine into one saved result.
 
-Downscale still needs a full controls branch for the remaining broad Clop
-`downscale` options. Verified candidates include adaptive image optimization,
-type filtering, recursive folders, and the shared execution options documented
-for broad commands. Add this as a separate bounded task after fixture probes,
-using the same shallow `controls:` pattern as Crop / Resize and Optimize
-instead of expanding the current factor-only grammar opportunistically.
+Downscale also exposes a shallow `controls:` branch, matching Crop / Resize
+and Optimize. The factor remains the required base value, and users may add
+output-changing controls after it: `ad` / `adaptive`, `no-ad` /
+`no-adaptive`, and video `m` / `mute`. The root menu keeps factor-only typing
+working and also accepts `factor + controls` for consistency with Crop /
+Resize.
+
+Type filtering, copy result, recursive folders, output templates, Clop UI, and
+background submission remain shared execution or automation-oriented controls,
+not ordinary Downscale menu controls. Aggressive or Standard processing remains
+a global/modifier choice rather than a nested menu option.
 
 ### Convert
 
@@ -1079,7 +1084,7 @@ Optimize controls accept either spaces or commas between tokens. Teach compact
 tokens first in Alfred subtitles with spaced slash separators, for example:
 
 ```text
-Use 5-100 / au / hw / sw / ll / ad / m / 2x
+Use 5-100 / au + hw / sw / ll / ad + m + 2x
 ```
 
 Large Type may show full words and examples such as `70 m`, `70, hw`,
@@ -1262,8 +1267,8 @@ Prefer `Use ...` hints:
 ```text
 Selected file · Use compression 5-100 / auto · ⌘L Reference
 Selected file · Use compression (e.g. c70) / bitrate (e.g. b128) · ⌘L Reference
-Selected file · Use size + ad / m · ⌘L Reference
-Selected PDF · Use target + p / l / a / e · ⌘L Reference
+Selected file · Use size + ad + m · ⌘L Reference
+Selected PDF · Use target + a / p / l + e · ⌘L Reference
 ```
 
 Use `+` for optional controls added after a required base value, `/` for

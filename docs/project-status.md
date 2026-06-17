@@ -13,8 +13,8 @@ parameter-free execution, a guided dynamic parameter step for crop and resize,
 the bounded Downscale parameter step, user-defined Crop / Resize and
 Downscale action presets, media-specific conversion with inline controls and
 presets, media-specific Optimize controls and presets, reversible Crop PDF
-controls and presets, shared settings, and the unified input and routing
-foundation planned for Milestone 6.
+controls and presets, the Downscale controls branch, shared settings, and the
+unified input and routing foundation planned for Milestone 6.
 
 The public automation surface is now one typed `clop` request with independent
 input and route values. Files, folders, HTTP/HTTPS URLs, clipboard content,
@@ -326,12 +326,23 @@ Aggressive.
   negative values, and enlarging values are rejected visibly
 - Downscale results display percentage-first labels such as `50%` with the
   normalized Clop factor in the subtitle
+- Downscale supports the same shallow `controls:` editor pattern as Crop /
+  Resize, accepting `ad` / `adaptive`, `no-ad` / `no-adaptive`, and video
+  `m` / `mute` after the required factor
+- Root Downscale typing also accepts `factor + controls` while keeping
+  factor-only rows and saved presets working as before
+- Downscale controls use compact guidance rows, scoped preset matching,
+  autocomplete that mirrors visible syntax, and Large Type references with
+  the shared input block
 - Downscale execution uses
-  `clop downscale --factor VALUE --json --no-progress --skip-errors`
+  `clop downscale --factor VALUE --json --no-progress --skip-errors`, plus
+  optional `--adaptive-optimisation`, `--no-adaptive-optimisation`, and
+  `--remove-audio` when explicitly requested
 - Downscale inherits configured Clop UI, copy-result, recursion, and output
   preservation settings
 - External Trigger execution supports `execute: Downscale` with required
-  `factor:` using the same grammar as the menu
+  `factor:` using the same grammar as the menu, plus optional `controls:`,
+  `adaptive:`, `no adaptive:`, `mute:`, and `remove audio:`
 - Downscale presets are stored in `settings.json`, scoped to the Downscale
   submenu, and support Control-Return save and confirmation-based removal with
   a visible Cancel row
@@ -390,7 +401,7 @@ Aggressive.
   `hw` / `hardware`, `sw` / `software`, `ll` / `lossless`, and `ad` /
   `adaptive` encoders, `m` / `mute`, and playback speeds such as `2x` or
   `1.5x`; compact subtitles use spaced slash separators such as
-  `Use 5-100 / au / hw / sw / ll / ad / m / 2x`
+  `Use 5-100 / au + hw / sw / ll / ad + m + 2x`
 - PDF Optimize accepts `ad` / `adaptive`, supported bare DPI values, and
   `dpi 150` forms
 - Audio Optimize accepts `70` compression, `b128`, and `bitrate 128`
@@ -578,6 +589,9 @@ The shared controls interaction model is now:
 - Crop / Resize exposes adaptive optimization and video mute controls through
   the same shallow typed query as geometry values and through a `controls:`
   editor, with longer grammar help in Large Type;
+- Downscale exposes adaptive optimization and video mute controls through the
+  same shallow typed query as factors and through a `controls:` editor, with
+  factor-only root behavior preserved;
 - Crop PDF uses root `ratio:`, `device:`, and `paper:` branches, with
   target-specific `controls:` for page layout and extend behavior;
 - video Optimize includes playback speed as a typed control and External
@@ -634,15 +648,13 @@ The shared controls interaction model is now:
 
 ## Next recommended task
 
-Implement the missing Downscale controls branch after fixture probes for
-Clop's broad downscale controls, then continue workflow polish with icons,
-packaging, and release automation.
+Continue workflow polish with icons, packaging, and release automation.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 286 tests.
+- `./scripts/test.sh` passes 298 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

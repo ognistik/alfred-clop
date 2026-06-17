@@ -92,14 +92,38 @@ struct CropActionPreset: Codable, Equatable, Hashable {
 
 struct DownscaleActionPreset: Codable, Equatable, Hashable {
     var factor: Double
+    var adaptiveOptimisation: CropAdaptiveOptimisation?
+    var removeAudio: Bool
 
-    init(factor: Double) {
+    init(
+        factor: Double,
+        adaptiveOptimisation: CropAdaptiveOptimisation? = nil,
+        removeAudio: Bool = false
+    ) {
         self.factor = factor
+        self.adaptiveOptimisation = adaptiveOptimisation
+        self.removeAudio = removeAudio
+    }
+
+    init(controls: DownscaleControls) {
+        self.init(
+            factor: controls.factor.factor,
+            adaptiveOptimisation: controls.adaptiveOptimisation,
+            removeAudio: controls.removeAudio
+        )
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let factor = try container.decode(Double.self, forKey: .factor)
+        let adaptiveOptimisation = try container.decodeIfPresent(
+            CropAdaptiveOptimisation.self,
+            forKey: .adaptiveOptimisation
+        )
+        let removeAudio = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .removeAudio
+        ) ?? false
 
         guard DownscaleFactorParser.isSupported(factor) else {
             throw DecodingError.dataCorruptedError(
@@ -110,10 +134,26 @@ struct DownscaleActionPreset: Codable, Equatable, Hashable {
         }
 
         self.factor = factor
+        self.adaptiveOptimisation = adaptiveOptimisation
+        self.removeAudio = removeAudio
+    }
+
+    var controls: DownscaleControls {
+        DownscaleControls(
+            factor: DownscaleFactor(
+                factor: factor,
+                displayValue: DownscaleFactorParser.displayValue(for: factor),
+                factorValue: stableFactor
+            ),
+            adaptiveOptimisation: adaptiveOptimisation,
+            removeAudio: removeAudio
+        )
     }
 
     var displayValue: String {
-        DownscaleFactorParser.displayValue(for: factor)
+        ([DownscaleFactorParser.displayValue(for: factor)]
+            + DownscaleControlParser.compactControlTokens(for: controls))
+            .joined(separator: " ")
     }
 
     var stableFactor: String {
@@ -121,7 +161,12 @@ struct DownscaleActionPreset: Codable, Equatable, Hashable {
     }
 
     var stableUID: String {
-        "downscale.preset.factor.\(stableFactor)"
+        [
+            "downscale.preset.factor",
+            stableFactor,
+            adaptiveOptimisation?.rawValue,
+            removeAudio ? "mute" : nil
+        ].compactMap(\.self).joined(separator: ".")
     }
 }
 
@@ -265,6 +310,11 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case let .downscale(preset):
             try container.encode(PresetType.downscale, forKey: .type)
             try container.encode(preset.factor, forKey: .factor)
+            try container.encodeIfPresent(
+                preset.adaptiveOptimisation,
+                forKey: .adaptiveOptimisation
+            )
+            try container.encode(preset.removeAudio, forKey: .removeAudio)
         case let .conversion(preset):
             try container.encode(PresetType.conversion, forKey: .type)
             try container.encode(preset.choice.media, forKey: .media)

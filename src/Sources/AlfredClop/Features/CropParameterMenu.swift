@@ -1241,7 +1241,7 @@ enum CropParameterMenu {
         for request: ParameterStepRequest
     ) -> String {
         supportsMuteControl(for: request)
-            ? "Use size + ad / m"
+            ? "Use size + ad + m"
             : "Use size + ad"
     }
 

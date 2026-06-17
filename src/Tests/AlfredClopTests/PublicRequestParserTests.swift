@@ -307,6 +307,39 @@ struct PublicRequestParserTests {
     }
 
     @Test
+    func downscaleExecutionAcceptsControls() throws {
+        let request = try PublicRequestParser.parse("""
+        execute: Downscale
+        factor: 50%
+        controls: adaptive mute
+
+        /tmp/movie.mp4
+        """)
+
+        #expect(request.route == .execute(action: .downscale(
+            factor: 0.5,
+            adaptiveOptimisation: .enabled,
+            removeAudio: true
+        )))
+    }
+
+    @Test
+    func downscaleExecutionRejectsConflictingControls() {
+        #expect(throws: PublicRequestError.invalidParameter(
+            "downscale controls",
+            "50% adaptive no-adaptive"
+        )) {
+            try PublicRequestParser.parse("""
+            execute: Downscale
+            factor: 50%
+            controls: adaptive no-adaptive
+
+            /tmp/movie.mp4
+            """)
+        }
+    }
+
+    @Test
     func conversionExecutionAcceptsDefaultsCompressionAndBitrate() throws {
         let image = try PublicRequestParser.parse("""
         execute: Convert Image

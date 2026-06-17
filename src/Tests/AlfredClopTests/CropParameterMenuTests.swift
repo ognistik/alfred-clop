@@ -88,7 +88,7 @@ struct CropParameterMenuTests {
         #expect(imageResponse.items[0].title == "Type crop controls")
         #expect(imageResponse.items[0].subtitle == "Selected 2 files · Use size + ad · ⌘L Reference")
         #expect(imageResponse.items[0].text?.largetype?.contains("no-ad or no-adaptive") == true)
-        #expect(videoResponse.items[0].subtitle == "Copied 2 files · Use size + ad / m · ⌘L Reference")
+        #expect(videoResponse.items[0].subtitle == "Copied 2 files · Use size + ad + m · ⌘L Reference")
     }
 
     @Test(arguments: [

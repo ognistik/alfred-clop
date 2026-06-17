@@ -41,6 +41,36 @@ struct DownscaleParameterMenuTests {
         #expect(DownscaleFactorParser.parse(input) == nil)
     }
 
+    @Test(arguments: [
+        ("50 ad", 0.5, CropAdaptiveOptimisation.enabled, false),
+        ("50%, mute", 0.5, nil, true),
+        ("0.5 no adaptive", 0.5, CropAdaptiveOptimisation.disabled, false),
+        ("75% ad m", 0.75, CropAdaptiveOptimisation.enabled, true)
+    ])
+    func parsesDownscaleControls(
+        input: String,
+        factor: Double,
+        adaptive: CropAdaptiveOptimisation?,
+        removeAudio: Bool
+    ) throws {
+        let controls = try #require(DownscaleControlParser.parse(input))
+
+        #expect(controls.factor.factor == factor)
+        #expect(controls.adaptiveOptimisation == adaptive)
+        #expect(controls.removeAudio == removeAudio)
+    }
+
+    @Test(arguments: [
+        "ad",
+        "50 ad no-ad",
+        "50 m mute",
+        "50 75",
+        "50 unknown"
+    ])
+    func rejectsInvalidDownscaleControls(input: String) {
+        #expect(DownscaleControlParser.parse(input) == nil)
+    }
+
     @Test
     func emptyQueryShowsOneInstructionalItem() throws {
         let response = try downscaleResponse(
@@ -50,7 +80,8 @@ struct DownscaleParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Type a downscale factor")
-        #expect(response.items[0].subtitle == "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⌃↩ Save Preset")
+        #expect(response.items[0].subtitle == "Examples: 50 / 50% / 0.5 / 75% / 0.75 · ⇥ Controls, ⌃↩ Save Preset")
+        #expect(response.items[0].autocomplete == "controls: ")
         #expect(response.items[0].valid == false)
     }
 
@@ -74,34 +105,135 @@ struct DownscaleParameterMenuTests {
         #expect(response.items.count == 1)
         #expect(item.subtitle.hasPrefix("\(subtitlePrefix) ·"))
         #expect(operation.inputs == ["/tmp/first image.png", "/tmp/second audio.m4a"])
-        #expect(operation.action == .downscale(factor: 0.5))
+        #expect(downscaleComponents(operation.action)?.factor == 0.5)
         #expect(response.variables?[ActionMenu.menuStateVariable] == stateJSON)
         #expect(response.variables?[ActionMenu.inputContextVariable] == context.rawValue)
     }
 
-    @Test(arguments: [
-        ("50", 0.5, "Downscale to 50%"),
-        ("50%", 0.5, "Downscale to 50%"),
-        ("0.5", 0.5, "Downscale to 50%"),
-        ("75", 0.75, "Downscale to 75%")
-    ])
-    func acceptedSyntaxProducesOneExplanatoryResult(
-        input: String,
-        factor: Double,
-        title: String
-    ) throws {
+    @Test
+    func acceptedSyntaxProducesOneExplanatoryResult() throws {
+        let cases: [(input: String, factor: Double, title: String)] = [
+            ("50", 0.5, "Downscale to 50%"),
+            ("50%", 0.5, "Downscale to 50%"),
+            ("0.5", 0.5, "Downscale to 50%"),
+            ("75", 0.75, "Downscale to 75%")
+        ]
+
+        for testCase in cases {
+            let response = try downscaleResponse(
+                stateJSON: try downscaleStateJSON(context: .arguments),
+                query: testCase.input
+            )
+            let item = try #require(response.items.first)
+            let operation = try operationRequest(from: item)
+            let components = try #require(downscaleComponents(operation.action))
+
+            #expect(response.items.count == 1)
+            #expect(item.title == testCase.title)
+            #expect(!item.subtitle.contains(
+                "Factor \(DownscaleFactorParser.factorValue(for: testCase.factor))"
+            ))
+            #expect(item.subtitle == "Passed 2 files · ⌃↩ Save Preset")
+            #expect(components.factor == testCase.factor)
+        }
+    }
+
+    @Test
+    func validControlsBuildTypedRequest() throws {
         let response = try downscaleResponse(
-            stateJSON: try downscaleStateJSON(context: .arguments),
-            query: input
+            stateJSON: try downscaleStateJSON(
+                context: .selected,
+                mediaKinds: [.video],
+                itemKinds: [.localFile, .localFile]
+            ),
+            query: "controls: 50 ad m"
         )
         let item = try #require(response.items.first)
         let operation = try operationRequest(from: item)
+        let components = try #require(downscaleComponents(operation.action))
 
-        #expect(response.items.count == 1)
-        #expect(item.title == title)
-        #expect(!item.subtitle.contains("Factor \(DownscaleFactorParser.factorValue(for: factor))"))
-        #expect(item.subtitle == "Passed 2 files · ⌃↩ Save Preset")
-        #expect(operation.action == .downscale(factor: factor))
+        #expect(item.title == "Downscale to 50% · Adaptive · Mute Video")
+        #expect(item.subtitle == "Selected 2 files · ⌃↩ Save Preset")
+        #expect(!item.subtitle.contains("Use factor"))
+        #expect(item.autocomplete == "controls: 50% ad m")
+        #expect(components == (
+            factor: 0.5,
+            adaptiveOptimisation: .enabled,
+            removeAudio: true
+        ))
+    }
+
+    @Test
+    func rootAcceptsFactorPlusControls() throws {
+        let response = try downscaleResponse(
+            stateJSON: try downscaleStateJSON(
+                context: .selected,
+                mediaKinds: [.video],
+                itemKinds: [.localFile, .localFile]
+            ),
+            query: "75 mute"
+        )
+        let item = try #require(response.items.first)
+        let operation = try operationRequest(from: item)
+        let components = try #require(downscaleComponents(operation.action))
+
+        #expect(item.title == "Downscale to 75% · Mute Video")
+        #expect(components == (
+            factor: 0.75,
+            adaptiveOptimisation: nil,
+            removeAudio: true
+        ))
+    }
+
+    @Test
+    func controlsBranchGuidanceUsesLargeTypeReference() throws {
+        let response = try downscaleResponse(
+            stateJSON: try downscaleStateJSON(context: .arguments),
+            query: "controls: "
+        )
+        let item = try #require(response.items.first)
+
+        #expect(item.title == "Type downscale controls")
+        #expect(item.subtitle == "Passed 2 files · Use factor + ad + m · ⌘L Reference")
+        #expect(item.text?.largetype?.contains("Downscale controls") == true)
+        #expect(item.text?.largetype?.contains("Inputs\n2 inputs") == true)
+    }
+
+    @Test
+    func partialControlsShowGuidanceBeforeInvalidFeedback() throws {
+        let response = try downscaleResponse(
+            stateJSON: try downscaleStateJSON(context: .arguments),
+            query: "controls: 50 a"
+        )
+
+        #expect(response.items.first?.title == "Type downscale controls")
+        #expect(response.items.first?.subtitle == "Passed 2 files · Use factor + ad + m · ⌘L Reference")
+    }
+
+    @Test
+    func invalidControlsShowGuidance() throws {
+        let response = try downscaleResponse(
+            stateJSON: try downscaleStateJSON(context: .arguments),
+            query: "controls: 50 banana"
+        )
+
+        #expect(response.items.first?.title == "Invalid downscale controls")
+        #expect(response.items.first?.subtitle == "Passed 2 files · Use factor + ad + m · ⌘L Reference")
+    }
+
+    @Test
+    func muteControlIsRejectedForClearNonVideoInput() throws {
+        let response = try downscaleResponse(
+            stateJSON: try downscaleStateJSON(
+                context: .selected,
+                mediaKinds: [.image],
+                itemKinds: [.localFile, .localFile]
+            ),
+            query: "controls: 50 m"
+        )
+
+        #expect(response.items.first?.title == "Mute only applies to video")
+        #expect(response.items.first?.subtitle == "Selected 2 files · Use factor + ad · ⌘L Reference")
     }
 
     @Test
@@ -156,11 +288,14 @@ struct DownscaleParameterMenuTests {
             "Downscale to 7%",
             "Downscale to 75%"
         ])
-        #expect(operation.action == .downscale(factor: 0.07))
-        #expect(typedItem.mods?.control?.subtitle == "Save Preset 7%")
+        #expect(downscaleComponents(operation.action)?.factor == 0.07)
+        #expect(
+            typedItem.mods?.control?.subtitle
+                == "Save Preset Downscale to 7%"
+        )
         #expect(
             response.items[1].mods?.control?.subtitle
-                == "Remove Preset 75%"
+                == "Remove Preset Downscale to 75%"
         )
     }
 
@@ -186,6 +321,41 @@ struct DownscaleParameterMenuTests {
         ])
         #expect(try fixture.store.load().presets == [
             .downscale(DownscaleActionPreset(factor: 0.75))
+        ])
+    }
+
+    @Test
+    func controlsPresetCanBeSavedAndRemoved() throws {
+        let fixture = try DownscalePresetFixture()
+        let response = DownscaleParameterMenu.response(
+            stateJSON: try downscaleStateJSON(
+                context: .arguments,
+                mediaKinds: [.video],
+                itemKinds: [.localFile, .localFile]
+            ),
+            query: "controls: 75 ad m",
+            environment: fixture.environment
+        )
+        let stateJSON = try #require(response.items[0].mods?.control?.arg)
+
+        let saved = DownscaleParameterMenu.response(
+            stateJSON: stateJSON,
+            query: "",
+            environment: fixture.environment
+        )
+
+        #expect(saved.items.map(\.title) == [
+            "Type a downscale factor",
+            "Downscale to 75% · Adaptive · Mute Video"
+        ])
+        #expect(saved.items[1].subtitle == "Passed 2 files · Saved Preset · ⌃↩ Remove Preset")
+        #expect(saved.items[1].autocomplete == "75% ad m")
+        #expect(try fixture.store.load().presets == [
+            .downscale(DownscaleActionPreset(
+                factor: 0.75,
+                adaptiveOptimisation: .enabled,
+                removeAudio: true
+            ))
         ])
     }
 
@@ -236,13 +406,17 @@ struct DownscaleParameterMenuTests {
     }
 
     private func downscaleStateJSON(
-        context: ActionInputContext
+        context: ActionInputContext,
+        mediaKinds: [MediaKind]? = nil,
+        itemKinds: [InputItemKind]? = nil
     ) throws -> String {
         try JSONOutput.string(
             for: MenuState.downscale(ParameterStepRequest(
                 action: .downscale,
                 inputs: ["/tmp/first image.png", "/tmp/second audio.m4a"],
-                inputContext: context
+                inputContext: context,
+                mediaKinds: mediaKinds,
+                itemKinds: itemKinds
             )),
             prettyPrinted: false
         )
@@ -269,6 +443,23 @@ struct DownscaleParameterMenuTests {
             OperationRequest.self,
             from: Data(try #require(item.arg).utf8)
         )
+    }
+
+    private func downscaleComponents(
+        _ action: ActionRequest
+    ) -> (
+        factor: Double,
+        adaptiveOptimisation: CropAdaptiveOptimisation?,
+        removeAudio: Bool
+    )? {
+        guard case let .downscale(
+            factor,
+            adaptiveOptimisation,
+            removeAudio
+        ) = action else {
+            return nil
+        }
+        return (factor, adaptiveOptimisation, removeAudio)
     }
 }
 

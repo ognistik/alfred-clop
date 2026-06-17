@@ -8,7 +8,11 @@ enum ActionRequest: Codable, Equatable {
         adaptiveOptimisation: CropAdaptiveOptimisation? = nil,
         removeAudio: Bool = false
     )
-    case downscale(factor: Double)
+    case downscale(
+        factor: Double,
+        adaptiveOptimisation: CropAdaptiveOptimisation? = nil,
+        removeAudio: Bool = false
+    )
     case convert(ConversionChoice)
     case cropPDF(CropPDFRequest)
     case uncropPDF
@@ -70,9 +74,14 @@ enum ActionRequest: Codable, Equatable {
                 forKey: .adaptiveOptimisation
             )
             try container.encode(removeAudio, forKey: .removeAudio)
-        case let .downscale(factor):
+        case let .downscale(factor, adaptiveOptimisation, removeAudio):
             try container.encode(ActionType.downscale, forKey: .type)
             try container.encode(factor, forKey: .factor)
+            try container.encodeIfPresent(
+                adaptiveOptimisation,
+                forKey: .adaptiveOptimisation
+            )
+            try container.encode(removeAudio, forKey: .removeAudio)
         case let .convert(choice):
             try container.encode(ActionType.convert, forKey: .type)
             try container.encode(choice.media, forKey: .media)
@@ -114,7 +123,17 @@ enum ActionRequest: Codable, Equatable {
                 ) ?? false
             )
         case .downscale:
-            self = .downscale(factor: try container.decode(Double.self, forKey: .factor))
+            self = .downscale(
+                factor: try container.decode(Double.self, forKey: .factor),
+                adaptiveOptimisation: try container.decodeIfPresent(
+                    CropAdaptiveOptimisation.self,
+                    forKey: .adaptiveOptimisation
+                ),
+                removeAudio: try container.decodeIfPresent(
+                    Bool.self,
+                    forKey: .removeAudio
+                ) ?? false
+            )
         case .convert:
             self = .convert(ConversionChoice(
                 media: try container.decode(

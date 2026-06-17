@@ -113,13 +113,15 @@ struct ClopCommandBuilder {
                 removeAudio: removeAudio
             )
             expectsJSON = true
-        case let .downscale(factor):
+        case let .downscale(factor, adaptiveOptimisation, removeAudio):
             guard DownscaleFactorParser.isSupported(factor) else {
                 throw ClopCommandBuilderError.invalidDownscaleFactor
             }
             arguments = downscaleArguments(
                 for: resolvedRequest,
-                factor: factor
+                factor: factor,
+                adaptiveOptimisation: adaptiveOptimisation,
+                removeAudio: removeAudio
             )
             expectsJSON = true
         case .convert(let choice):
@@ -208,7 +210,9 @@ struct ClopCommandBuilder {
 
     private func downscaleArguments(
         for request: OperationRequest,
-        factor: Double
+        factor: Double,
+        adaptiveOptimisation: CropAdaptiveOptimisation?,
+        removeAudio: Bool
     ) -> [String] {
         var arguments = [
             "downscale",
@@ -219,6 +223,17 @@ struct ClopCommandBuilder {
             "--skip-errors"
         ]
 
+        switch adaptiveOptimisation {
+        case .enabled:
+            arguments.append("--adaptive-optimisation")
+        case .disabled:
+            arguments.append("--no-adaptive-optimisation")
+        case nil:
+            break
+        }
+        if removeAudio {
+            arguments.append("--remove-audio")
+        }
         if request.execution.showClopUI {
             arguments.append("--gui")
         }

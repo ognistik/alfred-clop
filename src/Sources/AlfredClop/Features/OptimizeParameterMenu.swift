@@ -919,7 +919,7 @@ enum OptimizeParameterMenu {
         case .image:
             return "Use compression 5-100 / ad"
         case .video:
-            return "Use 5-100 / au / hw / sw / ll / ad / m / 2x"
+            return "Use 5-100 / au + hw / sw / ll / ad + m + 2x"
         case .pdf:
             return "Use DPI 300 / 250 / 150 / ad"
         case .audio:

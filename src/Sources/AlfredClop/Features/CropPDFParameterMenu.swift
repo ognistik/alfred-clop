@@ -661,7 +661,7 @@ enum CropPDFParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: title,
-            subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · Use target + p / l / a / e · ⌘L Reference",
+            subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · Use target + a / p / l + e · ⌘L Reference",
             arg: "",
             valid: false,
             text: ScriptFilterText(

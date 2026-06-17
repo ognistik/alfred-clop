@@ -276,15 +276,70 @@ enum PublicRequestParser {
                 removeAudio: controls.removeAudio
             )
         case .downscale:
-            try rejectUnknown(values, allowed: ["factor"])
+            try rejectUnknown(
+                values,
+                allowed: [
+                    "factor",
+                    "controls",
+                    "adaptive",
+                    "no adaptive",
+                    "mute",
+                    "remove audio"
+                ]
+            )
             guard let factorValue = values["factor"],
                   !factorValue.isEmpty else {
                 throw PublicRequestError.missingParameter("factor")
             }
-            guard let factor = DownscaleFactorParser.parse(factorValue) else {
-                throw PublicRequestError.invalidParameter("factor", factorValue)
+            var controlParts = [factorValue]
+            if let controls = values["controls"], !controls.isEmpty {
+                controlParts.append(controls)
             }
-            return .downscale(factor: factor.factor)
+            if try boolean(
+                values["adaptive"],
+                name: "adaptive",
+                defaultValue: false
+            ) {
+                controlParts.append("adaptive")
+            }
+            if try boolean(
+                values["no adaptive"],
+                name: "no adaptive",
+                defaultValue: false
+            ) {
+                controlParts.append("no-adaptive")
+            }
+            let mute = try boolean(
+                values["mute"],
+                name: "mute",
+                defaultValue: false
+            )
+            let removeAudio = try boolean(
+                values["remove audio"],
+                name: "remove audio",
+                defaultValue: false
+            )
+            if mute || removeAudio {
+                controlParts.append("mute")
+            }
+            let controlText = controlParts.joined(separator: " ")
+            guard let controls = DownscaleControlParser.parse(controlText) else {
+                if controlParts.count == 1 {
+                    throw PublicRequestError.invalidParameter(
+                        "factor",
+                        factorValue
+                    )
+                }
+                throw PublicRequestError.invalidParameter(
+                    "downscale controls",
+                    controlText
+                )
+            }
+            return .downscale(
+                factor: controls.factor.factor,
+                adaptiveOptimisation: controls.adaptiveOptimisation,
+                removeAudio: controls.removeAudio
+            )
         case .uncropPDF:
             try rejectUnknown(values, allowed: [])
             return .uncropPDF
