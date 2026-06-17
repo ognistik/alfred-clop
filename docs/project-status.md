@@ -79,6 +79,13 @@ consistent `Inputs` spacing, and Optimize's default modifier now inverts the
 configured aggressive default instead of always advertising both Standard and
 Aggressive.
 
+Crop PDF reversible menu rows now follow the same title/subtitle split as the
+other parameter menus. Device, paper, ratio, and resolution rows carry their
+target type in the title, explicit controls are appended only when selected,
+saved preset subtitles stay compact, and branch guidance uses source context,
+concise `Use ...` hints, and clear control affordances without repeating title
+content.
+
 ## Completed
 
 ### Swift foundation

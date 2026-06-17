@@ -12,6 +12,9 @@ struct CropPDFParameterMenuTests {
             "Apple Device",
             "Paper Size"
         ])
+        #expect(response.items[0].subtitle.contains("Use ratio: for 16:9 or 1200x630") == true)
+        #expect(response.items[1].subtitle.contains("Search Clop's device list") == true)
+        #expect(response.items[2].subtitle.contains("Search Clop's paper list") == true)
         #expect(response.items[0].autocomplete == "ratio: ")
         #expect(response.items[1].autocomplete == "device: ")
         #expect(response.items[2].autocomplete == "paper: ")
@@ -22,9 +25,10 @@ struct CropPDFParameterMenuTests {
         let response = try cropPDFResponse(query: "device: mini")
         let titles = response.items.map(\.title)
 
-        #expect(titles.contains("iPad mini 6 & 7"))
-        #expect(!titles.contains("iPhone 17 Pro Max & 16 Pro Max"))
-        #expect(response.items.first?.subtitle.contains("Device") == true)
+        #expect(titles.contains("Device iPad mini 6 & 7"))
+        #expect(!titles.contains("Device iPhone 17 Pro Max & 16 Pro Max"))
+        #expect(response.items.first?.subtitle.contains("Device") == false)
+        #expect(response.items.first?.subtitle.contains("⇥ Controls · ⌃↩ Save Preset") == true)
         #expect(response.items.first?.match?.contains("iPad mini 7") == true)
     }
 
@@ -33,7 +37,7 @@ struct CropPDFParameterMenuTests {
         let response = try cropPDFResponse(query: "mini")
         let titles = response.items.map(\.title)
 
-        #expect(titles == ["iPad mini 6 & 7"])
+        #expect(titles == ["Device iPad mini 6 & 7"])
     }
 
     @Test
@@ -41,7 +45,7 @@ struct CropPDFParameterMenuTests {
         let response = try cropPDFResponse(query: "paper: letter")
         let titles = response.items.map(\.title)
 
-        #expect(titles.contains("Letter & ANSI A/C/E (17:22)"))
+        #expect(titles.contains("Paper Letter & ANSI A/C/E (17:22)"))
         #expect(response.items.first?.match?.contains("ANSI A") == true)
     }
 
@@ -50,7 +54,7 @@ struct CropPDFParameterMenuTests {
         let response = try cropPDFResponse(query: "letter")
 
         #expect(response.items.map(\.title) == [
-            "Letter & ANSI A/C/E (17:22)"
+            "Paper Letter & ANSI A/C/E (17:22)"
         ])
     }
 
@@ -81,10 +85,12 @@ struct CropPDFParameterMenuTests {
 
         #expect(response.items.map(\.title) == [
             "Type a ratio or resolution",
-            "2:3 · Portrait"
+            "Ratio 2:3 · Portrait"
         ])
         #expect(response.items[0].valid == false)
+        #expect(response.items[0].subtitle.contains("Use 16:9 / 1200x630") == true)
         #expect(response.items[1].valid == true)
+        #expect(response.items[1].subtitle == "Passed 2 files · Saved Preset · ⌃↩ Remove Preset")
     }
 
     @Test
@@ -108,11 +114,11 @@ struct CropPDFParameterMenuTests {
 
         #expect(deviceResponse.items.map(\.title) == [
             "Type to search Apple devices",
-            "iPad mini 6 & 7"
+            "Device iPad mini 6 & 7"
         ])
         #expect(paperResponse.items.map(\.title) == [
             "Type to search paper sizes",
-            "A4"
+            "Paper A4"
         ])
     }
 
@@ -122,7 +128,7 @@ struct CropPDFParameterMenuTests {
         let item = try #require(response.items.first)
         let operation = try operationRequest(from: item)
 
-        #expect(item.title == "16:9 · Landscape · Extend")
+        #expect(item.title == "Ratio 16:9 · Landscape · Extend")
         #expect(operation.inputs == [
             "/tmp/first file.pdf",
             "/tmp/second file.pdf"
@@ -141,7 +147,7 @@ struct CropPDFParameterMenuTests {
         let item = try #require(response.items.first)
         let operation = try operationRequest(from: item)
 
-        #expect(item.title == "16:9 · Landscape · Extend")
+        #expect(item.title == "Ratio 16:9 · Landscape · Extend")
         #expect(operation.action == .cropPDF(CropPDFRequest(
             target: .aspectRatio("16:9"),
             pageLayout: .landscape,
@@ -157,7 +163,7 @@ struct CropPDFParameterMenuTests {
         let item = try #require(response.items.first)
         let operation = try operationRequest(from: item)
 
-        #expect(item.title == "A4 · Portrait")
+        #expect(item.title == "Paper A4 · Portrait")
         #expect(operation.action == .cropPDF(CropPDFRequest(
             target: .paperSize("A4"),
             pageLayout: .portrait,
@@ -171,6 +177,8 @@ struct CropPDFParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Invalid PDF crop ratio")
+        #expect(response.items[0].subtitle.contains("Use 16:9 / 1200x630") == true)
+        #expect(response.items[0].subtitle.contains("optional controls") == false)
         #expect(response.items[0].valid == false)
     }
 
@@ -194,8 +202,8 @@ struct CropPDFParameterMenuTests {
 
         #expect(response.items.map(\.title) == [
             "Invalid PDF crop ratio",
-            "2:3 · Portrait",
-            "1200x630"
+            "Ratio 2:3 · Portrait",
+            "Resolution 1200x630"
         ])
     }
 

@@ -121,21 +121,21 @@ enum CropPDFParameterMenu {
         var items = [
             branchItem(
                 title: "Custom Ratio / Resolution",
-                subtitle: "Ratio or resolution",
+                subtitle: "Use ratio: for 16:9 or 1200x630 · ⌘L Reference",
                 prefix: CropPDFTargetKind.ratio.prefix,
                 request: request,
                 stateJSON: stateJSON
             ),
             branchItem(
                 title: "Apple Device",
-                subtitle: "Clop's supported devices",
+                subtitle: "Search Clop's device list · ⌘L Reference",
                 prefix: CropPDFTargetKind.device.prefix,
                 request: request,
                 stateJSON: stateJSON
             ),
             branchItem(
                 title: "Paper Size",
-                subtitle: "Clop's supported paper sizes",
+                subtitle: "Search Clop's paper list · ⌘L Reference",
                 prefix: CropPDFTargetKind.paper.prefix,
                 request: request,
                 stateJSON: stateJSON
@@ -227,7 +227,7 @@ enum CropPDFParameterMenu {
             return response(
                 items: [ScriptFilterItem(
                     title: "Type a ratio or resolution",
-                    subtitle: "\(inputDescription(for: request)) · Examples: 16:9 / 1200x630 · ⌘L Reference",
+                    subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · ⌘L Reference",
                     arg: "",
                     valid: false,
                     text: ScriptFilterText(
@@ -337,8 +337,8 @@ enum CropPDFParameterMenu {
                 subtitle: [
                     inputDescription(for: request),
                     kind == .device
-                        ? "Clop's supported devices"
-                        : "Clop's supported paper sizes",
+                        ? "Use device names from Clop"
+                        : "Use paper names from Clop",
                     "⌘L Reference"
                 ].joined(separator: " · "),
                 arg: "",
@@ -591,12 +591,6 @@ enum CropPDFParameterMenu {
             title: title(for: preset.request),
             subtitle: ([
                 inputDescription(for: request),
-                savedPreset == nil
-                    ? targetDescription(for: preset.request.target)
-                    : nil,
-                savedPreset == nil
-                    ? controlsDescription(for: preset.request)
-                    : nil,
                 rowHint(
                     for: preset.request,
                     savedPreset: savedPreset != nil,
@@ -661,7 +655,7 @@ enum CropPDFParameterMenu {
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: title,
-            subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · Use target + a / p / l + e · ⌘L Reference",
+            subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · ⌘L Reference",
             arg: "",
             valid: false,
             text: ScriptFilterText(
@@ -919,13 +913,9 @@ enum CropPDFParameterMenu {
     }
 
     private static func title(for request: CropPDFRequest) -> String {
-        ([request.target.value] + CropPDFControlParser.controlDescriptions(for: request))
-            .joined(separator: " · ")
-    }
-
-    private static func controlsDescription(for request: CropPDFRequest) -> String {
         let controls = CropPDFControlParser.controlDescriptions(for: request)
-        return controls.isEmpty ? "Auto layout" : controls.joined(separator: ", ")
+        return ([targetTitle(for: request.target)] + controls)
+            .joined(separator: " · ")
     }
 
     private static func rowHint(
@@ -938,19 +928,21 @@ enum CropPDFParameterMenu {
         }
         if opensControls && CropPDFControlParser
             .controlDescriptions(for: request).isEmpty {
-            return "⇥ Controls, ⌃↩ Save Preset"
+            return "⇥ Controls · ⌃↩ Save Preset"
         }
         return "⌃↩ Save Preset"
     }
 
-    private static func targetDescription(for target: CropPDFTarget) -> String {
+    private static func targetTitle(for target: CropPDFTarget) -> String {
         switch target {
-        case .aspectRatio:
-            return "Ratio / resolution"
-        case .device:
-            return "Device"
-        case .paperSize:
-            return "Paper size"
+        case .aspectRatio(let value):
+            return value.contains("x")
+                ? "Resolution \(value)"
+                : "Ratio \(value)"
+        case .device(let value):
+            return "Device \(value)"
+        case .paperSize(let value):
+            return "Paper \(value)"
         }
     }
 
