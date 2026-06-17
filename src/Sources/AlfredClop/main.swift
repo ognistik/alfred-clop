@@ -302,6 +302,11 @@ enum AlfredClopCommand {
                     stateJSON: stateJSON,
                     query: query
                 )
+            case .cropPDF, .cropPDFPresetRemoval:
+                return CropPDFParameterMenu.response(
+                    stateJSON: stateJSON,
+                    query: query
+                )
             case .configuration,
                  .configurationOutputTemplate,
                  .configurationSaveOutput,

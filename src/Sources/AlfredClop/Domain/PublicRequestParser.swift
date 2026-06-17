@@ -297,8 +297,103 @@ enum PublicRequestParser {
                 values: values
             )
         case .cropPDF:
-            throw PublicRequestError.unsupportedExecution(title(for: action))
+            return try cropPDFExecution(values: values)
         }
+    }
+
+    private static func cropPDFExecution(
+        values: [String: String]
+    ) throws -> ActionRequest {
+        try rejectUnknown(
+            values,
+            allowed: [
+                "ratio",
+                "aspect ratio",
+                "resolution",
+                "device",
+                "paper",
+                "paper size",
+                "page layout",
+                "layout",
+                "extend",
+                "controls"
+            ]
+        )
+        let targetValues = [
+            values["ratio"],
+            values["aspect ratio"],
+            values["resolution"],
+            values["device"],
+            values["paper"],
+            values["paper size"]
+        ].compactMap { value in
+            value?.isEmpty == false ? value : nil
+        }
+        guard targetValues.count == 1 else {
+            throw targetValues.isEmpty
+                ? PublicRequestError.missingParameter("ratio, device, or paper size")
+                : PublicRequestError.invalidParameter(
+                    "PDF crop target",
+                    "choose only one target"
+                )
+        }
+
+        let target: CropPDFTarget
+        if let ratio = values["ratio"] ?? values["aspect ratio"] ?? values["resolution"] {
+            guard let normalized = CropPDFControlParser.normalizedRatioTarget(ratio) else {
+                throw PublicRequestError.invalidParameter("ratio", ratio)
+            }
+            target = .aspectRatio(normalized)
+        } else if let device = values["device"] {
+            target = .device(device)
+        } else {
+            target = .paperSize(values["paper"] ?? values["paper size"] ?? "")
+        }
+
+        let layoutValue = values["page layout"] ?? values["layout"]
+        let layout: CropPDFPageLayout?
+        if let layoutValue, !layoutValue.isEmpty {
+            guard let parsed = CropPDFPageLayout(
+                rawValue: normalizedName(layoutValue)
+            ) else {
+                throw PublicRequestError.invalidParameter(
+                    "page layout",
+                    layoutValue
+                )
+            }
+            layout = parsed
+        } else {
+            layout = nil
+        }
+
+        var request = CropPDFRequest(
+            target: target,
+            pageLayout: layout,
+            extend: try boolean(
+                values["extend"],
+                name: "extend",
+                defaultValue: false
+            )
+        )
+        if let controls = values["controls"], !controls.isEmpty {
+            guard let parsed = CropPDFControlParser.parseControlsOnly(
+                controls,
+                base: request
+            ) else {
+                throw PublicRequestError.invalidParameter(
+                    "PDF crop controls",
+                    controls
+                )
+            }
+            if request.pageLayout != nil || request.extend {
+                throw PublicRequestError.invalidParameter(
+                    "PDF crop controls",
+                    "use controls or explicit layout/extend, not both"
+                )
+            }
+            request = parsed
+        }
+        return .cropPDF(request)
     }
 
     private static func optimizeExecution(

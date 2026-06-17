@@ -81,6 +81,31 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func cropPDFMenuRouteOpensCropPDFBranches() throws {
+        let file = try temporaryFile(named: "document.pdf")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .menu(action: .cropPDF)
+        )
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder()
+        )
+
+        #expect(response.items.map(\.title).prefix(3) == [
+            "Custom Ratio / Resolution",
+            "Apple Device",
+            "Paper Size"
+        ])
+    }
+
+    @Test
     func menuHandoffKeepsRequestInVariableAndClearsVisibleArgument() throws {
         let publicRequest = """
         crop:

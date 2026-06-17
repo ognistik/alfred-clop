@@ -198,11 +198,34 @@ struct OptimizeActionPreset: Codable, Equatable, Hashable {
     }
 }
 
+struct CropPDFActionPreset: Codable, Equatable, Hashable {
+    var request: CropPDFRequest
+
+    init(request: CropPDFRequest) {
+        self.request = request
+    }
+
+    var displayValue: String {
+        CropPDFControlParser.displayValue(for: request)
+    }
+
+    var stableUID: String {
+        [
+            "crop-pdf.preset",
+            request.target.mode,
+            request.target.value,
+            request.pageLayout?.rawValue,
+            request.extend ? "extend" : nil
+        ].compactMap(\.self).joined(separator: ".")
+    }
+}
+
 enum ActionPreset: Codable, Equatable, Hashable {
     case crop(CropActionPreset)
     case downscale(DownscaleActionPreset)
     case conversion(ConversionActionPreset)
     case optimize(OptimizeActionPreset)
+    case cropPDF(CropPDFActionPreset)
 
     private enum CodingKeys: String, CodingKey {
         case type
@@ -215,6 +238,7 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case format
         case setting
         case optimize
+        case cropPDF
     }
 
     private enum PresetType: String, Codable {
@@ -222,6 +246,7 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case downscale
         case conversion
         case optimize
+        case cropPDF
     }
 
     func encode(to encoder: Encoder) throws {
@@ -248,6 +273,9 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case let .optimize(preset):
             try container.encode(PresetType.optimize, forKey: .type)
             try container.encode(preset.request, forKey: .optimize)
+        case let .cropPDF(preset):
+            try container.encode(PresetType.cropPDF, forKey: .type)
+            try container.encode(preset.request, forKey: .cropPDF)
         }
     }
 
@@ -274,6 +302,13 @@ enum ActionPreset: Codable, Equatable, Hashable {
                 )
             }
             self = .optimize(OptimizeActionPreset(request: request))
+        case .cropPDF:
+            self = .cropPDF(CropPDFActionPreset(
+                request: try container.decode(
+                    CropPDFRequest.self,
+                    forKey: .cropPDF
+                )
+            ))
         }
     }
 }

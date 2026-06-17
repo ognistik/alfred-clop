@@ -191,6 +191,57 @@ struct ClopCommandBuilderTests {
     }
 
     @Test
+    func cropPDFBuildsTextCommandWithSeparatePaths() throws {
+        var execution = makeExecutionOptions(
+            output: .sameFolder(template: "%P/%f-clop")
+        )
+        execution.recursiveFolders = true
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/book one.pdf", "/tmp/book two.pdf"],
+            action: .cropPDF(CropPDFRequest(
+                target: .paperSize("A4"),
+                pageLayout: .portrait,
+                extend: true
+            )),
+            execution: execution
+        ))
+
+        #expect(command.arguments == [
+            "crop-pdf",
+            "--paper-size",
+            "A4",
+            "--page-layout",
+            "portrait",
+            "--extend",
+            "--recursive",
+            "--output",
+            "%P/%f-clop",
+            "/tmp/book one.pdf",
+            "/tmp/book two.pdf"
+        ])
+        #expect(!command.expectsJSON)
+    }
+
+    @Test
+    func cropPDFUsesTargetSpecificFlags() throws {
+        let ratio = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/book.pdf"],
+            action: .cropPDF(CropPDFRequest(target: .aspectRatio("16:9"))),
+            execution: makeExecutionOptions()
+        ))
+        let device = try makeBuilder().command(for: OperationRequest(
+            inputs: ["/tmp/book.pdf"],
+            action: .cropPDF(CropPDFRequest(target: .device("iPad mini 6 & 7"))),
+            execution: makeExecutionOptions()
+        ))
+
+        #expect(ratio.arguments.contains("--aspect-ratio"))
+        #expect(ratio.arguments.contains("16:9"))
+        #expect(device.arguments.contains("--for-device"))
+        #expect(device.arguments.contains("iPad mini 6 & 7"))
+    }
+
+    @Test
     func stripMetadataUsesStripExifWithoutJSON() throws {
         let command = try makeBuilder().command(for: OperationRequest(
             inputs: ["/tmp/photo.jpg", "/tmp/movie.mp4"],

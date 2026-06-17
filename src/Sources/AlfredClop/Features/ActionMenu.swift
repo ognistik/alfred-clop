@@ -869,7 +869,7 @@ enum ActionMenu {
         case .convertImage, .convertVideo, .convertAudio:
             state = .conversion(request)
         case .cropPDF:
-            state = MenuState(mode: .actions, parameterRequest: request)
+            state = .cropPDF(request)
         case .uncropPDF, .stripMetadata:
             preconditionFailure("Immediate actions do not have parameter state")
         }

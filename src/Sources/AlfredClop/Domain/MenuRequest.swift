@@ -349,6 +349,8 @@ enum MenuMode: String, Codable, Equatable {
     case downscalePresetRemoval
     case conversion
     case conversionPresetRemoval
+    case cropPDF
+    case cropPDFPresetRemoval
     case configuration
     case configurationOutputTemplate
     case configurationSaveOutput
@@ -476,6 +478,26 @@ struct MenuState: Codable, Equatable {
             parameterRequest: request,
             presetAction: action,
             configurationValue: format
+        )
+    }
+
+    static func cropPDF(_ request: ParameterStepRequest) -> MenuState {
+        MenuState(
+            mode: .cropPDF,
+            parameterRequest: request
+        )
+    }
+
+    static func cropPDF(
+        _ request: ParameterStepRequest,
+        action: PresetMenuAction
+    ) -> MenuState {
+        MenuState(
+            mode: action.kind == .confirmRemoval
+                ? .cropPDFPresetRemoval
+                : .cropPDF,
+            parameterRequest: request,
+            presetAction: action
         )
     }
 

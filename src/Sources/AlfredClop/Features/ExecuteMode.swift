@@ -7,6 +7,7 @@ enum ExecuteMode {
         "Crop / resize complete",
         "Downscale complete",
         "Conversion complete",
+        "PDF crop complete",
         "PDF uncrop complete",
         "Metadata removed",
         "Clop operation complete"
@@ -78,6 +79,12 @@ enum ExecuteMode {
             return feedback(
                 title: "Invalid Optimize controls",
                 subtitle: "Use supported controls for that media type.",
+                valid: false
+            )
+        } catch ClopCommandBuilderError.invalidCropPDFControls {
+            return feedback(
+                title: "Invalid PDF crop controls",
+                subtitle: "Choose a ratio, device, or paper size with supported controls.",
                 valid: false
             )
         } catch ClopCommandBuilderError.unsupportedAction {
@@ -238,7 +245,7 @@ enum ExecuteMode {
             )
         case .cropPDF:
             return feedback(
-                title: "Clop operation complete",
+                title: "PDF crop complete",
                 subtitle: "Clop processed \(files).",
                 valid: false
             )

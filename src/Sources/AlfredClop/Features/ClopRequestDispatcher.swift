@@ -8,6 +8,7 @@ enum ClopRequestDispatcher {
             "Crop / resize complete",
             "Downscale complete",
             "Conversion complete",
+            "PDF crop complete",
             "PDF uncrop complete",
             "Metadata removed",
             "Clop operation complete"
@@ -292,9 +293,20 @@ enum ClopRequestDispatcher {
                 environment: environment
             )
         case .cropPDF:
-            return feedback(
-                title: "This action needs more information",
-                subtitle: "Its parameter menu is not available yet."
+            let state = MenuState.cropPDF(parameterRequest)
+            guard let stateJSON = try? JSONOutput.string(
+                for: state,
+                prettyPrinted: false
+            ) else {
+                return feedback(
+                    title: "Unable to open Crop PDF",
+                    subtitle: "The menu state could not be encoded."
+                )
+            }
+            return CropPDFParameterMenu.response(
+                stateJSON: stateJSON,
+                query: query,
+                environment: environment
             )
         case .uncropPDF, .stripMetadata:
             return ActionMenu.response(

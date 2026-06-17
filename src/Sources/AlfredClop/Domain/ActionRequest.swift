@@ -10,7 +10,7 @@ enum ActionRequest: Codable, Equatable {
     )
     case downscale(factor: Double)
     case convert(ConversionChoice)
-    case cropPDF(mode: String, value: String, pageLayout: String?)
+    case cropPDF(CropPDFRequest)
     case uncropPDF
     case stripMetadata
 
@@ -30,6 +30,7 @@ enum ActionRequest: Codable, Equatable {
         case mode
         case value
         case pageLayout
+        case cropPDF
     }
 
     private enum ActionType: String, Codable {
@@ -77,11 +78,9 @@ enum ActionRequest: Codable, Equatable {
             try container.encode(choice.media, forKey: .media)
             try container.encode(choice.format, forKey: .format)
             try container.encodeIfPresent(choice.setting, forKey: .setting)
-        case let .cropPDF(mode, value, pageLayout):
+        case let .cropPDF(request):
             try container.encode(ActionType.cropPDF, forKey: .type)
-            try container.encode(mode, forKey: .mode)
-            try container.encode(value, forKey: .value)
-            try container.encodeIfPresent(pageLayout, forKey: .pageLayout)
+            try container.encode(request, forKey: .cropPDF)
         case .uncropPDF:
             try container.encode(ActionType.uncropPDF, forKey: .type)
         case .stripMetadata:
@@ -129,15 +128,38 @@ enum ActionRequest: Codable, Equatable {
                 )
             ))
         case .cropPDF:
-            self = .cropPDF(
-                mode: try container.decode(String.self, forKey: .mode),
-                value: try container.decode(String.self, forKey: .value),
-                pageLayout: try container.decodeIfPresent(String.self, forKey: .pageLayout)
-            )
+            if let request = try container.decodeIfPresent(
+                CropPDFRequest.self,
+                forKey: .cropPDF
+            ) {
+                self = .cropPDF(request)
+            } else {
+                self = .cropPDF(CropPDFRequest(
+                    target: legacyCropPDFTarget(
+                        mode: try container.decode(String.self, forKey: .mode),
+                        value: try container.decode(String.self, forKey: .value)
+                    ),
+                    pageLayout: try container
+                        .decodeIfPresent(String.self, forKey: .pageLayout)
+                        .flatMap(CropPDFPageLayout.init(rawValue:)),
+                    extend: false
+                ))
+            }
         case .uncropPDF:
             self = .uncropPDF
         case .stripMetadata:
             self = .stripMetadata
         }
+    }
+}
+
+private func legacyCropPDFTarget(mode: String, value: String) -> CropPDFTarget {
+    switch mode {
+    case "device", "for-device":
+        return .device(value)
+    case "paper", "paper-size":
+        return .paperSize(value)
+    default:
+        return .aspectRatio(value)
     }
 }

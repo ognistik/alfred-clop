@@ -19,6 +19,7 @@ enum ClopCommandBuilderError: Error, Equatable {
     case invalidDownscaleFactor
     case invalidConversion
     case invalidOptimizeControls
+    case invalidCropPDFControls
     case unsupportedAction
     case unsupportedBackupBehavior
     case invalidOutputTemplate(OutputTemplateError)
@@ -141,8 +142,15 @@ struct ClopCommandBuilder {
                 + recursiveArguments(for: request.execution)
                 + request.inputs
             expectsJSON = false
-        case .cropPDF:
-            throw ClopCommandBuilderError.unsupportedAction
+        case let .cropPDF(cropPDF):
+            guard isSupportedCropPDF(cropPDF) else {
+                throw ClopCommandBuilderError.invalidCropPDFControls
+            }
+            arguments = cropPDFArguments(
+                for: resolvedRequest,
+                cropPDF: cropPDF
+            )
+            expectsJSON = false
         }
 
         return ClopCommand(
@@ -263,6 +271,42 @@ struct ClopCommandBuilder {
         return arguments
             + outputArguments(for: request.execution.output)
             + request.inputs
+    }
+
+    private func cropPDFArguments(
+        for request: OperationRequest,
+        cropPDF: CropPDFRequest
+    ) -> [String] {
+        var arguments = ["crop-pdf"]
+        switch cropPDF.target {
+        case .aspectRatio(let value):
+            arguments += ["--aspect-ratio", value]
+        case .device(let value):
+            arguments += ["--for-device", value]
+        case .paperSize(let value):
+            arguments += ["--paper-size", value]
+        }
+        if let layout = cropPDF.pageLayout {
+            arguments += ["--page-layout", layout.rawValue]
+        }
+        if cropPDF.extend {
+            arguments.append("--extend")
+        }
+        if request.execution.recursiveFolders {
+            arguments.append("--recursive")
+        }
+        return arguments
+            + outputArguments(for: request.execution.output)
+            + request.inputs
+    }
+
+    private func isSupportedCropPDF(_ cropPDF: CropPDFRequest) -> Bool {
+        switch cropPDF.target {
+        case .aspectRatio(let value):
+            return CropPDFControlParser.normalizedRatioTarget(value) == value
+        case .device(let value), .paperSize(let value):
+            return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
 
     private func optimiseArguments(

@@ -220,6 +220,39 @@ bitrate: 128
 Image and MP4 conversion accept `compression`; MP4 also accepts `auto`. Audio
 accepts `compression` or `bitrate`.
 
+Crop PDF requires exactly one target: `ratio`, `device`, or `paper size`.
+`ratio` accepts ratio or resolution values such as `16:9` and `1200x630`.
+`device` and `paper size` accept names from Clop's current `crop-pdf`
+device and paper lists.
+
+```text
+execute: Crop PDF
+ratio: 16:9
+page layout: landscape
+extend: true
+
+/path/slides.pdf
+```
+
+```text
+execute: Crop PDF
+device: iPad mini 6 & 7
+controls: portrait extend
+
+/path/book.pdf
+```
+
+```text
+execute: Crop PDF
+paper size: A4
+
+/path/document.pdf
+```
+
+Supported Crop PDF controls are `a` / `auto`, `p` / `portrait`,
+`l` / `landscape`, and `e` / `extend`. Omit `extend` to use Clop's normal
+crop behavior.
+
 ### Current Grammar
 
 This table is the complete shorthand execution grammar currently implemented:
@@ -230,17 +263,9 @@ This table is the complete shorthand execution grammar currently implemented:
 | `Crop / Resize` | `size` (required), `smart crop` (optional boolean), optional adaptive/mute controls | Smart Crop disabled, Clop defaults for adaptive optimization and audio |
 | `Downscale` | `factor` (required) | Uses workflow execution settings |
 | `Convert`, `Convert Image`, `Convert Video`, `Convert Audio` | `format` (required), optional compression/bitrate where supported | Uses Clop defaults for that target |
+| `Crop PDF` | exactly one of `ratio`, `device`, or `paper size`; optional `page layout`, `extend`, or compact `controls` | Auto layout, crop content |
 | `Uncrop PDF` | None | Uses workflow execution settings |
 | `Strip Metadata` | None | Uses workflow execution settings |
-
-The following shortcuts open their existing workflow menus, but their execution
-syntax is intentionally unavailable until those parameter menus and operations
-are implemented:
-
-- `crop pdf:`
-
-Attempting `execute:` with Crop PDF produces a visible error rather than
-guessing at an unfinished parameter contract.
 
 ### Defaults And Workflow Settings
 

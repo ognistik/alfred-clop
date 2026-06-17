@@ -12,8 +12,9 @@ Milestones 1 and 2 are substantially complete. Milestone 3 includes
 parameter-free execution, a guided dynamic parameter step for crop and resize,
 the bounded Downscale parameter step, user-defined Crop / Resize and
 Downscale action presets, media-specific conversion with inline controls and
-presets, media-specific Optimize controls and presets, shared settings, and
-the unified input and routing foundation planned for Milestone 6.
+presets, media-specific Optimize controls and presets, reversible Crop PDF
+controls and presets, shared settings, and the unified input and routing
+foundation planned for Milestone 6.
 
 The public automation surface is now one typed `clop` request with independent
 input and route values. Files, folders, HTTP/HTTPS URLs, clipboard content,
@@ -54,6 +55,13 @@ menu, parameter menus, conversion controls, presets, Configuration, and
 modifier rows. Processing subtitles keep source and folder-count clarity while
 using short effect labels and consistent title-case hints such as `Save
 Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
+
+Crop PDF now has a complete shallow parameter menu for Clop's reversible
+`crop-pdf` surface. The menu offers root branches for custom ratio/resolution,
+Apple devices, and paper sizes; reads device and paper values from the
+installed Clop CLI; supports inline `controls:` for `auto`, `portrait`,
+`landscape`, and `extend`; infers the likely branch when the user types at the
+root; and stores Crop PDF presets in `settings.json`.
 
 ## Completed
 
@@ -383,6 +391,38 @@ Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
   a media-specific Optimize command; folders remain broad and are passed
   through to Clop with the configured recursion policy
 
+### Crop PDF
+
+- Crop PDF opens a dedicated parameter menu instead of the previous placeholder
+- Root branches use `ratio:`, `device:`, and `paper:` so Backspace naturally
+  returns to broader choices
+- Root typing infers the likely branch: ratio-like values open the custom
+  ratio flow, device-like searches filter devices, and paper-like searches
+  filter paper sizes
+- `device:` and `paper:` browse and filter Clop's current supported target
+  lists, preserving group names and searchable aliases without long subtitles
+- Empty `ratio:`, `device:`, and `paper:` branches keep one concise guidance
+  row first, then show only saved presets scoped to that branch instead of
+  flooding the menu with every Clop target
+- Device and paper lists are read through `crop-pdf --list-devices` and
+  `crop-pdf --list-paper-sizes`, then cached under Alfred's workflow cache
+  when available
+- `ratio:` accepts supported ratio and resolution values such as `16:9` and
+  `1200x630`
+- Incomplete or invalid ratio searches still keep matching saved ratio presets
+  visible below the validation feedback
+- Optional controls support `a` / `auto`, `p` / `portrait`,
+  `l` / `landscape`, and `e` / `extend` both directly after the target and
+  through a target-specific `controls:` editor
+- Crop PDF presets are stored in `settings.json` and can be saved or removed
+  from the menu with the same confirmation pattern as other parameter menus
+- Execution builds `crop-pdf` argument arrays with exactly one of
+  `--aspect-ratio`, `--for-device`, or `--paper-size`, plus optional
+  `--page-layout`, `--extend`, `--recursive`, and `--output`
+- External Trigger execution supports `execute: Crop PDF` with exactly one
+  `ratio`, `device`, or `paper size` target and optional layout or extend
+  controls
+
 ### Shared settings and execution policy
 
 - Versioned `settings.json` stores action presets and the active output
@@ -503,8 +543,6 @@ structure.
 
 ## Not implemented
 
-- PDF-crop parameter menus and parsing
-- Dynamic PDF device and paper-size menus
 - Workflow icons, packaging, and release automation
 
 ### Implemented controls model
@@ -524,6 +562,8 @@ The shared controls interaction model is now:
 - Crop / Resize exposes adaptive optimization and video mute controls through
   the same shallow typed query as geometry values and through a `controls:`
   editor, with longer grammar help in Large Type;
+- Crop PDF uses root `ratio:`, `device:`, and `paper:` branches, with
+  target-specific `controls:` for page layout and extend behavior;
 - video Optimize includes playback speed as a typed control and External
   Trigger parameter;
 - parameter menus stay shallow and query-driven, using prefixes such as
@@ -578,14 +618,14 @@ The shared controls interaction model is now:
 
 ## Next recommended task
 
-Start the bounded PDF Crop parameter menu work now that mixed-media filtering
-behavior has been verified.
+Continue workflow polish with icons, packaging, and release automation, or
+probe any remaining Crop PDF output edge cases with disposable fixtures.
 
 ## Verification baseline
 
 At this checkpoint:
 
-- `./scripts/test.sh` passes 265 tests.
+- `./scripts/test.sh` passes 283 tests.
 - `./scripts/build.sh` produces `workflow/alfred-clop`.
 - `plutil -lint workflow/info.plist` passes.
 - The built workflow binary is currently Apple Silicon (`arm64`).

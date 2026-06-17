@@ -408,6 +408,48 @@ struct PublicRequestParserTests {
     }
 
     @Test
+    func cropPDFExecutionAcceptsAllTargetKindsAndControls() throws {
+        let ratio = try PublicRequestParser.parse("""
+        execute: Crop PDF
+        ratio: 32:18
+        controls: landscape extend
+
+        /tmp/book one.pdf
+        /tmp/book two.pdf
+        """)
+        let device = try PublicRequestParser.parse("""
+        execute: Crop PDF
+        device: iPad mini 6 & 7
+        page layout: portrait
+
+        /tmp/book.pdf
+        """)
+        let paper = try PublicRequestParser.parse("""
+        execute: Crop PDF
+        paper size: A4
+        extend: true
+
+        /tmp/book.pdf
+        """)
+
+        #expect(ratio.route == .execute(action: .cropPDF(CropPDFRequest(
+            target: .aspectRatio("16:9"),
+            pageLayout: .landscape,
+            extend: true
+        ))))
+        #expect(device.route == .execute(action: .cropPDF(CropPDFRequest(
+            target: .device("iPad mini 6 & 7"),
+            pageLayout: .portrait,
+            extend: false
+        ))))
+        #expect(paper.route == .execute(action: .cropPDF(CropPDFRequest(
+            target: .paperSize("A4"),
+            pageLayout: nil,
+            extend: true
+        ))))
+    }
+
+    @Test
     func typedJSONRemainsCompatible() throws {
         let expected = ClopRequest(
             version: 1,

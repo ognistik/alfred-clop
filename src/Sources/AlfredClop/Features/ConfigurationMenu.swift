@@ -624,6 +624,7 @@ enum ConfigurationMenu {
         var convertVideo = [String]()
         var convertAudio = [String]()
         var optimize = [String]()
+        var cropPDF = [String]()
 
         for preset in presets {
             switch preset {
@@ -642,12 +643,15 @@ enum ConfigurationMenu {
                 }
             case .optimize(let value):
                 optimize.append(value.displayValue)
+            case .cropPDF(let value):
+                cropPDF.append(value.displayValue)
             }
         }
 
         return [
             ("Optimize", optimize),
             ("Crop / Resize", crop),
+            ("Crop PDF", cropPDF),
             ("Downscale", downscale),
             ("Convert Image", convertImage),
             ("Convert Video", convertVideo),

@@ -1183,6 +1183,8 @@ enum CropParameterMenu {
             return conversion.displayValue
         case let .optimize(optimize):
             return optimize.displayValue
+        case let .cropPDF(cropPDF):
+            return cropPDF.displayValue
         }
     }
 
