@@ -285,8 +285,7 @@ enum CropPDFControlParser {
         if let match {
             let controlStart = input.index(input.startIndex, offsetBy: match.count)
             return (
-                target: String(input[..<controlStart])
-                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                target: match,
                 controls: String(input[controlStart...])
             )
         }

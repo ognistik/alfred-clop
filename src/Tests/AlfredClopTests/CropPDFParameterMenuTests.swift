@@ -45,17 +45,42 @@ struct CropPDFParameterMenuTests {
         let response = try cropPDFResponse(query: "paper: letter")
         let titles = response.items.map(\.title)
 
-        #expect(titles.contains("Paper Letter & ANSI A/C/E (17:22)"))
-        #expect(response.items.first?.match?.contains("ANSI A") == true)
+        #expect(titles.contains("Paper Letter"))
+        let operation = try operationRequest(from: try #require(response.items.first))
+        #expect(operation.action == .cropPDF(CropPDFRequest(
+            target: .paperSize("Letter")
+        )))
     }
 
     @Test
     func rootTypingRoutesToMatchingPaperList() throws {
         let response = try cropPDFResponse(query: "letter")
 
-        #expect(response.items.map(\.title) == [
-            "Paper Letter & ANSI A/C/E (17:22)"
-        ])
+        #expect(response.items.map(\.title) == ["Paper Letter"])
+    }
+
+    @Test
+    func paperAliasesAreFirstClassTargets() throws {
+        let a5Response = try cropPDFResponse(query: "A5")
+        let b11Response = try cropPDFResponse(query: "paper: B11")
+        let halfLetterResponse = try cropPDFResponse(query: "Half Letter portrait")
+
+        #expect(a5Response.items.first?.title == "Paper A5")
+
+        let b11Operation = try operationRequest(
+            from: try #require(b11Response.items.first)
+        )
+        let halfLetterOperation = try operationRequest(
+            from: try #require(halfLetterResponse.items.first)
+        )
+
+        #expect(b11Operation.action == .cropPDF(CropPDFRequest(
+            target: .paperSize("B11")
+        )))
+        #expect(halfLetterOperation.action == .cropPDF(CropPDFRequest(
+            target: .paperSize("Half Letter"),
+            pageLayout: .portrait
+        )))
     }
 
     @Test
@@ -240,6 +265,42 @@ struct CropPDFParameterMenuTests {
         ])
     }
 
+    @Test
+    func listParserCanExpandPaperAliasesIntoTargets() {
+        let values = CropPDFTargetListParser.parse("""
+        Paper sizes, grouped by aspect ratio.
+        Both group names and paper size names are accepted.
+        ISO:
+          A & B series (1:√2)
+              "A4", "A5", "B11"
+
+        US:
+          Tabloid & Ledger & ANSI B/D (11:17)
+              "Tabloid", "Ledger", "Half Letter", "ANSI B", "ANSI D"
+        """, expandsAliases: true)
+
+        #expect(values.contains(CropPDFTargetValue(
+            value: "A & B series (1:√2)",
+            category: "ISO",
+            aliases: []
+        )))
+        #expect(values.contains(CropPDFTargetValue(
+            value: "A5",
+            category: "ISO",
+            aliases: ["A & B series (1:√2)"]
+        )))
+        #expect(values.contains(CropPDFTargetValue(
+            value: "B11",
+            category: "ISO",
+            aliases: ["A & B series (1:√2)"]
+        )))
+        #expect(values.contains(CropPDFTargetValue(
+            value: "Half Letter",
+            category: "US",
+            aliases: ["Tabloid & Ledger & ANSI B/D (11:17)"]
+        )))
+    }
+
     private func cropPDFResponse(
         query: String,
         presets: [ActionPreset] = []
@@ -306,9 +367,29 @@ private struct StubCropPDFTargetProvider: CropPDFTargetProviding {
                 aliases: []
             ),
             CropPDFTargetValue(
+                value: "A5",
+                category: "ISO",
+                aliases: ["A & B series (1:√2)"]
+            ),
+            CropPDFTargetValue(
+                value: "B11",
+                category: "ISO",
+                aliases: ["A & B series (1:√2)"]
+            ),
+            CropPDFTargetValue(
                 value: "Letter & ANSI A/C/E (17:22)",
                 category: "US",
-                aliases: ["Letter", "ANSI A", "ANSI C", "ANSI E"]
+                aliases: []
+            ),
+            CropPDFTargetValue(
+                value: "Letter",
+                category: "US",
+                aliases: ["Letter & ANSI A/C/E (17:22)", "ANSI A"]
+            ),
+            CropPDFTargetValue(
+                value: "Half Letter",
+                category: "US",
+                aliases: ["Tabloid & Ledger & ANSI B/D (11:17)"]
             )
         ]
     }

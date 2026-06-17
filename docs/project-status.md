@@ -86,6 +86,12 @@ saved preset subtitles stay compact, and branch guidance uses source context,
 concise `Use ...` hints, and clear control affordances without repeating title
 content.
 
+Crop PDF paper-size discovery now expands Clop's grouped paper aliases into
+first-class menu targets while keeping group rows available. Searches and typed
+root queries such as `A5`, `B11`, and `Half Letter portrait` resolve to the
+specific paper size value passed to `--paper-size`, and cached dynamic paper
+lists are invalidated through the target-list cache schema.
+
 ## Completed
 
 ### Swift foundation

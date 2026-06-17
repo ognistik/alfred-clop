@@ -12,6 +12,8 @@ protocol CropPDFTargetProviding {
 }
 
 struct CropPDFTargetProvider: CropPDFTargetProviding {
+    private static let cacheSchemaVersion = 2
+
     private enum ListKind: String, Codable {
         case devices
         case paperSizes
@@ -36,6 +38,7 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
     }
 
     private struct CacheDocument: Codable {
+        var schemaVersion: Int
         var cliPath: String
         var values: [CachedTargetValue]
     }
@@ -109,7 +112,10 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
         guard let output = String(data: result.standardOutput, encoding: .utf8) else {
             throw CropPDFTargetProviderError.invalidOutput
         }
-        let parsed = CropPDFTargetListParser.parse(output)
+        let parsed = CropPDFTargetListParser.parse(
+            output,
+            expandsAliases: kind == .paperSizes
+        )
         guard !parsed.isEmpty else {
             throw CropPDFTargetProviderError.invalidOutput
         }
@@ -127,6 +133,7 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
                   CacheDocument.self,
                   from: data
               ),
+              document.schemaVersion == Self.cacheSchemaVersion,
               document.cliPath == cliPath else {
             return nil
         }
@@ -140,6 +147,7 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
     ) {
         guard let url = cacheURL(kind: kind),
               let data = try? JSONEncoder().encode(CacheDocument(
+                  schemaVersion: Self.cacheSchemaVersion,
                   cliPath: cliPath,
                   values: values.map(CachedTargetValue.init)
               )) else {
@@ -165,10 +173,36 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
 }
 
 enum CropPDFTargetListParser {
-    static func parse(_ output: String) -> [CropPDFTargetValue] {
+    static func parse(
+        _ output: String,
+        expandsAliases: Bool = false
+    ) -> [CropPDFTargetValue] {
         var values = [CropPDFTargetValue]()
         var category: String?
         var pendingValue: String?
+
+        func appendTarget(_ value: String, aliases: [String]) {
+            if expandsAliases, !aliases.isEmpty {
+                values.append(CropPDFTargetValue(
+                    value: value,
+                    category: category,
+                    aliases: []
+                ))
+                values.append(contentsOf: aliases.map {
+                    CropPDFTargetValue(
+                        value: $0,
+                        category: category,
+                        aliases: [value]
+                    )
+                })
+            } else {
+                values.append(CropPDFTargetValue(
+                    value: value,
+                    category: category,
+                    aliases: aliases
+                ))
+            }
+        }
 
         for rawLine in output.components(separatedBy: .newlines) {
             guard !rawLine.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -178,11 +212,7 @@ enum CropPDFTargetListParser {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             if leadingSpaces == 0 || line.hasSuffix(":") {
                 if let pendingValue {
-                    values.append(CropPDFTargetValue(
-                        value: pendingValue,
-                        category: category,
-                        aliases: []
-                    ))
+                    appendTarget(pendingValue, aliases: [])
                 }
                 if line.hasSuffix(":") {
                     category = String(line.dropLast())
@@ -192,31 +222,19 @@ enum CropPDFTargetListParser {
             }
             if leadingSpaces == 2 {
                 if let pendingValue {
-                    values.append(CropPDFTargetValue(
-                        value: pendingValue,
-                        category: category,
-                        aliases: []
-                    ))
+                    appendTarget(pendingValue, aliases: [])
                 }
                 pendingValue = line
                 continue
             }
             if leadingSpaces >= 6, let value = pendingValue {
-                values.append(CropPDFTargetValue(
-                    value: value,
-                    category: category,
-                    aliases: quotedValues(in: line)
-                ))
+                appendTarget(value, aliases: quotedValues(in: line))
                 pendingValue = nil
             }
         }
 
         if let pendingValue {
-            values.append(CropPDFTargetValue(
-                value: pendingValue,
-                category: category,
-                aliases: []
-            ))
+            appendTarget(pendingValue, aliases: [])
         }
 
         return values

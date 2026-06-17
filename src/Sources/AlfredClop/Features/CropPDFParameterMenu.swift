@@ -786,7 +786,21 @@ enum CropPDFParameterMenu {
         query: String,
         values: [CropPDFTargetValue]
     ) -> [CropPDFTargetValue] {
-        values.filter { normalized($0.searchText).contains(query) }
+        values.filter {
+            normalized($0.searchText).contains(query)
+                || queryMatchesKnownTargetPrefix(query, target: $0)
+        }
+    }
+
+    private static func queryMatchesKnownTargetPrefix(
+        _ query: String,
+        target: CropPDFTargetValue
+    ) -> Bool {
+        (target.aliases + [target.value]).contains {
+            let normalizedTarget = normalized($0)
+            return query == normalizedTarget
+                || query.hasPrefix(normalizedTarget + " ")
+        }
     }
 
     private static func looksLikeRatioEntry(_ query: String) -> Bool {
