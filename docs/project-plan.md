@@ -358,7 +358,7 @@ finder
 ```text
 execute: Crop / Resize
 size: 16:9
-smart crop: true
+controls: sc
 
 /path/one image.png
 /path/two image.png
@@ -761,13 +761,14 @@ Resize menu.
 The `no-ad` / `no-adaptive` form remains accepted as an advanced explicit
 override and should be documented in Large Type, but do not promote it in the
 interactive subtitle examples if Clop's default crop behavior is already
-non-adaptive. Examples include `16:9 ad` and `1280x720 mute`. The
+non-adaptive. Examples include `16:9 sc`, `16:9 ad`, and `1280x720 mute`. The
 interpreted result title should translate the complete query into natural
-language, including adaptive, no-adaptive, and mute controls; keep those action
-details out of subtitles so subtitles remain useful for input context, grammar
-guidance, and modifiers. Validation rows explain conflicts such as duplicate
-adaptive tokens. Smart Crop remains an Option-Return modifier and an explicit
-External Trigger boolean. Aggressive or Standard optimization remains a
+language, including Smart Crop, adaptive, no-adaptive, and mute controls; keep
+those action details out of subtitles so subtitles remain useful for input
+context, grammar guidance, and modifiers. Validation rows explain conflicts
+such as duplicate adaptive tokens or Smart Crop on resize-only values. Smart
+Crop is a typed crop control (`sc` / `smart-crop`) rather than a separate
+modifier or External Trigger boolean. Aggressive or Standard optimization remains a
 global/modifier choice, and output behavior remains controlled by workflow
 settings, Shift modifiers, or headless External Trigger overrides rather than
 by the crop grammar.
@@ -1253,7 +1254,7 @@ and unspaced slash examples across equivalent rows.
 Use short, noun-like effect labels when they are clear enough in context:
 `Crop to 1200x630`, `Crop to 16:9`, `Long edge 1920`,
 `Width 128, auto height`,
-`Downscale to 50%`, `Compression 70`, or `Clop Defaults`.
+`Downscale to 50%`, `Convert to HEIC`, or `Compression 70`.
 
 Titles should carry the action that Return will perform. Subtitles should
 carry source context, compact syntax/reference hints, and modifiers. Saved
@@ -1282,7 +1283,7 @@ also invites typing or branching, using `⏎ Run Defaults` consistently. Use thi
 only where the row is both executable and plausibly confused with a guide row,
 such as Optimize defaults and Convert target defaults. In target-specific
 Convert branches, the top default row should be titled
-`Convert to HEIC with Clop Defaults` or the equivalent target name.
+`Convert to HEIC` or the equivalent target name.
 
 Expose keyboard affordances only where they help discover a non-obvious path:
 empty parameter menus, typed parameter rows, saved preset rows, conversion
@@ -1290,15 +1291,15 @@ format rows with inline controls, and immediate main-menu actions with useful
 modifiers. Do not repeat every possible modifier on every row.
 
 Use consistent title case for named affordances and workflow concepts:
-`Save Preset`, `Remove Preset`, `Smart Crop`, `Clop Defaults`, `Output
-Template`, `Replace Originals`, `Aggressive`, and `Standard`.
+`Save Preset`, `Remove Preset`, `Smart Crop`, `Output Template`,
+`Replace Originals`, `Aggressive`, and `Standard`.
 
 Examples:
 
 ```text
 Selected folder: 14 files · Compress · ⌘⏎ Aggressive, ⇧⏎ Output Template
 Copied file · Long edge 1920 · ⌃⏎ Save Preset
-Passed file · Crop to 16:9 · ⌥⏎ Smart Crop · ⌃⏎ Save Preset
+Passed file · Crop to 16:9 · Smart Crop · ⌃⏎ Save Preset
 Selected file · Saved Preset · ⌃⏎ Remove Preset
 Copied file · Use compression 5-100 · ⏎ Run Defaults · ⌘L Reference
 ```
@@ -1311,12 +1312,11 @@ When a reference has an input section, format it as `Inputs` immediately
 followed by the input block, with no extra blank line between the heading and
 the first path or count line.
 
-For Crop / Resize results that perform an actual crop, Option-Return enables
-Smart Crop, centering the crop around detected visual features.
-Command-Option-Return combines the configured aggressive-default inversion and
-Smart Crop when the selected input and Clop command support both. Do not offer
-Smart Crop modifiers for resize-only forms such as a long edge, fixed width,
-or fixed height because those forms do not choose crop positioning.
+For Crop / Resize results that perform an actual crop, `sc` / `smart-crop`
+enables Smart Crop, centering the crop around detected visual features. Smart
+Crop can be saved in crop presets alongside the size and other typed controls.
+Do not accept Smart Crop for resize-only forms such as a long edge, fixed
+width, or fixed height because those forms do not choose crop positioning.
 
 Option is therefore reserved for a clearly labeled action-specific alternate
 processing mode, not for preserving the original.

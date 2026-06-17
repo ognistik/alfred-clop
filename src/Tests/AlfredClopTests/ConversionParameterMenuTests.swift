@@ -53,7 +53,7 @@ struct ConversionParameterMenuTests {
 
         #expect(
             empty.items.first?.title
-                == "Convert to WebP with Clop Defaults"
+                == "Convert to WebP"
         )
         #expect(empty.items.first?.subtitle.contains("Use compression 5-100") == true)
         #expect(empty.items.first?.subtitle.contains("⏎ Run Defaults") == true)
@@ -125,7 +125,7 @@ struct ConversionParameterMenuTests {
         )
         #expect(
             controls.items.first?.title
-                == "Convert to WebP with Clop Defaults"
+                == "Convert to WebP"
         )
         #expect(!controls.items.contains {
             $0.title == "Back to conversion formats"
@@ -223,9 +223,6 @@ struct ConversionParameterMenuTests {
         #expect(saved.items.contains {
             $0.title == "Convert to WebP"
         })
-        #expect(!saved.items.contains {
-            $0.title == "Convert to WebP with Clop Defaults"
-        })
         let preset = try #require(saved.items.first {
             $0.title == "WebP · Compression 70"
         })
@@ -280,9 +277,6 @@ struct ConversionParameterMenuTests {
         #expect(try fixture.store.load().presets.isEmpty)
         #expect(removed.items.contains {
             $0.title == "Convert to WebP"
-        })
-        #expect(!removed.items.contains {
-            $0.title == "Convert to WebP with Clop Defaults"
         })
     }
 

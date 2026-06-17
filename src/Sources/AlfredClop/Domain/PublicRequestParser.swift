@@ -215,7 +215,6 @@ enum PublicRequestParser {
                 values,
                 allowed: [
                     "size",
-                    "smart crop",
                     "controls",
                     "adaptive",
                     "no adaptive",
@@ -264,13 +263,15 @@ enum PublicRequestParser {
                     controlText
                 )
             }
+            if controls.smartCrop && !cropSizeSupportsSmartCrop(controls.size) {
+                throw PublicRequestError.invalidParameter(
+                    "crop controls",
+                    controls.size.value
+                )
+            }
             return .crop(
                 size: controls.size.value,
-                smartCrop: try boolean(
-                    values["smart crop"],
-                    name: "smart crop",
-                    defaultValue: false
-                ),
+                smartCrop: controls.smartCrop,
                 longEdge: controls.size.longEdge,
                 adaptiveOptimisation: controls.adaptiveOptimisation,
                 removeAudio: controls.removeAudio
@@ -634,6 +635,15 @@ enum PublicRequestParser {
             return .bitrate(value)
         } else {
             return nil
+        }
+    }
+
+    private static func cropSizeSupportsSmartCrop(_ size: CropSize) -> Bool {
+        switch size.kind {
+        case .exactDimensions, .aspectRatio:
+            return true
+        case .longEdge, .fixedWidth, .fixedHeight:
+            return false
         }
     }
 

@@ -198,13 +198,13 @@ struct SettingsFoundationTests {
                 for: MenuState.crop(request),
                 prettyPrinted: false
             ),
-            query: "16:9",
+            query: "16:9 sc",
             environment: environment
         )
         let cropItem = try #require(crop.items.first)
-        #expect(cropItem.mods?.option != nil)
-        #expect(cropItem.mods?.commandOptionShift != nil)
-        let smart = try operation(cropItem.mods?.option?.arg)
+        #expect(cropItem.mods?.option == nil)
+        #expect(cropItem.mods?.commandOptionShift == nil)
+        let smart = try operation(cropItem.arg)
         #expect(smart.action == .crop(
             size: "16:9",
             smartCrop: true,

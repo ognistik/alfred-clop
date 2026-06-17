@@ -292,9 +292,9 @@ struct ClopCommandBuilderTests {
         let command = try makeBuilder().command(for: OperationRequest(
             inputs: ["/tmp/movie.mp4"],
             action: .crop(
-                size: "1920",
+                size: "16:9",
                 smartCrop: true,
-                longEdge: true
+                longEdge: false
             ),
             execution: execution
         ))
@@ -302,11 +302,10 @@ struct ClopCommandBuilderTests {
         #expect(command.arguments == [
             "crop",
             "--size",
-            "1920",
+            "16:9",
             "--json",
             "--no-progress",
             "--skip-errors",
-            "--long-edge",
             "--smart-crop",
             "--gui",
             "--copy",

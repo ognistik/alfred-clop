@@ -75,24 +75,25 @@ struct CropPresetMenuTests {
     @Test
     func matchingTypedControlsCombineWithSavedPreset() throws {
         let fixture = try Fixture()
-        try fixture.save("w128 ad m")
+        try fixture.save("1200x630 sc ad m")
 
-        let response = fixture.response(query: "128x0 adaptive mute")
+        let response = fixture.response(query: "1200x630 smart crop adaptive mute")
         let matchingItems = response.items.filter {
-            $0.uid == "crop.preset.size.128x0.enabled.mute"
+            $0.uid == "crop.preset.size.1200x630.smart-crop.enabled.mute"
         }
         let operation = try operationRequest(
             from: try #require(matchingItems.first)
         )
 
         #expect(matchingItems.count == 1)
-        #expect(matchingItems[0].title == "Width 128, auto height · Adaptive · Mute Video")
+        #expect(matchingItems[0].title == "Crop to 1200x630 · Smart Crop · Adaptive · Mute Video")
+        #expect(!matchingItems[0].subtitle.contains("Smart Crop"))
         #expect(!matchingItems[0].subtitle.contains("Adaptive"))
         #expect(!matchingItems[0].subtitle.contains("Mute"))
         #expect(matchingItems[0].subtitle.contains("Saved Preset"))
         #expect(operation.action == .crop(
-            size: "128x0",
-            smartCrop: false,
+            size: "1200x630",
+            smartCrop: true,
             longEdge: false,
             adaptiveOptimisation: .enabled,
             removeAudio: true
@@ -148,6 +149,31 @@ struct CropPresetMenuTests {
             longEdge: false,
             adaptiveOptimisation: nil,
             removeAudio: true
+        ))
+    }
+
+    @Test
+    func smartCropPresetCanBeSavedAndExecuted() throws {
+        let fixture = try Fixture(context: .arguments)
+        let initial = fixture.response(query: "16:9 sc")
+        let typedItem = try #require(initial.items.first(where: { $0.valid }))
+        let control = try #require(typedItem.mods?.control)
+        let saveStateJSON = try #require(
+            control.variables?[ActionMenu.menuStateVariable]
+        )
+
+        let saved = fixture.response(stateJSON: saveStateJSON, query: "")
+        let combined = try #require(saved.items.first(where: {
+            $0.uid == "crop.preset.size.16:9.smart-crop"
+        }))
+        let operation = try operationRequest(from: combined)
+
+        #expect(combined.title == "Crop to 16:9 · Smart Crop")
+        #expect(combined.autocomplete == "16:9 sc")
+        #expect(operation.action == .crop(
+            size: "16:9",
+            smartCrop: true,
+            longEdge: false
         ))
     }
 

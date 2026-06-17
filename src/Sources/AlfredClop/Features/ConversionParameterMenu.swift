@@ -319,7 +319,6 @@ enum ConversionParameterMenu {
             title: "Convert to \(choice.displayFormat)",
             subtitle: [
                 inputDescription(for: request),
-                "Clop Defaults",
                 hasControls
                     ? Optional("⇥ Controls")
                     : nil
@@ -353,7 +352,7 @@ enum ConversionParameterMenu {
         fileManager: FileManager
     ) -> ScriptFilterItem {
         ScriptFilterItem(
-            title: "Convert to \(choice.displayFormat) with Clop Defaults",
+            title: "Convert to \(choice.displayFormat)",
             subtitle: [
                 inputDescription(for: request),
                 controlHint(for: choice),

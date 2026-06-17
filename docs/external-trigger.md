@@ -153,30 +153,31 @@ Crop / Resize requires `size`. It accepts the same values as the workflow menu:
 ```text
 execute: Crop / Resize
 size: 16:9
-smart crop: true
+controls: sc
 
 finder
 ```
 
-`smart crop` is Clop's optional feature for centering the crop around detected
-image features. It defaults to `false`, which means Alfred Clop does not pass
-Clop's `--smart-crop` option. Supported size examples include `1200x630`,
-`16:9`, `1920`, `w128`, `h720`, `128x0`, and `0x720`.
+`sc` / `smart-crop` enables Clop's Smart Crop feature for centering the crop
+around detected image features. It is only valid with exact dimensions or aspect
+ratios. Omit it to leave Smart Crop off. Supported size examples include
+`1200x630`, `16:9`, `1920`, `w128`, `h720`, `128x0`, and `0x720`.
 
 Crop / Resize also accepts the workflow menu's compact controls grammar:
 
 ```text
 execute: Crop / Resize
 size: 16:9
-controls: no-ad, m
+controls: sc no-ad m
 
 /path/movie.mp4
 ```
 
-Supported controls are `ad` / `adaptive`, `no-ad` / `no-adaptive`, and
-`m` / `mute`. In the interactive workflow, `no-ad` is treated as an advanced
-explicit override because Clop's crop defaults already keep adaptive
-optimization off unless requested. Explicit booleans are also available:
+Supported controls are `sc` / `smart-crop`, `ad` / `adaptive`, `no-ad` /
+`no-adaptive`, and `m` / `mute`. In the interactive workflow, `no-ad` is
+treated as an advanced explicit override because Clop's crop defaults already
+keep adaptive optimization off unless requested. Explicit booleans are also
+available for adaptive optimization and audio:
 
 ```text
 execute: Crop / Resize
@@ -260,7 +261,7 @@ This table is the complete shorthand execution grammar currently implemented:
 | Action | Parameters | Omitted behavior |
 | --- | --- | --- |
 | `Optimize` | `aggressive` (optional boolean), optional media-specific controls | Standard optimization |
-| `Crop / Resize` | `size` (required), `smart crop` (optional boolean), optional adaptive/mute controls | Smart Crop disabled, Clop defaults for adaptive optimization and audio |
+| `Crop / Resize` | `size` (required), optional compact controls such as `sc`, `ad`, `no-ad`, and `m`; optional adaptive/mute booleans | Smart Crop disabled, Clop defaults for adaptive optimization and audio |
 | `Downscale` | `factor` (required) | Uses workflow execution settings |
 | `Convert`, `Convert Image`, `Convert Video`, `Convert Audio` | `format` (required), optional compression/bitrate where supported | Uses Clop defaults for that target |
 | `Crop PDF` | exactly one of `ratio`, `device`, or `paper size`; optional `page layout`, `extend`, or compact `controls` | Auto layout, crop content |

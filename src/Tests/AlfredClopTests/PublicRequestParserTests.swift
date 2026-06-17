@@ -208,11 +208,11 @@ struct PublicRequestParserTests {
     }
 
     @Test
-    func cropExecutionDerivesLongEdgeAndAcceptsSmartCrop() throws {
+    func cropExecutionAcceptsSmartCropControlForCropShapes() throws {
         let request = try PublicRequestParser.parse("""
         execute: Crop / Resize
-        size: 1920
-        smart crop: on
+        size: 16:9
+        controls: sc
 
         finder
         """)
@@ -220,19 +220,19 @@ struct PublicRequestParserTests {
         #expect(request == ClopRequest(
             input: .finderSelection,
             route: .execute(action: .crop(
-                size: "1920",
+                size: "16:9",
                 smartCrop: true,
-                longEdge: true
+                longEdge: false
             ))
         ))
     }
 
     @Test
-    func cropExecutionAcceptsAdaptiveAndMuteControls() throws {
+    func cropExecutionAcceptsSmartAdaptiveAndMuteControls() throws {
         let compact = try PublicRequestParser.parse("""
         execute: Crop / Resize
         size: 16:9
-        controls: no-ad, m
+        controls: sc, no-ad, m
 
         /tmp/movie.mp4
         """)
@@ -247,7 +247,7 @@ struct PublicRequestParserTests {
 
         #expect(compact.route == .execute(action: .crop(
             size: "16:9",
-            smartCrop: false,
+            smartCrop: true,
             longEdge: false,
             adaptiveOptimisation: .disabled,
             removeAudio: true
@@ -271,6 +271,27 @@ struct PublicRequestParserTests {
             execute: Crop / Resize
             size: 16:9
             controls: adaptive no-adaptive
+
+            /tmp/movie.mp4
+            """)
+        }
+        #expect(throws: PublicRequestError.invalidParameter(
+            "crop controls",
+            "1920"
+        )) {
+            try PublicRequestParser.parse("""
+            execute: Crop / Resize
+            size: 1920
+            controls: sc
+
+            /tmp/movie.mp4
+            """)
+        }
+        #expect(throws: PublicRequestError.unexpectedParameter("smart crop")) {
+            try PublicRequestParser.parse("""
+            execute: Crop / Resize
+            size: 16:9
+            smart crop: true
 
             /tmp/movie.mp4
             """)

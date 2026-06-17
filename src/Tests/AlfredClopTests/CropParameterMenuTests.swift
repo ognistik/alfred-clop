@@ -86,9 +86,9 @@ struct CropParameterMenuTests {
         )
 
         #expect(imageResponse.items[0].title == "Type crop controls")
-        #expect(imageResponse.items[0].subtitle == "Selected 2 files · Use size + ad · ⌘L Reference")
+        #expect(imageResponse.items[0].subtitle == "Selected 2 files · Use size + sc + ad · ⌘L Reference")
         #expect(imageResponse.items[0].text?.largetype?.contains("no-ad or no-adaptive") == true)
-        #expect(videoResponse.items[0].subtitle == "Copied 2 files · Use size + ad + m · ⌘L Reference")
+        #expect(videoResponse.items[0].subtitle == "Copied 2 files · Use size + sc + ad + m · ⌘L Reference")
     }
 
     @Test(arguments: [
@@ -220,6 +220,8 @@ struct CropParameterMenuTests {
     @Test(arguments: [
         ("1200x630 ad", "1200x630", false, CropAdaptiveOptimisation.enabled, false),
         ("16:9 no-ad m", "16:9", false, CropAdaptiveOptimisation.disabled, true),
+        ("16:9 sc", "16:9", false, nil, false),
+        ("1200x630 smart crop ad", "1200x630", false, CropAdaptiveOptimisation.enabled, false),
         ("w128, adaptive, mute", "128x0", false, CropAdaptiveOptimisation.enabled, true),
         ("h720 no adaptive", "0x720", false, CropAdaptiveOptimisation.disabled, false)
     ])
@@ -239,7 +241,7 @@ struct CropParameterMenuTests {
 
         #expect(request.action == .crop(
             size: normalizedValue,
-            smartCrop: false,
+            smartCrop: input.contains("sc") || input.contains("smart"),
             longEdge: longEdge,
             adaptiveOptimisation: adaptive,
             removeAudio: removeAudio
@@ -254,6 +256,8 @@ struct CropParameterMenuTests {
         ("122 ad", "Long edge 122 · Adaptive"),
         ("122 m", "Long edge 122 · Mute Video"),
         ("122 ad m", "Long edge 122 · Adaptive · Mute Video"),
+        ("16:9 sc", "Crop to 16:9 · Smart Crop"),
+        ("1200x630 sc ad", "Crop to 1200x630 · Smart Crop · Adaptive"),
         ("w128 no-ad mute", "Width 128, auto height · No Adaptive · Mute Video")
     ])
     func typedControlTitlesDescribeCompleteAction(
@@ -285,7 +289,24 @@ struct CropParameterMenuTests {
 
         #expect(response.items.count == 1)
         #expect(response.items[0].title == "Mute only applies to video")
-        #expect(response.items[0].subtitle == "Selected 2 files · Use size + ad · ⌘L Reference")
+        #expect(response.items[0].subtitle == "Selected 2 files · Use size + sc + ad · ⌘L Reference")
+        #expect(response.items[0].valid == false)
+    }
+
+    @Test(arguments: [
+        "1920 sc",
+        "w128 sc",
+        "h720 smart-crop"
+    ])
+    func smartCropRequiresDimensionsOrRatio(input: String) throws {
+        let response = try cropResponse(
+            stateJSON: try cropStateJSON(context: .selected),
+            query: input
+        )
+
+        #expect(response.items.count == 1)
+        #expect(response.items[0].title == "Smart Crop needs dimensions or ratio")
+        #expect(response.items[0].subtitle == "Selected 2 files · Use 1200x630 sc / 16:9 sc · ⌘L Reference")
         #expect(response.items[0].valid == false)
     }
 

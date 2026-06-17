@@ -101,7 +101,8 @@ struct ClopCommandBuilder {
             removeAudio
         ):
             guard let parsedSize = CropSizeParser.parse(size),
-                  parsedSize.longEdge == longEdge else {
+                  parsedSize.longEdge == longEdge,
+                  !smartCrop || supportsSmartCrop(parsedSize) else {
                 throw ClopCommandBuilderError.invalidCropSize
             }
             arguments = cropArguments(
@@ -206,6 +207,15 @@ struct ClopCommandBuilder {
         return arguments
             + outputArguments(for: request.execution.output)
             + request.inputs
+    }
+
+    private func supportsSmartCrop(_ size: CropSize) -> Bool {
+        switch size.kind {
+        case .exactDimensions, .aspectRatio:
+            return true
+        case .longEdge, .fixedWidth, .fixedHeight:
+            return false
+        }
     }
 
     private func downscaleArguments(

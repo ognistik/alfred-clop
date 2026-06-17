@@ -16,15 +16,18 @@ struct CropSize: Equatable, Hashable {
 
 struct CropControls: Codable, Equatable, Hashable {
     var size: CropSize
+    var smartCrop: Bool
     var adaptiveOptimisation: CropAdaptiveOptimisation?
     var removeAudio: Bool
 
     init(
         size: CropSize,
+        smartCrop: Bool = false,
         adaptiveOptimisation: CropAdaptiveOptimisation? = nil,
         removeAudio: Bool = false
     ) {
         self.size = size
+        self.smartCrop = smartCrop
         self.adaptiveOptimisation = adaptiveOptimisation
         self.removeAudio = removeAudio
     }
@@ -32,6 +35,7 @@ struct CropControls: Codable, Equatable, Hashable {
     enum CodingKeys: String, CodingKey {
         case size
         case longEdge
+        case smartCrop
         case adaptiveOptimisation
         case removeAudio
     }
@@ -40,6 +44,7 @@ struct CropControls: Codable, Equatable, Hashable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(size.value, forKey: .size)
         try container.encode(size.longEdge, forKey: .longEdge)
+        try container.encode(smartCrop, forKey: .smartCrop)
         try container.encodeIfPresent(
             adaptiveOptimisation,
             forKey: .adaptiveOptimisation
@@ -61,6 +66,10 @@ struct CropControls: Codable, Equatable, Hashable {
             )
         }
         size = parsed
+        smartCrop = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .smartCrop
+        ) ?? false
         adaptiveOptimisation = try container.decodeIfPresent(
             CropAdaptiveOptimisation.self,
             forKey: .adaptiveOptimisation
@@ -193,6 +202,7 @@ enum CropControlParser {
         }
 
         var size: CropSize?
+        var smartCrop = false
         var adaptiveOptimisation: CropAdaptiveOptimisation?
         var removeAudio = false
         var index = 0
@@ -225,6 +235,19 @@ enum CropControlParser {
                 index += 1
                 continue
             }
+            if token == "smart", index + 1 < tokens.count,
+               tokens[index + 1] == "crop" {
+                guard !smartCrop else { return nil }
+                smartCrop = true
+                index += 2
+                continue
+            }
+            if token == "sc" || token == "smart" || token == "smart-crop" {
+                guard !smartCrop else { return nil }
+                smartCrop = true
+                index += 1
+                continue
+            }
             if token == "m" || token == "mu" || token == "mute" {
                 guard !removeAudio else { return nil }
                 removeAudio = true
@@ -239,6 +262,7 @@ enum CropControlParser {
         }
         return CropControls(
             size: size,
+            smartCrop: smartCrop,
             adaptiveOptimisation: adaptiveOptimisation,
             removeAudio: removeAudio
         )
@@ -254,7 +278,8 @@ enum CropControlParser {
             last,
             of: [
                 "ad", "adaptive", "na", "noad", "no-ad",
-                "no-adaptive", "noadaptive", "m", "mu", "mute"
+                "no-adaptive", "noadaptive", "sc", "smart", "smart-crop",
+                "m", "mu", "mute"
             ]
         ) || last == "no" else {
             return false
@@ -274,6 +299,7 @@ enum CropControlParser {
 
     static func compactControlTokens(for controls: CropControls) -> [String] {
         [
+            controls.smartCrop ? "sc" : nil,
             controls.adaptiveOptimisation.map {
                 $0 == .enabled ? "ad" : "no-ad"
             },
@@ -283,6 +309,7 @@ enum CropControlParser {
 
     static func controlDescriptions(for controls: CropControls) -> [String] {
         [
+            controls.smartCrop ? "Smart Crop" : nil,
             controls.adaptiveOptimisation.map {
                 $0 == .enabled ? "Adaptive" : "No Adaptive"
             },
@@ -302,6 +329,7 @@ enum CropControlParser {
         h720 fixed height
 
         Add optional controls after the size:
+        sc or smart-crop
         ad or adaptive
         m or mute
 
@@ -309,8 +337,8 @@ enum CropControlParser {
         no-ad or no-adaptive explicitly disables adaptive optimization.
 
         Examples:
-        1200x630 ad
-        16:9 m
+        1200x630 sc ad
+        16:9 sc m
         w128 mute
         """
     }
@@ -498,7 +526,18 @@ enum CropParameterMenu {
         var items = [ScriptFilterItem]()
 
         if let controls = CropControlParser.parse(trimmedQuery) {
-            guard supportsControls(controls, request: request) else {
+            guard supportsSmartCrop(for: controls) else {
+                items.append(unsupportedSmartCropItem(request: request))
+                return ScriptFilterResponse(
+                    items: items.map(affordance.apply),
+                    variables: preservedVariables(
+                        for: request,
+                        stateJSON: stateJSON
+                    ),
+                    skipKnowledge: true
+                )
+            }
+            guard supportsMuteControl(for: controls, request: request) else {
                 items.append(unsupportedMuteItem(request: request))
                 return ScriptFilterResponse(
                     items: items.map(affordance.apply),
@@ -597,7 +636,18 @@ enum CropParameterMenu {
                 )
             })
         } else if let controls = CropControlParser.parse(trimmedQuery) {
-            guard supportsControls(controls, request: request) else {
+            guard supportsSmartCrop(for: controls) else {
+                items.append(unsupportedSmartCropItem(request: request))
+                return ScriptFilterResponse(
+                    items: items.map(affordance.apply),
+                    variables: preservedVariables(
+                        for: request,
+                        stateJSON: stateJSON
+                    ),
+                    skipKnowledge: true
+                )
+            }
+            guard supportsMuteControl(for: controls, request: request) else {
                 items.append(unsupportedMuteItem(request: request))
                 return ScriptFilterResponse(
                     items: items.map(affordance.apply),
@@ -847,7 +897,7 @@ enum CropParameterMenu {
         fileManager: FileManager = .default,
         aggressive: Bool? = nil,
         preserveOriginal: Bool? = nil,
-        smartCrop: Bool = false
+        smartCrop: Bool? = nil
     ) -> String? {
         let template = (try? PresetStore(
             environment: environment,
@@ -864,7 +914,7 @@ enum CropParameterMenu {
                 inputs: request.inputs,
                 action: .crop(
                     size: preset.size,
-                    smartCrop: smartCrop,
+                    smartCrop: smartCrop ?? preset.smartCrop,
                     longEdge: preset.longEdge,
                     adaptiveOptimisation: preset.adaptiveOptimisation,
                     removeAudio: preset.removeAudio
@@ -889,18 +939,10 @@ enum CropParameterMenu {
         let preserveText = preserve
             ? "Replace Originals"
             : "Output Template"
-        let supportsSmartCrop: Bool
-        switch preset.cropSize.kind {
-        case .exactDimensions, .aspectRatio:
-            supportsSmartCrop = true
-        case .longEdge, .fixedWidth, .fixedHeight:
-            supportsSmartCrop = false
-        }
 
         func modifier(
             aggressive: Bool,
             preserve: Bool,
-            smartCrop: Bool,
             subtitle: String
         ) -> ScriptFilterModifier? {
             guard let arg = operationArgument(
@@ -908,8 +950,7 @@ enum CropParameterMenu {
                 request: request,
                 environment: environment,
                 aggressive: aggressive,
-                preserveOriginal: preserve,
-                smartCrop: smartCrop
+                preserveOriginal: preserve
             ) else {
                 return nil
             }
@@ -935,50 +976,26 @@ enum CropParameterMenu {
         let command = modifier(
             aggressive: !aggressive,
             preserve: preserve,
-            smartCrop: false,
             subtitle: commandText
         )
         let shift = modifier(
             aggressive: aggressive,
             preserve: !preserve,
-            smartCrop: false,
             subtitle: preserveText
         )
-        let option = supportsSmartCrop ? modifier(
-            aggressive: aggressive,
-            preserve: preserve,
-            smartCrop: true,
-            subtitle: "Smart Crop"
-        ) : nil
         return ScriptFilterMods(
             command: command,
-            option: option,
+            option: nil,
             control: control,
             shift: shift,
-            commandOption: supportsSmartCrop ? modifier(
-                aggressive: !aggressive,
-                preserve: preserve,
-                smartCrop: true,
-                subtitle: "\(commandText) · Smart Crop"
-            ) : nil,
+            commandOption: nil,
             commandShift: modifier(
                 aggressive: !aggressive,
                 preserve: !preserve,
-                smartCrop: false,
                 subtitle: "\(commandText) · \(preserveText)"
             ),
-            optionShift: supportsSmartCrop ? modifier(
-                aggressive: aggressive,
-                preserve: !preserve,
-                smartCrop: true,
-                subtitle: "Smart Crop · \(preserveText)"
-            ) : nil,
-            commandOptionShift: supportsSmartCrop ? modifier(
-                aggressive: !aggressive,
-                preserve: !preserve,
-                smartCrop: true,
-                subtitle: "\(commandText) · Smart Crop · \(preserveText)"
-            ) : nil
+            optionShift: nil,
+            commandOptionShift: nil
         )
     }
 
@@ -1151,6 +1168,24 @@ enum CropParameterMenu {
         )
     }
 
+    private static func unsupportedSmartCropItem(
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "Smart Crop needs dimensions or ratio",
+            subtitle: [
+                inputDescription(for: request),
+                "Use 1200x630 sc / 16:9 sc",
+                "⌘L Reference"
+            ].joined(separator: " · "),
+            arg: "",
+            valid: false,
+            text: ScriptFilterText(
+                largetype: largeTypeReference(for: request)
+            )
+        )
+    }
+
     private static func interpretation(for size: CropSize) -> String {
         switch size.kind {
         case let .exactDimensions(width, height):
@@ -1175,7 +1210,7 @@ enum CropParameterMenu {
         }
         switch size.kind {
         case .exactDimensions, .aspectRatio:
-            return "⌥↩ Smart Crop · ⌃↩ Save Preset"
+            return "⌃↩ Save Preset"
         case .longEdge, .fixedWidth, .fixedHeight:
             return "⌃↩ Save Preset"
         }
@@ -1215,6 +1250,7 @@ enum CropParameterMenu {
         for controls: CropControls
     ) -> [String] {
         [
+            controls.smartCrop ? "Smart Crop" : nil,
             controls.adaptiveOptimisation.map {
                 $0 == .enabled ? "Adaptive" : "No Adaptive"
             },
@@ -1241,8 +1277,8 @@ enum CropParameterMenu {
         for request: ParameterStepRequest
     ) -> String {
         supportsMuteControl(for: request)
-            ? "Use size + ad + m"
-            : "Use size + ad"
+            ? "Use size + sc + ad + m"
+            : "Use size + sc + ad"
     }
 
     private static var acceptedSizeSubtitle: String {
@@ -1279,6 +1315,9 @@ enum CropParameterMenu {
         _ preset: CropActionPreset,
         request: ParameterStepRequest
     ) -> Bool {
+        guard !preset.smartCrop || supportsSmartCrop(for: preset.cropSize) else {
+            return false
+        }
         guard preset.removeAudio else {
             return true
         }
@@ -1289,10 +1328,34 @@ enum CropParameterMenu {
         _ controls: CropControls,
         request: ParameterStepRequest
     ) -> Bool {
+        supportsSmartCrop(for: controls)
+            && supportsMuteControl(for: controls, request: request)
+    }
+
+    private static func supportsSmartCrop(for controls: CropControls) -> Bool {
+        guard controls.smartCrop else {
+            return true
+        }
+        return supportsSmartCrop(for: controls.size)
+    }
+
+    private static func supportsMuteControl(
+        for controls: CropControls,
+        request: ParameterStepRequest
+    ) -> Bool {
         guard controls.removeAudio else {
             return true
         }
         return supportsMuteControl(for: request)
+    }
+
+    private static func supportsSmartCrop(for size: CropSize) -> Bool {
+        switch size.kind {
+        case .exactDimensions, .aspectRatio:
+            return true
+        case .longEdge, .fixedWidth, .fixedHeight:
+            return false
+        }
     }
 
     private static func controlsQueryValue(from query: String) -> String? {

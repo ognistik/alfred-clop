@@ -54,7 +54,7 @@ Script Filter subtitles now share a compact style across the main action
 menu, parameter menus, conversion controls, presets, Configuration, and
 modifier rows. Processing subtitles keep source and folder-count clarity while
 using short effect labels and consistent title-case hints such as `Save
-Preset`, `Remove Preset`, `Smart Crop`, and `Clop Defaults`.
+Preset`, `Remove Preset`, and `Smart Crop`.
 
 Crop PDF now has a complete shallow parameter menu for Clop's reversible
 `crop-pdf` surface. The menu offers root branches for custom ratio/resolution,
@@ -269,10 +269,11 @@ content.
 - Bare positive integers encoded as long-edge resize requests
 - Invalid, malformed, negative, decimal, and zero-only values rejected visibly
 - Crop execution through `clop crop --size VALUE --json --no-progress`
-- Conditional `--long-edge`; menu-generated requests keep `smartCrop` disabled
-- Crop / Resize typed controls accept `ad` / `adaptive`, `no-ad` /
-  `no-adaptive`, and `m` / `mute` after the size, with spaces or commas
-  between tokens
+- Conditional `--long-edge`; Smart Crop stays limited to exact dimensions and
+  aspect ratios
+- Crop / Resize typed controls accept `sc` / `smart-crop`, `ad` / `adaptive`,
+  `no-ad` / `no-adaptive`, and `m` / `mute` after the size, with spaces or
+  commas between tokens
 - The empty Crop / Resize instruction row offers a `controls:` editor through
   Tab and Control-Return, matching the shallow controls flow used by Optimize
   and Convert
@@ -529,8 +530,8 @@ content.
 - Return uses configured aggressive and preservation defaults
 - Command-Return and Shift-Return invert those defaults in fully resolved
   operation requests
-- Crop-capable values expose Smart Crop through Option combinations; resize-only
-  forms omit Smart Crop modifiers
+- Crop-capable values expose Smart Crop as a typed control that can be saved in
+  presets; resize-only forms reject it
 - Pipeline delivery remains owned by Clop; no workflow recipe system or
   pipeline output override was added
 - Configured settings are authoritative and malformed active files never fall

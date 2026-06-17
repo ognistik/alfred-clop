@@ -8,6 +8,7 @@ enum CropAdaptiveOptimisation: String, Codable, Equatable, Hashable {
 struct CropActionPreset: Codable, Equatable, Hashable {
     var size: String
     var longEdge: Bool
+    var smartCrop: Bool
     var adaptiveOptimisation: CropAdaptiveOptimisation?
     var removeAudio: Bool
 
@@ -16,6 +17,7 @@ struct CropActionPreset: Codable, Equatable, Hashable {
     ) {
         size = controls.size.value
         longEdge = controls.size.longEdge
+        smartCrop = controls.smartCrop
         adaptiveOptimisation = controls.adaptiveOptimisation
         removeAudio = controls.removeAudio
     }
@@ -28,6 +30,10 @@ struct CropActionPreset: Codable, Equatable, Hashable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let size = try container.decode(String.self, forKey: .size)
         let longEdge = try container.decode(Bool.self, forKey: .longEdge)
+        let smartCrop = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .smartCrop
+        ) ?? false
         let adaptiveOptimisation = try container.decodeIfPresent(
             CropAdaptiveOptimisation.self,
             forKey: .adaptiveOptimisation
@@ -39,7 +45,8 @@ struct CropActionPreset: Codable, Equatable, Hashable {
 
         guard let parsed = CropSizeParser.parse(size),
               parsed.value == size,
-              parsed.longEdge == longEdge else {
+              parsed.longEdge == longEdge,
+              !smartCrop || Self.supportsSmartCrop(parsed) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .size,
                 in: container,
@@ -49,6 +56,7 @@ struct CropActionPreset: Codable, Equatable, Hashable {
 
         self.size = size
         self.longEdge = longEdge
+        self.smartCrop = smartCrop
         self.adaptiveOptimisation = adaptiveOptimisation
         self.removeAudio = removeAudio
     }
@@ -60,6 +68,7 @@ struct CropActionPreset: Codable, Equatable, Hashable {
     var controls: CropControls {
         CropControls(
             size: cropSize,
+            smartCrop: smartCrop,
             adaptiveOptimisation: adaptiveOptimisation,
             removeAudio: removeAudio
         )
@@ -84,9 +93,19 @@ struct CropActionPreset: Codable, Equatable, Hashable {
             "crop.preset",
             longEdge ? "long-edge" : "size",
             size,
+            smartCrop ? "smart-crop" : nil,
             adaptiveOptimisation?.rawValue,
             removeAudio ? "mute" : nil
         ].compactMap(\.self).joined(separator: ".")
+    }
+
+    private static func supportsSmartCrop(_ size: CropSize) -> Bool {
+        switch size.kind {
+        case .exactDimensions, .aspectRatio:
+            return true
+        case .longEdge, .fixedWidth, .fixedHeight:
+            return false
+        }
     }
 }
 
@@ -276,6 +295,7 @@ enum ActionPreset: Codable, Equatable, Hashable {
         case type
         case size
         case longEdge
+        case smartCrop
         case adaptiveOptimisation
         case removeAudio
         case factor
@@ -302,6 +322,7 @@ enum ActionPreset: Codable, Equatable, Hashable {
             try container.encode(PresetType.crop, forKey: .type)
             try container.encode(preset.size, forKey: .size)
             try container.encode(preset.longEdge, forKey: .longEdge)
+            try container.encode(preset.smartCrop, forKey: .smartCrop)
             try container.encodeIfPresent(
                 preset.adaptiveOptimisation,
                 forKey: .adaptiveOptimisation
