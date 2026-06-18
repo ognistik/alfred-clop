@@ -27,13 +27,6 @@ enum PipelineMenu {
             )
         }
 
-        guard !pipelines.isEmpty else {
-            return error(
-                title: "No saved pipelines",
-                subtitle: "Add pipelines in Configuration with :pipelines."
-            )
-        }
-
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let state = MenuState.pipeline(request)
         if let route = categoryRoute(from: trimmed, request: request) {
@@ -43,7 +36,8 @@ enum PipelineMenu {
                 state: state,
                 query: route.query,
                 category: route.category,
-                environment: environment
+                environment: environment,
+                showGuideWhenEmpty: false
             )
         }
 
@@ -61,7 +55,8 @@ enum PipelineMenu {
             state: state,
             query: trimmed,
             category: defaultCategory(for: request),
-            environment: environment
+            environment: environment,
+            showGuideWhenEmpty: true
         )
     }
 
@@ -71,16 +66,31 @@ enum PipelineMenu {
         state: MenuState,
         query: String,
         category: PipelineCategory?,
-        environment: Environment
+        environment: Environment,
+        showGuideWhenEmpty: Bool
     ) -> ScriptFilterResponse {
         let visible = pipelines
             .filter { isVisible($0, category: category, request: request) }
             .sorted(by: pipelineDisplayOrder)
+        let inlineItem = inlinePipelineItem(
+            query: query,
+            request: request,
+            environment: environment
+        )
 
         guard !visible.isEmpty else {
-            return error(
-                title: "No matching pipelines",
-                subtitle: "Try another pipeline name or file type."
+            let items = [guideItem(for: request, category: category, emptySavedList: pipelines.isEmpty)]
+            if let inlineItem {
+                return response(
+                    items: [inlineItem],
+                    request: request,
+                    state: state
+                )
+            }
+            return response(
+                items: items,
+                request: request,
+                state: state
             )
         }
 
@@ -88,7 +98,14 @@ enum PipelineMenu {
             pipelineItem($0, request: request, environment: environment)
         }
         guard !query.isEmpty else {
-            return response(items: items, request: request, state: state)
+            if !showGuideWhenEmpty {
+                return response(items: items, request: request, state: state)
+            }
+            return response(
+                items: [guideItem(for: request, category: category)] + items,
+                request: request,
+                state: state
+            )
         }
 
         let search = FuzzySearch<ScriptFilterItem>(
@@ -99,14 +116,20 @@ enum PipelineMenu {
             }
         )
         let matches = search.sorted(items)
-        guard !matches.isEmpty else {
-            return error(
-                title: "No matching pipelines",
-                subtitle: "Try another pipeline name or file type."
+        var resultItems = [ScriptFilterItem]()
+        if let inlineItem {
+            resultItems.append(inlineItem)
+        }
+        resultItems.append(contentsOf: matches.map { items[$0.targetIndex] })
+        guard !resultItems.isEmpty else {
+            return response(
+                items: [guideItem(for: request, category: category, noMatches: true)],
+                request: request,
+                state: state
             )
         }
         return response(
-            items: matches.map { items[$0.targetIndex] },
+            items: resultItems,
             request: request,
             state: state
         )
@@ -154,6 +177,39 @@ enum PipelineMenu {
         execution.output = .inPlace
         execution.aggressiveProcessing = nil
         return execution
+    }
+
+    private static func inlinePipelineItem(
+        query: String,
+        request: ParameterStepRequest,
+        environment: Environment
+    ) -> ScriptFilterItem? {
+        let steps = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard looksLikeInlinePipeline(steps) else {
+            return nil
+        }
+        let operation = OperationRequest(
+            inputs: request.inputs,
+            action: .pipeline(PipelineRunRequest(name: steps)),
+            execution: pipelineExecutionOptions(environment: environment)
+        )
+        return ScriptFilterItem(
+            uid: "pipeline.inline.\(steps)",
+            title: "Run inline pipeline",
+            subtitle: "\(inputDescription(for: request)) · Clop validates steps · ⌘L Syntax",
+            arg: (try? JSONOutput.string(for: operation, prettyPrinted: false)) ?? "",
+            valid: true,
+            autocomplete: steps,
+            match: "\(steps) inline pipeline steps",
+            variables: [
+                ActionMenu.requestKindVariable:
+                    WorkflowRequestKind.operation.rawValue
+            ],
+            text: ScriptFilterText(largetype: inlinePipelineDetails(
+                steps: steps,
+                request: request
+            ))
+        )
     }
 
     private static func categoryRows(
@@ -266,18 +322,37 @@ enum PipelineMenu {
     private static func branchingItems(
         for request: ParameterStepRequest
     ) -> [ScriptFilterItem] {
-        [branchingGuideItem(for: request)] + categoryRows(for: request)
+        [guideItem(for: request)] + categoryRows(for: request)
     }
 
-    private static func branchingGuideItem(
-        for request: ParameterStepRequest
+    private static func guideItem(
+        for request: ParameterStepRequest,
+        category: PipelineCategory? = nil,
+        noMatches: Bool = false,
+        emptySavedList: Bool = false
     ) -> ScriptFilterItem {
-        ScriptFilterItem(
+        let title: String
+        let subtitle: String
+        if noMatches {
+            title = "No matching pipelines"
+            subtitle = "Search saved pipelines or use steps like convert(to: webp)"
+        } else if emptySavedList {
+            title = "Search saved pipelines or type inline steps"
+            subtitle = "\(inputDescription(for: request)) · No saved pipelines · ⌘L Syntax"
+        } else if category == nil, shouldShowCategoryRows(for: request) {
+            title = "Pick a media type, search, or type inline steps"
+            subtitle = "\(inputDescription(for: request)) · Compatible pipeline groups · ⌘L Syntax"
+        } else {
+            title = "Search saved pipelines or type inline steps"
+            subtitle = "\(inputDescription(for: request)) · Example: convert(to: webp) · ⌘L Syntax"
+        }
+        return ScriptFilterItem(
             uid: "pipeline.guide",
-            title: "Pick a media type or search by name",
-            subtitle: "\(inputDescription(for: request)) · Showing compatible pipeline groups",
+            title: title,
+            subtitle: subtitle,
             arg: "",
-            valid: false
+            valid: false,
+            text: ScriptFilterText(largetype: inlinePipelineReference(for: request))
         )
     }
 
@@ -314,6 +389,61 @@ enum PipelineMenu {
             lines += ["", "Inputs", inputs]
         }
         return lines.joined(separator: "\n")
+    }
+
+    private static func inlinePipelineDetails(
+        steps: String,
+        request: ParameterStepRequest
+    ) -> String {
+        var lines = [
+            "Run inline pipeline",
+            "",
+            "Steps",
+            steps,
+            "",
+            "Clop validates the pipeline syntax."
+        ]
+        if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
+            lines += ["", "Inputs", inputs]
+        }
+        lines += ["", inlinePipelineReference(for: request)]
+        return lines.joined(separator: "\n")
+    }
+
+    private static func inlinePipelineReference(
+        for request: ParameterStepRequest
+    ) -> String {
+        var lines = [
+            "Pipeline syntax",
+            "",
+            "Search saved pipelines by name, or type inline Clop pipeline steps.",
+            "",
+            "Examples",
+            "crop(width: 1600) -> convert(to: webp)",
+            "changeSpeed(factor: 2.0) -> removeAudio",
+            "convert(to: gif)",
+            "",
+            "Type only the steps here. Saved pipeline creation uses:",
+            "Name => steps ; options"
+        ]
+        if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
+            lines += ["", "Inputs", inputs]
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func looksLikeInlinePipeline(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return false
+        }
+        if trimmed.contains("->") {
+            return true
+        }
+        if trimmed.contains("("), trimmed.contains(")") {
+            return true
+        }
+        return knownPipelineSteps.contains(trimmed.lowercased())
     }
 
     private static func settingsDescription(
@@ -390,6 +520,30 @@ enum PipelineMenu {
             )
         ])
     }
+
+    private static let knownPipelineSteps: Set<String> = [
+        "optimise",
+        "downscale",
+        "lowerbitrate",
+        "convert",
+        "crop",
+        "extractpagesasimages",
+        "copy",
+        "move",
+        "rename",
+        "delete",
+        "if",
+        "ifnot",
+        "removeaudio",
+        "changespeed",
+        "runscript",
+        "runshortcut",
+        "copytoclipboard",
+        "copylinkforsending",
+        "shelvewith",
+        "uploadwith",
+        "openwith"
+    ]
 }
 
 private enum PipelineCategory: CaseIterable {

@@ -533,8 +533,10 @@ shelveWith, uploadWith, openWith
 
 Pipelines make multi-step conversion and processing possible in one Clop
 request. Alfred Clop exposes saved-pipeline listing, execution, creation, and
-deletion while keeping pipeline step expressions opaque user input; inline
-pipeline execution remains a CLI capability rather than an Alfred workflow UI.
+deletion while keeping pipeline step expressions opaque user input. The
+interactive runner also supports inline pipeline execution when the typed query
+looks like Clop pipeline syntax; Alfred Clop passes the steps through and lets
+Clop validate the full grammar.
 
 ## Output templates
 

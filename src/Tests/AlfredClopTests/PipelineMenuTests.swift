@@ -11,14 +11,19 @@ struct PipelineMenuTests {
             provider: PipelineProviderStub()
         )
 
-        #expect(response.items.map(\.title) == ["Any", "To WebP"])
-        #expect(response.items[0].subtitle == "Selected file · ⌘L Details")
+        #expect(response.items.map(\.title) == [
+            "Search saved pipelines or type inline steps",
+            "Any",
+            "To WebP"
+        ])
+        #expect(response.items[0].subtitle == "Selected file · Example: convert(to: webp) · ⌘L Syntax")
         #expect(response.items[1].subtitle == "Selected file · ⌘L Details")
-        #expect(response.items[1].text?.largetype?.contains("Steps\nconvert(to: webp)") == true)
+        #expect(response.items[2].subtitle == "Selected file · ⌘L Details")
+        #expect(response.items[2].text?.largetype?.contains("Steps\nconvert(to: webp)") == true)
 
         let operation = try JSONDecoder().decode(
             OperationRequest.self,
-            from: Data((response.items[1].arg ?? "").utf8)
+            from: Data((response.items[2].arg ?? "").utf8)
         )
         #expect(operation.action == .pipeline(PipelineRunRequest(name: "To WebP")))
     }
@@ -31,7 +36,7 @@ struct PipelineMenuTests {
             provider: PipelineProviderStub()
         )
 
-        #expect(response.items.first?.title == "Pick a media type or search by name")
+        #expect(response.items.first?.title == "Pick a media type, search, or type inline steps")
         #expect(response.items.map(\.title).contains("Image Pipelines"))
         #expect(response.items.map(\.title).contains("Video Pipelines"))
         #expect(!response.items.map(\.title).contains("All-File Pipelines"))
@@ -61,6 +66,76 @@ struct PipelineMenuTests {
 
         #expect(Set(response.items.map(\.title)) == ["Any", "To WebP", "To GIF"])
         #expect(!response.items.map(\.title).contains("To MP3"))
+    }
+
+    @Test
+    func inlineSyntaxRunsTypedStepsBeforeSavedMatches() throws {
+        let steps = "crop(width: 1600) -> convert(to: webp)"
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: steps,
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Run inline pipeline")
+        #expect(item.subtitle == "Selected file · Clop validates steps · ⌘L Syntax")
+        #expect(item.text?.largetype?.contains("Steps\n\(steps)") == true)
+
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((item.arg ?? "").utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(name: steps)))
+    }
+
+    @Test
+    func bareKnownPipelineStepCanRunInline() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.video]),
+            query: "removeAudio",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Run inline pipeline")
+
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((item.arg ?? "").utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(name: "removeAudio")))
+    }
+
+    @Test
+    func plainUnmatchedSearchDoesNotRunInline() {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "not a pipeline",
+            provider: PipelineProviderStub()
+        )
+
+        #expect(response.items.map(\.title) == ["No matching pipelines"])
+        #expect(response.items.first?.valid == false)
+        #expect(response.items.first?.subtitle == "Search saved pipelines or use steps like convert(to: webp)")
+    }
+
+    @Test
+    func noSavedPipelinesStillAllowsInlineSyntax() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convert(to: webp)",
+            provider: PipelineProviderStub(pipelines: [])
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Run inline pipeline")
+
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((item.arg ?? "").utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(name: "convert(to: webp)")))
     }
 
     @Test

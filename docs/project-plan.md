@@ -1148,8 +1148,12 @@ workflow cache directory. Refresh when the Clop app version changes.
 
 For selected, copied, or passed inputs, `Pipeline` opens a saved-pipeline
 runner backed by `clop pipeline list --json`. The runner executes existing
-saved pipelines only; it must not expose inline pipeline execution from the
-normal action menu.
+saved pipelines and inline pipeline steps typed directly into the same menu.
+The empty menu should teach both behaviors with a compact guide row. Plain
+typing searches saved pipelines by name and metadata; inline execution becomes
+available only when the typed query looks intentionally like Clop pipeline
+syntax, such as `crop(width: 1600) -> convert(to: webp)`, a parenthesized
+single step, or a documented bare step name.
 
 When the current input has one clear media type, filter saved pipelines to
 pipelines whose declared `fileType` matches that media type plus pipelines with
@@ -1159,14 +1163,17 @@ input, use shallow media filter rows inspired by the Optimize controls menu:
 image, video, audio, or PDF as applicable. All-file pipelines should appear
 inside the relevant media branches instead of as a competing top-level branch
 when the input media is known. Typing in the pipeline runner searches runnable
-pipelines by name and related metadata. When input is ambiguous, preserve
-honest broad choices and let Clop own final compatibility.
+pipelines by name and related metadata unless the query is detected as inline
+step syntax. When input is ambiguous, preserve honest broad choices and let
+Clop own final compatibility.
 
 Pipeline row subtitles should stay compact, such as
 `Selected file · ⌘L Details`. Use Large Type for the pipeline name, accepted
 file type, raw step text, saved Clop settings such as skip optimization or hide
-result, and the current inputs. Do not put long raw pipeline expressions in
-ordinary subtitles.
+result, and the current inputs. Inline pipeline rows should also keep subtitles
+compact, such as `Selected file · Clop validates steps · ⌘L Syntax`, and use
+Large Type for examples and the current inline steps. Do not put long raw
+pipeline expressions in ordinary subtitles.
 
 Pipeline execution must pass only options supported by `pipeline run`:
 `--gui`, `--no-progress`, `--recursive`, `--skip-errors`, and `--json` where

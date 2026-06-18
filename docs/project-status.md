@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 17, 2026
+Last updated: June 18, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -96,7 +96,13 @@ The Pipeline checkpoint is implemented. The main action menu now exposes a
 saved-pipeline runner that lists Clop pipelines from `pipeline list --json`,
 filters clear single-media input to compatible saved pipelines plus all-file
 pipelines, shows shallow media filters for mixed or ambiguous input, and runs
-chosen pipelines with only the shared options supported by `pipeline run`.
+chosen saved pipelines with only the shared options supported by `pipeline run`.
+The runner also supports inline pipeline execution from the same menu:
+the empty guide row teaches both saved search and inline steps, syntax-looking
+queries such as `crop(width: 1600) -> convert(to: webp)` become runnable
+inline rows, plain unmatched searches stay non-executable, and Large Type
+contains the longer syntax reference. Inline step text is passed directly to
+Clop for final grammar validation.
 Pipeline management lives in Configuration under `:pipelines`; it supports
 category browsing, global search, Large Type details, adding named pipelines
 with `NAME => STEPS ; OPTIONS`, Command-Return replacement, and confirmed
