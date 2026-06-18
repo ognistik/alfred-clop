@@ -167,6 +167,35 @@ struct CropPDFParameterMenuTests {
     }
 
     @Test
+    func executableRowsExposeShiftOutputTemplateToggle() throws {
+        let response = try cropPDFResponse(query: "ratio: 16:9")
+        let item = try #require(response.items.first)
+        let shift = try #require(item.mods?.shift)
+        let operation = try operationRequest(from: shift)
+
+        #expect(shift.subtitle == "Passed 2 files · Output Template")
+        #expect(shift.variables?[ActionMenu.requestKindVariable]
+            == WorkflowRequestKind.operation.rawValue)
+        #expect(operation.action == .cropPDF(CropPDFRequest(
+            target: .aspectRatio("16:9")
+        )))
+        #expect(operation.execution.output == .sameFolder(template: "%P/%f-clop"))
+    }
+
+    @Test
+    func shiftOutputToggleCanReplaceOriginalsWhenPreserveIsConfigured() throws {
+        let response = try cropPDFResponse(
+            query: "ratio: 16:9",
+            preserveOriginal: true
+        )
+        let shift = try #require(response.items.first?.mods?.shift)
+        let operation = try operationRequest(from: shift)
+
+        #expect(shift.subtitle == "Passed 2 files · Replace Originals")
+        #expect(operation.execution.output == .inPlace)
+    }
+
+    @Test
     func rootTypingRoutesRatioLikeInputToRatioBranch() throws {
         let response = try cropPDFResponse(query: "16:9 l e")
         let item = try #require(response.items.first)
@@ -303,7 +332,8 @@ struct CropPDFParameterMenuTests {
 
     private func cropPDFResponse(
         query: String,
-        presets: [ActionPreset] = []
+        presets: [ActionPreset] = [],
+        preserveOriginal: Bool = false
     ) throws -> ScriptFilterResponse {
         let dataDirectory = try makeTemporaryDirectory()
         let store = PresetStore(
@@ -319,7 +349,8 @@ struct CropPDFParameterMenuTests {
             ),
             query: query,
             environment: Environment(values: [
-                "alfred_workflow_data": dataDirectory.path
+                "alfred_workflow_data": dataDirectory.path,
+                "preserveOriginal": preserveOriginal ? "true" : "false"
             ]),
             targetProvider: StubCropPDFTargetProvider()
         )
@@ -339,6 +370,13 @@ struct CropPDFParameterMenuTests {
         try JSONDecoder().decode(
             OperationRequest.self,
             from: Data(try #require(item.arg).utf8)
+        )
+    }
+
+    private func operationRequest(from modifier: ScriptFilterModifier) throws -> OperationRequest {
+        try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data(try #require(modifier.arg).utf8)
         )
     }
 }

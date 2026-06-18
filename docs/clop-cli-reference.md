@@ -433,6 +433,18 @@ This operation changes the PDF crop box and is reversible with `uncrop-pdf`.
 `--extend` is useful when fitting a document to a target ratio must not cut off
 text or other page content.
 
+Unlike the app-backed processing commands, `crop-pdf` does not document the
+full output-template grammar. Probes against Clop 3.1.0 show that filename
+templates such as `%f-clop` are expanded beside the source PDF, and fixed
+absolute destinations such as `/existing/folder/%f-clop` work when the folder
+exists. Directory-position tokens such as `%P/%f-clop` are not expanded as a
+full path by this command; Clop treats `%P` as a literal directory segment
+relative to the current working directory and still exits successfully.
+Alfred Clop therefore translates validated global templates before launching
+PDF crop: the common `%P/%f-clop` form becomes `%f-clop`, single-file
+per-source subfolder templates are resolved to a concrete output path, and
+multi-file per-source subfolder templates are rejected before launch.
+
 The 3.0 device list is grouped by exact screen aspect ratio and includes:
 
 - iPhone 4 through iPhone 17 families, including SE, mini, Plus, Pro, Pro Max,
@@ -467,6 +479,9 @@ Removes the crop box added by reversible PDF cropping.
 ```sh
 clop uncrop-pdf book.pdf
 ```
+
+`uncrop-pdf` uses the same PDF-specific `--output` behavior as `crop-pdf`.
+Alfred Clop applies the same template translation and preflight rules.
 
 ## `strip-exif`
 
@@ -664,8 +679,9 @@ omitting `--output` for the selected command.
   processed inputs under `done` and skipped inputs under `failed`, so callers
   must inspect both arrays rather than relying on termination status.
 - Legacy image conversion has no JSON output.
-- `crop-pdf`, `uncrop-pdf`, and `strip-exif` have no JSON output.
-- Output behavior for folders, remote URLs, videos, audio, and PDFs still needs
+- `crop-pdf`, `uncrop-pdf`, and `strip-exif` have no JSON output and no
+  `--gui` option, so workflow notifications are the only completion feedback.
+- Output behavior for folders, remote URLs, videos, and audio still needs
   disposable-fixture coverage where each command supports `--output`.
 - The parent `optimise` help's `--dpi 96` example conflicts with the typed
   parser, which accepts only `adaptive`, `300`, `250`, `200`, `150`, `100`,

@@ -48,7 +48,7 @@ struct ClopCommandBuilder {
         }
         var resolvedRequest = request
         if let template = request.execution.output.template,
-           !request.action.isPipeline {
+           request.action.usesSharedOutputTemplate {
             do {
                 let outputExtension: String?
                 if case .convert(let choice) = request.action {
@@ -137,9 +137,12 @@ struct ClopCommandBuilder {
             )
             expectsJSON = true
         case .uncropPDF:
-            arguments = ["uncrop-pdf"]
+            arguments = try ["uncrop-pdf"]
                 + recursiveArguments(for: resolvedRequest.execution)
-                + outputArguments(for: resolvedRequest.execution.output)
+                + pdfOutputArguments(
+                    for: resolvedRequest.execution.output,
+                    inputs: request.inputs
+                )
                 + request.inputs
             expectsJSON = false
         case .stripMetadata:
@@ -151,7 +154,7 @@ struct ClopCommandBuilder {
             guard isSupportedCropPDF(cropPDF) else {
                 throw ClopCommandBuilderError.invalidCropPDFControls
             }
-            arguments = cropPDFArguments(
+            arguments = try cropPDFArguments(
                 for: resolvedRequest,
                 cropPDF: cropPDF
             )
@@ -312,7 +315,7 @@ struct ClopCommandBuilder {
     private func cropPDFArguments(
         for request: OperationRequest,
         cropPDF: CropPDFRequest
-    ) -> [String] {
+    ) throws -> [String] {
         var arguments = ["crop-pdf"]
         switch cropPDF.target {
         case .aspectRatio(let value):
@@ -331,8 +334,11 @@ struct ClopCommandBuilder {
         if request.execution.recursiveFolders {
             arguments.append("--recursive")
         }
-        return arguments
-            + outputArguments(for: request.execution.output)
+        return try arguments
+            + pdfOutputArguments(
+                for: request.execution.output,
+                inputs: request.inputs
+            )
             + request.inputs
     }
 
@@ -471,6 +477,102 @@ struct ClopCommandBuilder {
         }
     }
 
+    private func pdfOutputArguments(
+        for output: OutputBehavior,
+        inputs: [String]
+    ) throws -> [String] {
+        switch output {
+        case .inPlace:
+            return []
+        case let .sameFolder(template):
+            return try ["--output", pdfOutputArgument(
+                template: template,
+                inputs: inputs
+            )]
+        case let .specificFolder(folder, template):
+            let outputPath = URL(fileURLWithPath: folder, isDirectory: true)
+                .appendingPathComponent(template)
+                .path
+            return try ["--output", pdfOutputArgument(
+                template: outputPath,
+                inputs: inputs
+            )]
+        }
+    }
+
+    private func pdfOutputArgument(
+        template: String,
+        inputs: [String]
+    ) throws -> String {
+        let plan: OutputTemplatePlan
+        do {
+            plan = try OutputTemplateValidator.plan(
+                template: template,
+                inputs: inputs,
+                outputExtension: "pdf",
+                fileManager: fileManager
+            )
+        } catch let error as OutputTemplateError {
+            throw ClopCommandBuilderError.invalidOutputTemplate(error)
+        }
+
+        if let sameFolderFilename = pdfSameFolderFilename(from: plan.template) {
+            try createParentDirectories(for: plan.outputPaths)
+            return sameFolderFilename
+        }
+
+        if directoryComponent(plan.template).contains("%") {
+            guard inputs.count == 1,
+                  let outputPath = plan.outputPaths.first else {
+                throw ClopCommandBuilderError.invalidOutputTemplate(
+                    .unsupportedPDFTemplate(template)
+                )
+            }
+            try createParentDirectories(for: plan.outputPaths)
+            return outputPathWithoutPDFExtension(outputPath)
+        }
+
+        try createParentDirectories(for: plan.outputPaths)
+        return plan.template
+    }
+
+    private func pdfSameFolderFilename(from template: String) -> String? {
+        guard template.hasPrefix("%P/") else {
+            return nil
+        }
+        let filename = String(template.dropFirst(3))
+        guard !filename.contains("/") else {
+            return nil
+        }
+        return filename
+    }
+
+    private func directoryComponent(_ template: String) -> String {
+        guard let slash = template.lastIndex(of: "/") else {
+            return ""
+        }
+        return String(template[..<slash])
+    }
+
+    private func outputPathWithoutPDFExtension(_ path: String) -> String {
+        let url = URL(fileURLWithPath: path)
+        guard url.pathExtension.lowercased() == "pdf" else {
+            return path
+        }
+        return url.deletingPathExtension().path
+    }
+
+    private func createParentDirectories(for outputPaths: [String]) throws {
+        for path in outputPaths {
+            let directory = URL(fileURLWithPath: path)
+                .deletingLastPathComponent()
+            try fileManager.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+        }
+    }
+
     private func outputBehavior(
         _ output: OutputBehavior,
         replacingTemplateWith template: String
@@ -523,10 +625,12 @@ struct ClopCommandBuilder {
 }
 
 private extension ActionRequest {
-    var isPipeline: Bool {
-        if case .pipeline = self {
+    var usesSharedOutputTemplate: Bool {
+        switch self {
+        case .optimise, .optimiseMedia, .crop, .downscale, .convert:
             return true
+        case .cropPDF, .uncropPDF, .stripMetadata, .pipeline:
+            return false
         }
-        return false
     }
 }

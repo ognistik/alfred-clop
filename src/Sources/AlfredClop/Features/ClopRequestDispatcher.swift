@@ -1,6 +1,12 @@
 import Foundation
 
 enum ClopRequestDispatcher {
+    private static let textOnlySuccessTitles: Set<String> = [
+        "PDF crop complete",
+        "PDF uncrop complete",
+        "Metadata removed"
+    ]
+
     static func isSuccessfulExecution(_ title: String) -> Bool {
         [
             "Optimization complete",
@@ -14,6 +20,10 @@ enum ClopRequestDispatcher {
             "Pipeline complete",
             "Clop operation complete"
         ].contains(title)
+    }
+
+    static func needsWorkflowSuccessNotification(_ title: String) -> Bool {
+        textOnlySuccessTitles.contains(title)
     }
 
     static func response(
@@ -192,7 +202,9 @@ enum ClopRequestDispatcher {
             return nil
         }
         let isSuccess = isSuccessfulExecution(item.title)
-        if isSuccess && environment.executionOptions.showClopUI {
+        if isSuccess
+            && environment.executionOptions.showClopUI
+            && !needsWorkflowSuccessNotification(item.title) {
             return nil
         }
         guard isSuccess ? environment.completionNotifications

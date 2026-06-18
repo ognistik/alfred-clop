@@ -97,7 +97,11 @@ enum AlfredClopCommand {
                 let environment = Environment()
                 let shouldNotify = successful
                     ? environment.completionNotifications
-                        && !environment.executionOptions.showClopUI
+                        && (
+                            !environment.executionOptions.showClopUI
+                            || ClopRequestDispatcher
+                                .needsWorkflowSuccessNotification(feedback.title)
+                        )
                     : environment.errorNotifications
                 if shouldNotify {
                     notify(feedback.subtitle.isEmpty

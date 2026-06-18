@@ -1144,6 +1144,14 @@ Offer:
 Read device and paper values from the installed CLI and cache them in Alfred's
 workflow cache directory. Refresh when the Clop app version changes.
 
+Clop's `crop-pdf` and `uncrop-pdf` commands use a narrower output syntax than
+the app-backed processing commands: filename templates work, but full
+directory-position tokens such as `%P/...` are not expanded by Clop. Alfred
+Clop should keep one global output-template setting and adapt it for PDF
+crop/uncrop at execution time, translating safe same-folder templates and
+rejecting batch templates that cannot be represented honestly by one PDF
+command.
+
 ### Pipelines
 
 For selected, copied, or passed inputs, `Pipeline` opens a saved-pipeline
@@ -1509,8 +1517,9 @@ options.
 Completion notifications default on. Successful Clop processing does not emit
 a duplicate workflow notification when `showClopUI` is enabled because Clop's
 result interface is already the completion feedback. Successful background
-processing and Configuration mutations may notify. Disabling Completion
-notifications silences both categories. Error notifications remain independent.
+processing, text-only commands that do not support Clop's result UI, and
+Configuration mutations may notify. Disabling Completion notifications
+silences all completion categories. Error notifications remain independent.
 
 The `recursiveFolders` checkbox should resolve once and control both folder
 inspection depth and `--recursive` command construction.

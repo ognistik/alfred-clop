@@ -622,6 +622,12 @@ enum CropPDFParameterMenu {
                     preset: preset,
                     request: request
                 ),
+                shift: outputModifier(
+                    cropPDF: preset.request,
+                    request: request,
+                    environment: environment,
+                    fileManager: fileManager
+                ),
                 function: stateJSON.map {
                     controlsModifier(
                         cropPDF: preset.request,
@@ -636,6 +642,31 @@ enum CropPDFParameterMenu {
                     request: request
                 )
             )
+        )
+    }
+
+    private static func outputModifier(
+        cropPDF: CropPDFRequest,
+        request: ParameterStepRequest,
+        environment: Environment,
+        fileManager: FileManager
+    ) -> ScriptFilterModifier {
+        let preserve = environment.preserveOriginal
+        let preserveText = preserve ? "Replace Originals" : "Output Template"
+        return ScriptFilterModifier(
+            arg: operationArgument(
+                for: cropPDF,
+                request: request,
+                environment: environment,
+                fileManager: fileManager,
+                preserveOriginal: !preserve
+            ),
+            subtitle: "\(inputDescription(for: request)) · \(preserveText)",
+            valid: true,
+            variables: [
+                ActionMenu.requestKindVariable:
+                    WorkflowRequestKind.operation.rawValue
+            ]
         )
     }
 
@@ -716,7 +747,8 @@ enum CropPDFParameterMenu {
         for cropPDF: CropPDFRequest,
         request: ParameterStepRequest,
         environment: Environment,
-        fileManager: FileManager
+        fileManager: FileManager,
+        preserveOriginal: Bool? = nil
     ) -> String {
         let template = (try? PresetStore(
             environment: environment,
@@ -728,7 +760,8 @@ enum CropPDFParameterMenu {
                 inputs: request.inputs,
                 action: .cropPDF(cropPDF),
                 execution: environment.executionOptions(
-                    outputTemplate: template
+                    outputTemplate: template,
+                    preserveOriginal: preserveOriginal
                 )
             ),
             prettyPrinted: false

@@ -215,11 +215,91 @@ struct ClopCommandBuilderTests {
             "--extend",
             "--recursive",
             "--output",
-            "%P/%f-clop",
+            "%f-clop",
             "/tmp/book one.pdf",
             "/tmp/book two.pdf"
         ])
         #expect(!command.expectsJSON)
+    }
+
+    @Test
+    func uncropPDFTranslatesSameFolderOutputForClopPDFSyntax() throws {
+        let directory = try makeTemporaryDirectory()
+        let source = directory.appendingPathComponent("book.pdf")
+        try Data().write(to: source)
+        var execution = makeExecutionOptions(
+            output: .sameFolder(template: "%P/%f-clop")
+        )
+        execution.showClopUI = false
+
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: [source.path],
+            action: .uncropPDF,
+            execution: execution
+        ))
+
+        #expect(command.arguments == [
+            "uncrop-pdf",
+            "--output",
+            "%f-clop",
+            source.path
+        ])
+    }
+
+    @Test
+    func cropPDFUsesConcreteOutputForSinglePerSourceSubfolderTemplate() throws {
+        let directory = try makeTemporaryDirectory()
+        let source = directory.appendingPathComponent("book.pdf")
+        try Data().write(to: source)
+        let processed = directory.appendingPathComponent("Processed")
+        var execution = makeExecutionOptions(
+            output: .sameFolder(template: "%P/Processed/%f-clop")
+        )
+        execution.showClopUI = false
+
+        let command = try makeBuilder().command(for: OperationRequest(
+            inputs: [source.path],
+            action: .cropPDF(CropPDFRequest(target: .aspectRatio("16:9"))),
+            execution: execution
+        ))
+
+        #expect(command.arguments == [
+            "crop-pdf",
+            "--aspect-ratio",
+            "16:9",
+            "--output",
+            processed.appendingPathComponent("book-clop").path,
+            source.path
+        ])
+        var isDirectory: ObjCBool = false
+        #expect(FileManager.default.fileExists(
+            atPath: processed.path,
+            isDirectory: &isDirectory
+        ))
+        #expect(isDirectory.boolValue)
+    }
+
+    @Test
+    func cropPDFRejectsPerSourceSubfolderTemplateForMultipleInputs() throws {
+        let firstDirectory = try makeTemporaryDirectory()
+        let secondDirectory = try makeTemporaryDirectory()
+        let first = firstDirectory.appendingPathComponent("book.pdf")
+        let second = secondDirectory.appendingPathComponent("book.pdf")
+        try Data().write(to: first)
+        try Data().write(to: second)
+        let execution = makeExecutionOptions(
+            output: .sameFolder(template: "%P/Processed/%f-clop")
+        )
+
+        #expect(throws: ClopCommandBuilderError.invalidOutputTemplate(
+            .unsupportedPDFTemplate("%P/Processed/%f-clop")
+        )) {
+            try makeBuilder().command(for: OperationRequest(
+                inputs: [first.path, second.path],
+                action: .cropPDF(CropPDFRequest(target: .aspectRatio("16:9"))),
+                execution: execution
+            ))
+        }
     }
 
     @Test

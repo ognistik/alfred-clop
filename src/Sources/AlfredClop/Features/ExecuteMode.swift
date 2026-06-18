@@ -13,6 +13,11 @@ enum ExecuteMode {
         "Pipeline complete",
         "Clop operation complete"
     ]
+    private static let textOnlySuccessTitles: Set<String> = [
+        "PDF crop complete",
+        "PDF uncrop complete",
+        "Metadata removed"
+    ]
 
     static func response(
         requestJSON: String,
@@ -185,7 +190,9 @@ enum ExecuteMode {
             from: Data(requestJSON.utf8)
         )
         let showsClopUI = request?.execution.showClopUI ?? false
-        if isSuccess && showsClopUI {
+        let needsWorkflowNotification = textOnlySuccessTitles
+            .contains(item.title)
+        if isSuccess && showsClopUI && !needsWorkflowNotification {
             return nil
         }
         guard isSuccess ? environment.completionNotifications

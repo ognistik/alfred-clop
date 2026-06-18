@@ -545,14 +545,22 @@ assignment.
   such as `-clop-2` and `-clop-3`, without changing the stored template
 - Preservation uses Clop's validated `--output` template only; no
   workflow-managed backups
+- PDF crop and uncrop adapt the global output template to Clop's separate
+  filename-template behavior: same-folder `%P/...` templates are passed as
+  filename templates, single-file per-source subfolder templates resolve to a
+  concrete output path, and unsupported multi-file per-source subfolder
+  templates stop before launch
+- Crop PDF menu rows expose Shift-Return to invert the configured Preserve
+  Original setting, matching the other processing parameter menus while using
+  the PDF-specific output adaptation at execution time
 - Static settings for Preserve Original, Standard or Aggressive default,
   Clop UI, completion notifications, error notifications, copy result,
   recursion, and 1-15 day clipboard-image retention
 - Automatic `--skip-errors` for implemented app-backed batch commands that
   support it, while structured partial failures remain visible
 - Successful processing notifications are suppressed when Clop UI is visible;
-  background execution and Configuration mutations follow the default-on
-  completion policy
+  text-only operations without Clop UI support, background execution, and
+  Configuration mutations follow the default-on completion policy
 - Public headless `execute` requests may use `output: default`,
   `output: template`, `output template: TEMPLATE`, or `output: false`;
   omitted output is the same as `output: default`

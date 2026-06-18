@@ -393,9 +393,42 @@ struct ExecuteModeTests {
     }
 
     @Test
-    func quietExecutionReturnsNoTextOnSuccess() throws {
+    func textOnlySuccessNotifiesEvenWhenClopUIIsEnabled() throws {
         let feedback = ExecuteMode.quietFeedback(
             requestJSON: try requestJSON(action: .stripMetadata),
+            builder: builder(),
+            runner: StubProcessRunner(result: ClopProcessResult(
+                terminationStatus: 0,
+                standardOutput: Data(),
+                standardError: Data()
+            ))
+        )
+
+        #expect(feedback == "Metadata removed: Clop processed 2 files.")
+    }
+
+    @Test
+    func pdfCropSuccessNotifiesEvenWhenClopUIIsEnabled() throws {
+        let feedback = ExecuteMode.quietFeedback(
+            requestJSON: try requestJSON(action: .cropPDF(CropPDFRequest(
+                target: .aspectRatio("16:9")
+            ))),
+            builder: builder(),
+            runner: StubProcessRunner(result: ClopProcessResult(
+                terminationStatus: 0,
+                standardOutput: Data(),
+                standardError: Data()
+            ))
+        )
+
+        #expect(feedback == "PDF crop complete: Clop processed 2 files.")
+    }
+
+    @Test
+    func textOnlySuccessHonorsCompletionNotificationSetting() throws {
+        let feedback = ExecuteMode.quietFeedback(
+            requestJSON: try requestJSON(action: .stripMetadata),
+            environment: Environment(values: ["completionNotifications": "false"]),
             builder: builder(),
             runner: StubProcessRunner(result: ClopProcessResult(
                 terminationStatus: 0,

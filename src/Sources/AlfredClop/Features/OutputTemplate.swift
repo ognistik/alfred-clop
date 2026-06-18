@@ -10,6 +10,7 @@ enum OutputTemplateError: Error, Equatable {
     case missingVariableFilename
     case unsupportedTilde
     case cannotPreflight(String)
+    case unsupportedPDFTemplate(String)
     case duplicateOutput(String)
     case sourceCollision(String)
 }
@@ -308,6 +309,8 @@ extension OutputTemplateError: LocalizedError {
             return "Use ~/ for your home folder. Other users' home shortcuts are not supported."
         case .cannotPreflight(let input):
             return "Preservation cannot safely preflight \(input)."
+        case .unsupportedPDFTemplate(let template):
+            return "PDF crop and uncrop cannot use \(template) for multiple inputs."
         case .duplicateOutput(let path):
             return "Multiple inputs would write to \(path)."
         case .sourceCollision(let path):

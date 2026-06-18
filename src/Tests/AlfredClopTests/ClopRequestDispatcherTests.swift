@@ -570,6 +570,28 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func publicTextOnlySuccessNotifiesEvenWhenClopUIIsEnabled() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let environment = try dispatcherEnvironment()
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(action: .stripMetadata)
+        )
+
+        let feedback = ClopRequestDispatcher.quietFeedback(
+            requestJSON: try JSONOutput.string(for: request, prettyPrinted: false),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: environment,
+            builder: dispatcherBuilder(),
+            runner: CapturingDispatcherRunner()
+        )
+
+        #expect(feedback == "Metadata removed: Clop processed 1 file.")
+    }
+
+    @Test
     func aggressiveExecuteRouteUsesOptimizeCapabilityWithoutMenuItem() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
