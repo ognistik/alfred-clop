@@ -1168,12 +1168,26 @@ step syntax. When input is ambiguous, preserve honest broad choices and let
 Clop own final compatibility.
 
 Pipeline row subtitles should stay compact, such as
-`Selected file · ⌘L Details`. Use Large Type for the pipeline name, accepted
-file type, raw step text, saved Clop settings such as skip optimization or hide
-result, and the current inputs. Inline pipeline rows should also keep subtitles
-compact, such as `Selected file · Clop validates steps · ⌘L Syntax`, and use
-Large Type for examples and the current inline steps. Do not put long raw
-pipeline expressions in ordinary subtitles.
+`Selected file · ⌃↩ Delete Pipeline · ⌘L Details`. Use Large Type for the
+pipeline name, accepted file type, raw step text, saved Clop settings such as
+skip optimization or hide result, and the current inputs. Inline pipeline rows
+should also keep subtitles compact, such as
+`Selected file · Optimizes First · ⌃↩ Save Pipeline · ⌘L Syntax`, and use
+Large Type for examples, the current inline steps, and the meaning of `skip`
+and `hide`. Do not put long raw pipeline expressions in ordinary subtitles.
+
+Normalize the user-facing pipeline options across saved and inline pipelines.
+Inline runs accept `steps ; skip hide`; saved creation accepts
+`Name => steps ; img skip hide`. In both places, `skip` means "steps only".
+For saved pipeline creation, it maps to Clop's `--skip-optimisation`; for
+inline execution, Alfred Clop omits its prepended `optimise` step. Without
+`skip`, inline execution should run `optimise -> steps` so it matches Clop's
+saved-pipeline default of optimizing before running saved steps. `hide` means
+hide Clop's floating result UI: saved creation maps it to `--hide-result`,
+while inline execution suppresses the runtime `--gui` flag. The Pipeline menu
+should let Control-Return save a valid inline pipeline and Control-Return
+delete a visible saved pipeline through confirmation. Configuration remains
+the complete unfiltered pipeline library manager.
 
 Pipeline execution must pass only options supported by `pipeline run`:
 `--gui`, `--no-progress`, `--recursive`, `--skip-errors`, and `--json` where
@@ -1189,7 +1203,8 @@ Pipeline management should support:
 - replacing a named pipeline only through an explicit modifier or confirmation;
 - choosing an optional image, video, PDF, or audio restriction;
 - toggling implicit optimization and floating results;
-- deleting with an explicit confirmation step.
+- deleting individual pipelines with an explicit confirmation step;
+- removing all saved pipelines with an explicit confirmation step.
 
 Pipeline management lives under the Configuration namespace as `:pipelines`.
 It follows the `:presets` browser pattern: an empty query shows category/filter
@@ -1213,8 +1228,8 @@ optional and space-separated:
 - `aud` or `audio`;
 - `pdf`;
 - `all`, meaning no `--file-type`;
-- `skip`, meaning `--skip-optimisation`;
-- `hide`, meaning `--hide-result`.
+- `skip`, meaning steps only via `--skip-optimisation`;
+- `hide`, meaning hide Clop's result UI via `--hide-result`.
 
 The older `:pipelines add NAME => STEPS ; OPTIONS` form may remain accepted as
 a compatibility shortcut, but the visible workflow guidance should teach the

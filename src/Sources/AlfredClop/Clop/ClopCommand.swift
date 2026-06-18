@@ -157,7 +157,7 @@ struct ClopCommandBuilder {
             )
             expectsJSON = false
         case .pipeline(let pipeline):
-            guard !pipeline.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            guard !pipeline.pipeline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw ClopCommandBuilderError.invalidPipeline
             }
             arguments = pipelineArguments(
@@ -502,13 +502,20 @@ struct ClopCommandBuilder {
             "--no-progress",
             "--skip-errors"
         ]
-        if request.execution.showClopUI {
+        if request.execution.showClopUI, !pipeline.hideResult {
             arguments.append("--gui")
         }
         if request.execution.recursiveFolders {
             arguments.append("--recursive")
         }
-        return arguments + [pipeline.name] + request.inputs
+        return arguments + [pipelineExpression(for: pipeline)] + request.inputs
+    }
+
+    private func pipelineExpression(for pipeline: PipelineRunRequest) -> String {
+        guard pipeline.isInline, !pipeline.skipOptimisation else {
+            return pipeline.pipeline
+        }
+        return "optimise -> \(pipeline.pipeline)"
     }
 }
 

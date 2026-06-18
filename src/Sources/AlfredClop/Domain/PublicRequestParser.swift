@@ -355,11 +355,45 @@ enum PublicRequestParser {
         case .cropPDF:
             return try cropPDFExecution(values: values)
         case .pipeline:
-            try rejectUnknown(values, allowed: ["name"])
-            guard let name = values["name"], !name.isEmpty else {
-                throw PublicRequestError.missingParameter("name")
+            try rejectUnknown(values, allowed: [
+                "pipeline",
+                "name",
+                "skip",
+                "hide"
+            ])
+            let pipelineValue = values["pipeline"] ?? values["name"]
+            guard let pipeline = pipelineValue, !pipeline.isEmpty else {
+                throw PublicRequestError.missingParameter("pipeline")
             }
-            return .pipeline(PipelineRunRequest(name: name))
+            if values["pipeline"] != nil, values["name"] != nil {
+                throw PublicRequestError.invalidParameter(
+                    "pipeline",
+                    "use pipeline or name, not both"
+                )
+            }
+            let hasSkip = values["skip"] != nil
+            let skip = try boolean(
+                values["skip"],
+                name: "skip",
+                defaultValue: false
+            )
+            let isInline = looksLikeInlinePipeline(pipeline)
+            if hasSkip, !isInline {
+                throw PublicRequestError.invalidParameter(
+                    "skip",
+                    "only works with inline pipeline steps"
+                )
+            }
+            return .pipeline(PipelineRunRequest(
+                pipeline: pipeline,
+                isInline: isInline,
+                skipOptimisation: skip,
+                hideResult: try boolean(
+                    values["hide"],
+                    name: "hide",
+                    defaultValue: false
+                )
+            ))
         }
     }
 
@@ -788,6 +822,20 @@ enum PublicRequestParser {
             .joined(separator: " ")
     }
 
+    private static func looksLikeInlinePipeline(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return false
+        }
+        if trimmed.contains("->") {
+            return true
+        }
+        if trimmed.contains("("), trimmed.contains(")") {
+            return true
+        }
+        return knownPipelineSteps.contains(trimmed.lowercased())
+    }
+
     private static let actionNames: [String: ClopAction] = [
         "optimize": .optimise,
         "crop": .crop,
@@ -807,5 +855,29 @@ enum PublicRequestParser {
     private static let executionOverrideKeys: Set<String> = [
         "output",
         "output template"
+    ]
+
+    private static let knownPipelineSteps: Set<String> = [
+        "optimise",
+        "downscale",
+        "lowerbitrate",
+        "convert",
+        "crop",
+        "extractpagesasimages",
+        "copy",
+        "move",
+        "rename",
+        "delete",
+        "if",
+        "ifnot",
+        "removeaudio",
+        "changespeed",
+        "runscript",
+        "runshortcut",
+        "copytoclipboard",
+        "copylinkforsending",
+        "shelvewith",
+        "uploadwith",
+        "openwith"
     ]
 }

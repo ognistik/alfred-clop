@@ -370,6 +370,8 @@ enum MenuMode: String, Codable, Equatable {
     case configurationPipelineAdd
     case configurationPipelineDeleteConfirmation
     case configurationPipelineDelete
+    case configurationResetPipelinesConfirmation
+    case configurationResetPipelines
 }
 
 enum PresetMenuActionKind: String, Codable, Equatable {
@@ -505,6 +507,17 @@ struct MenuState: Codable, Equatable {
         MenuState(
             mode: .pipeline,
             parameterRequest: request
+        )
+    }
+
+    static func pipeline(
+        _ request: ParameterStepRequest,
+        action: PipelineMenuAction
+    ) -> MenuState {
+        MenuState(
+            mode: .pipeline,
+            parameterRequest: request,
+            pipelineAction: action
         )
     }
 

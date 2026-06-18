@@ -462,6 +462,45 @@ struct PublicRequestParserTests {
     }
 
     @Test
+    func pipelineExecutionAcceptsSavedNamesAndInlineOptions() throws {
+        let saved = try PublicRequestParser.parse("""
+        execute: Pipeline
+        pipeline: To WebP
+        hide: true
+
+        /tmp/image.png
+        """)
+        let inline = try PublicRequestParser.parse("""
+        execute: Pipeline
+        pipeline: crop(width: 1600) -> convert(to: webp)
+        skip: true
+        hide: true
+
+        /tmp/image.png
+        """)
+        let legacyName = try PublicRequestParser.parse("""
+        execute: Pipeline
+        name: To WebP
+
+        /tmp/image.png
+        """)
+
+        #expect(saved.route == .execute(action: .pipeline(PipelineRunRequest(
+            pipeline: "To WebP",
+            hideResult: true
+        ))))
+        #expect(inline.route == .execute(action: .pipeline(PipelineRunRequest(
+            pipeline: "crop(width: 1600) -> convert(to: webp)",
+            isInline: true,
+            skipOptimisation: true,
+            hideResult: true
+        ))))
+        #expect(legacyName.route == .execute(action: .pipeline(
+            PipelineRunRequest(pipeline: "To WebP")
+        )))
+    }
+
+    @Test
     func cropPDFExecutionAcceptsAllTargetKindsAndControls() throws {
         let ratio = try PublicRequestParser.parse("""
         execute: Crop PDF
@@ -544,6 +583,13 @@ struct PublicRequestParserTests {
         (
             "execute: Optimize\noutput template:\n\n/tmp/image.jpg",
             PublicRequestError.missingParameter("output template")
+        ),
+        (
+            "execute: Pipeline\npipeline: To WebP\nskip: true\n\n/tmp/image.jpg",
+            PublicRequestError.invalidParameter(
+                "skip",
+                "only works with inline pipeline steps"
+            )
         ),
         (
             "menu: Crop / Resize\n\nfinder\n/tmp/image.jpg",

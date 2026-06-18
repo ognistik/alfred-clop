@@ -254,6 +254,32 @@ Supported Crop PDF controls are `a` / `auto`, `p` / `portrait`,
 `l` / `landscape`, and `e` / `extend`. Omit `extend` to use Clop's normal
 crop behavior.
 
+Pipeline execution accepts one `pipeline` value. It can be a saved Clop
+pipeline name or inline Clop pipeline steps:
+
+```text
+execute: Pipeline
+pipeline: To WebP
+
+/path/photo.png
+```
+
+```text
+execute: Pipeline
+pipeline: crop(width: 1600) -> convert(to: webp)
+skip: true
+hide: true
+
+/path/photo.png
+```
+
+For inline steps, omitting `skip` makes Alfred Clop optimize first and then run
+the written steps. `skip: true` runs only the written steps. `hide: true`
+hides Clop's floating result UI by suppressing the runtime UI flag. `skip` is
+not accepted for saved pipeline names because saved pipelines already carry
+their own Clop optimization setting. The older `name` field remains accepted
+as a compatibility alias, but new requests should use `pipeline`.
+
 ### Current Grammar
 
 This table is the complete shorthand execution grammar currently implemented:
@@ -265,6 +291,7 @@ This table is the complete shorthand execution grammar currently implemented:
 | `Downscale` | `factor` (required) | Uses workflow execution settings |
 | `Convert`, `Convert Image`, `Convert Video`, `Convert Audio` | `format` (required), optional compression/bitrate where supported | Uses Clop defaults for that target |
 | `Crop PDF` | exactly one of `ratio`, `device`, or `paper size`; optional `page layout`, `extend`, or compact `controls` | Auto layout, crop content |
+| `Pipeline` | `pipeline` (required), optional `skip` for inline steps, optional `hide` | Saved pipeline settings, or optimize first for inline steps |
 | `Uncrop PDF` | None | Uses workflow execution settings |
 | `Strip Metadata` | None | Uses workflow execution settings |
 

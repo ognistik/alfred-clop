@@ -333,7 +333,9 @@ enum AlfredClopCommand {
                  .configurationPipelineCategory,
                  .configurationPipelineAdd,
                  .configurationPipelineDeleteConfirmation,
-                 .configurationPipelineDelete:
+                 .configurationPipelineDelete,
+                 .configurationResetPipelinesConfirmation,
+                 .configurationResetPipelines:
                 return ConfigurationMenu.response(
                     stateJSON: stateJSON,
                     query: query

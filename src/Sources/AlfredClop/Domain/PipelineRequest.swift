@@ -32,10 +32,67 @@ enum PipelineFileType: String, Codable, CaseIterable, Equatable {
 }
 
 struct PipelineRunRequest: Codable, Equatable {
-    var name: String
+    var pipeline: String
+    var isInline: Bool
+    var skipOptimisation: Bool
+    var hideResult: Bool
+
+    init(
+        pipeline: String,
+        isInline: Bool = false,
+        skipOptimisation: Bool = false,
+        hideResult: Bool = false
+    ) {
+        self.pipeline = pipeline
+        self.isInline = isInline
+        self.skipOptimisation = skipOptimisation
+        self.hideResult = hideResult
+    }
 
     init(name: String) {
-        self.name = name
+        self.init(pipeline: name)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case pipeline
+        case name
+        case isInline
+        case skipOptimisation
+        case hideResult
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(pipeline, forKey: .pipeline)
+        if isInline {
+            try container.encode(true, forKey: .isInline)
+        }
+        if skipOptimisation {
+            try container.encode(true, forKey: .skipOptimisation)
+        }
+        if hideResult {
+            try container.encode(true, forKey: .hideResult)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        pipeline = try container.decodeIfPresent(
+            String.self,
+            forKey: .pipeline
+        ) ?? container.decode(String.self, forKey: .name)
+        isInline = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .isInline
+        ) ?? false
+        skipOptimisation = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .skipOptimisation
+        ) ?? false
+        hideResult = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .hideResult
+        ) ?? false
     }
 }
 
@@ -90,6 +147,7 @@ struct PipelineAddRequest: Codable, Equatable {
 }
 
 enum PipelineMenuActionKind: String, Codable, Equatable {
+    case nameInline
     case add
     case confirmDelete
     case delete

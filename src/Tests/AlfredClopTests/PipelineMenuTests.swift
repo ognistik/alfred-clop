@@ -17,15 +17,15 @@ struct PipelineMenuTests {
             "To WebP"
         ])
         #expect(response.items[0].subtitle == "Selected file · Example: convert(to: webp) · ⌘L Syntax")
-        #expect(response.items[1].subtitle == "Selected file · ⌘L Details")
-        #expect(response.items[2].subtitle == "Selected file · ⌘L Details")
+        #expect(response.items[1].subtitle == "Selected file · ⌃↩ Delete Pipeline · ⌘L Details")
+        #expect(response.items[2].subtitle == "Selected file · ⌃↩ Delete Pipeline · ⌘L Details")
         #expect(response.items[2].text?.largetype?.contains("Steps\nconvert(to: webp)") == true)
 
         let operation = try JSONDecoder().decode(
             OperationRequest.self,
             from: Data((response.items[2].arg ?? "").utf8)
         )
-        #expect(operation.action == .pipeline(PipelineRunRequest(name: "To WebP")))
+        #expect(operation.action == .pipeline(PipelineRunRequest(pipeline: "To WebP")))
     }
 
     @Test
@@ -79,14 +79,17 @@ struct PipelineMenuTests {
 
         let item = try #require(response.items.first)
         #expect(item.title == "Run inline pipeline")
-        #expect(item.subtitle == "Selected file · Clop validates steps · ⌘L Syntax")
+        #expect(item.subtitle == "Selected file · Optimizes First · ⌃↩ Save Pipeline · ⌘L Syntax")
         #expect(item.text?.largetype?.contains("Steps\n\(steps)") == true)
 
         let operation = try JSONDecoder().decode(
             OperationRequest.self,
             from: Data((item.arg ?? "").utf8)
         )
-        #expect(operation.action == .pipeline(PipelineRunRequest(name: steps)))
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: steps,
+            isInline: true
+        )))
     }
 
     @Test
@@ -104,7 +107,10 @@ struct PipelineMenuTests {
             OperationRequest.self,
             from: Data((item.arg ?? "").utf8)
         )
-        #expect(operation.action == .pipeline(PipelineRunRequest(name: "removeAudio")))
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: "removeAudio",
+            isInline: true
+        )))
     }
 
     @Test
@@ -135,7 +141,155 @@ struct PipelineMenuTests {
             OperationRequest.self,
             from: Data((item.arg ?? "").utf8)
         )
-        #expect(operation.action == .pipeline(PipelineRunRequest(name: "convert(to: webp)")))
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: "convert(to: webp)",
+            isInline: true
+        )))
+    }
+
+    @Test
+    func inlineOptionsNormalizeSkipAndHide() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convert(to: webp) ; skip hide",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.subtitle == "Selected file · Steps Only · Hide Result · ⌃↩ Save Pipeline · ⌘L Syntax")
+
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((item.arg ?? "").utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: "convert(to: webp)",
+            isInline: true,
+            skipOptimisation: true,
+            hideResult: true
+        )))
+    }
+
+    @Test
+    func inlinePipelineCommandPrependsOptimiseUnlessSkippedAndCanHideUI() throws {
+        let builder = ClopCommandBuilder(discovery: StubDiscovery(
+            diagnostics: ClopDiagnostics(
+                found: true,
+                path: "/tmp/Clop",
+                source: "test",
+                errors: []
+            )
+        ))
+        let execution = ExecutionOptions(
+            showClopUI: true,
+            copyResult: false,
+            output: .inPlace,
+            backup: .trustClop,
+            adaptiveOptimisation: nil,
+            pdfDPI: nil,
+            recursiveFolders: false
+        )
+
+        let optimizing = try builder.command(for: OperationRequest(
+            inputs: ["/tmp/image.png"],
+            action: .pipeline(PipelineRunRequest(
+                pipeline: "convert(to: webp)",
+                isInline: true
+            )),
+            execution: execution
+        ))
+        #expect(optimizing.arguments == [
+            "pipeline",
+            "run",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "--gui",
+            "optimise -> convert(to: webp)",
+            "/tmp/image.png"
+        ])
+
+        let hiddenStepsOnly = try builder.command(for: OperationRequest(
+            inputs: ["/tmp/image.png"],
+            action: .pipeline(PipelineRunRequest(
+                pipeline: "convert(to: webp)",
+                isInline: true,
+                skipOptimisation: true,
+                hideResult: true
+            )),
+            execution: execution
+        ))
+        #expect(hiddenStepsOnly.arguments == [
+            "pipeline",
+            "run",
+            "--json",
+            "--no-progress",
+            "--skip-errors",
+            "convert(to: webp)",
+            "/tmp/image.png"
+        ])
+    }
+
+    @Test
+    func controlReturnSavesInlinePipelineFromPipelineMenu() throws {
+        let provider = PipelineProviderStub(pipelines: [])
+        let inline = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convert(to: webp) ; skip hide",
+            provider: provider
+        )
+        let nameStateJSON = try #require(inline.items.first?.mods?.control?.variables?[ActionMenu.menuStateVariable])
+
+        let naming = PipelineMenu.response(
+            stateJSON: nameStateJSON,
+            query: "To WebP",
+            provider: provider
+        )
+        let saveJSON = try #require(naming.items.first?.arg)
+
+        _ = PipelineMenu.response(
+            stateJSON: saveJSON,
+            query: "",
+            provider: provider
+        )
+
+        #expect(provider.added == PipelineAddRequest(
+            name: "To WebP",
+            steps: "convert(to: webp)",
+            fileType: .image,
+            skipOptimisation: true,
+            hideResult: true
+        ))
+    }
+
+    @Test
+    func controlReturnDeletesSavedPipelineThroughConfirmation() throws {
+        let provider = PipelineProviderStub()
+        let list = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "",
+            provider: provider
+        )
+        let pipeline = try #require(list.items.first { $0.title == "To WebP" })
+        let confirmJSON = try #require(pipeline.mods?.control?.arg)
+        let confirmation = PipelineMenu.response(
+            stateJSON: confirmJSON,
+            query: "",
+            provider: provider
+        )
+
+        #expect(confirmation.items.map(\.title) == [
+            "Delete Pipeline To WebP?",
+            "Cancel"
+        ])
+
+        let deleteJSON = try #require(confirmation.items.first?.arg)
+        _ = PipelineMenu.response(
+            stateJSON: deleteJSON,
+            query: "",
+            provider: provider
+        )
+        #expect(provider.deleted == "To WebP")
     }
 
     @Test
@@ -220,6 +374,9 @@ struct PipelineMenuTests {
         #expect(response.items.first?.title == "Add pipeline")
         let image = try #require(response.items.first { $0.title == "Image Pipelines" })
         #expect(image.subtitle == "1 Saved Pipeline")
+        let remove = try #require(response.items.last)
+        #expect(remove.title == "Remove all saved pipelines")
+        #expect(remove.subtitle == "4 Saved Pipelines in Clop")
         #expect(image.text?.largetype?.contains("Pipeline add syntax") == true)
     }
 
@@ -239,6 +396,20 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func pipelinesConfigurationCanSearchForRemoveAllPipelines() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines remove",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        #expect(response.items.map(\.title).contains("Remove all saved pipelines"))
+    }
+
+    @Test
     func pipelinesConfigurationAddsFromBareNameAndStepsSyntax() throws {
         let environment = Environment(values: [
             PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
@@ -251,7 +422,7 @@ struct PipelineMenuTests {
 
         let item = try #require(response.items.first)
         #expect(item.title == "Add Pipeline New Pipeline")
-        #expect(item.subtitle == "All file types · Skip optimization · ⌘L Reference")
+        #expect(item.subtitle == "All file types · Steps only · ⌘L Reference")
 
         let json = try #require(item.arg)
         let state = try JSONDecoder().decode(
@@ -325,6 +496,40 @@ struct PipelineMenuTests {
         #expect(confirmation.items[1].arg == ":pipelines image")
     }
 
+    @Test
+    func pipelinesConfigurationRemovesAllPipelinesThroughConfirmation() throws {
+        let provider = PipelineProviderStub()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let list = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines",
+            environment: environment,
+            pipelineProvider: provider
+        )
+        let remove = try #require(list.items.first {
+            $0.title == "Remove all saved pipelines"
+        })
+        let confirmation = ConfigurationMenu.response(
+            stateJSON: try #require(remove.arg),
+            query: "",
+            environment: environment,
+            pipelineProvider: provider
+        )
+
+        #expect(confirmation.items.first?.title == "Remove all 4 saved pipelines?")
+        let deleteJSON = try #require(confirmation.items.first?.arg)
+        _ = ConfigurationMenu.response(
+            stateJSON: deleteJSON,
+            query: "",
+            environment: environment,
+            pipelineProvider: provider
+        )
+
+        #expect(provider.deletedNames == ["To WebP", "To GIF", "To MP3", "Any"])
+        #expect(provider.pipelines.isEmpty)
+    }
+
     private func stateJSON(mediaKinds: [MediaKind]) -> String {
         let request = ParameterStepRequest(
             action: .pipeline,
@@ -340,7 +545,7 @@ struct PipelineMenuTests {
     }
 }
 
-private struct PipelineProviderStub: ClopPipelineProviding {
+private final class PipelineProviderStub: ClopPipelineProviding {
     var pipelines: [SavedPipeline] = [
         SavedPipeline(
             name: "To WebP",
@@ -365,12 +570,41 @@ private struct PipelineProviderStub: ClopPipelineProviding {
             rawText: "copyToClipboard"
         )
     ]
+    var added: PipelineAddRequest?
+    var deleted: String?
+    var deletedNames = [String]()
+
+    init(pipelines: [SavedPipeline]? = nil) {
+        if let pipelines {
+            self.pipelines = pipelines
+        }
+    }
 
     func listPipelines() throws -> [SavedPipeline] {
         pipelines
     }
 
-    func addPipeline(_ request: PipelineAddRequest) throws {}
+    func addPipeline(_ request: PipelineAddRequest) throws {
+        added = request
+        if request.replace {
+            pipelines.removeAll {
+                $0.name.caseInsensitiveCompare(request.name) == .orderedSame
+            }
+        }
+        pipelines.append(SavedPipeline(
+            name: request.name,
+            fileType: request.fileType,
+            rawText: request.steps,
+            skipOptimisation: request.skipOptimisation,
+            hideResult: request.hideResult
+        ))
+    }
 
-    func deletePipeline(named name: String) throws {}
+    func deletePipeline(named name: String) throws {
+        deleted = name
+        deletedNames.append(name)
+        pipelines.removeAll {
+            $0.name.caseInsensitiveCompare(name) == .orderedSame
+        }
+    }
 }

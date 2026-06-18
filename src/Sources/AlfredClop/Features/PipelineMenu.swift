@@ -27,8 +27,83 @@ enum PipelineMenu {
             )
         }
 
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let state = MenuState.pipeline(request)
+        if let action = decodedState.pipelineAction {
+            switch action.kind {
+            case .nameInline:
+                guard let add = action.add else {
+                    return error(
+                        title: "Unable to save pipeline",
+                        subtitle: "The pipeline save state is invalid."
+                    )
+                }
+                return saveInlinePipelineResponse(
+                    add,
+                    pipelines: pipelines,
+                    request: request,
+                    state: decodedState,
+                    query: query
+                )
+            case .add:
+                guard let add = action.add else {
+                    return error(
+                        title: "Unable to save pipeline",
+                        subtitle: "The pipeline save state is invalid."
+                    )
+                }
+                do {
+                    try provider.addPipeline(add)
+                } catch let caughtError {
+                    return error(
+                        title: "Unable to save pipeline",
+                        subtitle: caughtError.localizedDescription
+                    )
+                }
+                return pipelineList(
+                    (try? provider.listPipelines()) ?? pipelines,
+                    request: request,
+                    state: state,
+                    query: "",
+                    category: defaultCategory(for: request),
+                    environment: environment,
+                    showGuideWhenEmpty: true
+                )
+            case .confirmDelete:
+                guard let pipeline = action.pipeline else {
+                    return error(
+                        title: "Unable to delete pipeline",
+                        subtitle: "The pipeline delete state is invalid."
+                    )
+                }
+                return deleteConfirmation(pipeline, request: request)
+            case .delete:
+                guard let pipeline = action.pipeline else {
+                    return error(
+                        title: "Unable to delete pipeline",
+                        subtitle: "The pipeline delete state is invalid."
+                    )
+                }
+                do {
+                    try provider.deletePipeline(named: pipeline.name)
+                } catch let caughtError {
+                    return error(
+                        title: "Unable to delete pipeline",
+                        subtitle: caughtError.localizedDescription
+                    )
+                }
+                return pipelineList(
+                    (try? provider.listPipelines()) ?? pipelines,
+                    request: request,
+                    state: state,
+                    query: "",
+                    category: defaultCategory(for: request),
+                    environment: environment,
+                    showGuideWhenEmpty: true
+                )
+            }
+        }
+
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if let route = categoryRoute(from: trimmed, request: request) {
             return pipelineList(
                 pipelines,
@@ -142,7 +217,7 @@ enum PipelineMenu {
     ) -> ScriptFilterItem {
         let operation = OperationRequest(
             inputs: request.inputs,
-            action: .pipeline(PipelineRunRequest(name: pipeline.name)),
+            action: .pipeline(PipelineRunRequest(pipeline: pipeline.name)),
             execution: pipelineExecutionOptions(environment: environment)
         )
         return ScriptFilterItem(
@@ -153,6 +228,7 @@ enum PipelineMenu {
                 shouldShowAcceptedType(in: request)
                     ? acceptedTypeDescription(for: pipeline)
                     : nil,
+                "⌃↩ Delete Pipeline",
                 "⌘L Details"
             ].compactMap(\.self).joined(separator: " · "),
             arg: (try? JSONOutput.string(for: operation, prettyPrinted: false)) ?? "",
@@ -163,6 +239,10 @@ enum PipelineMenu {
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
             ],
+            mods: ScriptFilterMods(control: pipelineDeleteModifier(
+                pipeline,
+                request: request
+            )),
             text: ScriptFilterText(
                 largetype: largeTypeDetails(for: pipeline, request: request)
             )
@@ -185,18 +265,29 @@ enum PipelineMenu {
         environment: Environment
     ) -> ScriptFilterItem? {
         let steps = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard looksLikeInlinePipeline(steps) else {
+        guard let inline = InlinePipelineParser.parse(steps),
+              looksLikeInlinePipeline(inline.steps) else {
             return nil
         }
         let operation = OperationRequest(
             inputs: request.inputs,
-            action: .pipeline(PipelineRunRequest(name: steps)),
+            action: .pipeline(PipelineRunRequest(
+                pipeline: inline.steps,
+                isInline: true,
+                skipOptimisation: inline.skipOptimisation,
+                hideResult: inline.hideResult
+            )),
             execution: pipelineExecutionOptions(environment: environment)
         )
         return ScriptFilterItem(
             uid: "pipeline.inline.\(steps)",
             title: "Run inline pipeline",
-            subtitle: "\(inputDescription(for: request)) · Clop validates steps · ⌘L Syntax",
+            subtitle: ([
+                inputDescription(for: request),
+                inlineSettingsDescription(for: inline),
+                "⌃↩ Save Pipeline",
+                "⌘L Syntax"
+            ] as [String]).joined(separator: " · "),
             arg: (try? JSONOutput.string(for: operation, prettyPrinted: false)) ?? "",
             valid: true,
             autocomplete: steps,
@@ -205,8 +296,12 @@ enum PipelineMenu {
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
             ],
+            mods: ScriptFilterMods(control: inlineSaveModifier(
+                inline,
+                request: request
+            )),
             text: ScriptFilterText(largetype: inlinePipelineDetails(
-                steps: steps,
+                inline: inline,
                 request: request
             ))
         )
@@ -246,6 +341,133 @@ enum PipelineMenu {
             items: items.map(affordance.apply),
             variables: preservedVariables(for: request, stateJSON: stateJSON),
             skipKnowledge: true
+        )
+    }
+
+    private static func saveInlinePipelineResponse(
+        _ base: PipelineAddRequest,
+        pipelines: [SavedPipeline],
+        request: ParameterStepRequest,
+        state: MenuState,
+        query: String
+    ) -> ScriptFilterResponse {
+        let name = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else {
+            return response(
+                items: [
+                    ScriptFilterItem(
+                        title: "Name this pipeline",
+                        subtitle: [
+                            pipelineAddSummary(base),
+                            "Type a name",
+                            "⌘L Details"
+                        ].joined(separator: " · "),
+                        arg: "",
+                        valid: false,
+                        text: ScriptFilterText(largetype: pipelineAddDetails(base))
+                    )
+                ],
+                request: request,
+                state: state
+            )
+        }
+
+        var add = base
+        add.name = name
+        let exists = pipelines.contains {
+            $0.name.caseInsensitiveCompare(name) == .orderedSame
+        }
+        var replace = add
+        replace.replace = true
+        let addState = MenuState.pipeline(
+            request,
+            action: PipelineMenuAction(kind: .add, add: add)
+        )
+        let replaceState = MenuState.pipeline(
+            request,
+            action: PipelineMenuAction(kind: .add, add: replace)
+        )
+        let addJSON = encoded(addState)
+        let replaceJSON = encoded(replaceState)
+        let title = exists
+            ? "Pipeline \(name) already exists"
+            : "Save Pipeline \(name)"
+        let subtitle = ([
+            pipelineAddSummary(add),
+            exists ? "⌘↩ Replace" : nil,
+            "⌘L Details"
+        ] as [String?]).compactMap(\.self).joined(separator: " · ")
+
+        return response(
+            items: [
+                ScriptFilterItem(
+                    title: title,
+                    subtitle: subtitle,
+                    arg: exists ? "" : addJSON,
+                    valid: !exists,
+                    variables: exists ? nil : transitionVariables(
+                        stateJSON: addJSON,
+                        request: request
+                    ),
+                    mods: ScriptFilterMods(command: ScriptFilterModifier(
+                        arg: replaceJSON,
+                        subtitle: "Replace Pipeline",
+                        valid: true,
+                        variables: transitionVariables(
+                            stateJSON: replaceJSON,
+                            request: request
+                        )
+                    )),
+                    text: ScriptFilterText(largetype: pipelineAddDetails(add))
+                )
+            ],
+            request: request,
+            state: state
+        )
+    }
+
+    private static func deleteConfirmation(
+        _ pipeline: SavedPipeline,
+        request: ParameterStepRequest
+    ) -> ScriptFilterResponse {
+        let deleteState = MenuState.pipeline(
+            request,
+            action: PipelineMenuAction(kind: .delete, pipeline: pipeline)
+        )
+        let deleteJSON = encoded(deleteState)
+        let cancelState = MenuState.pipeline(request)
+        let cancelJSON = encoded(cancelState)
+        return response(
+            items: [
+                ScriptFilterItem(
+                    title: "Delete Pipeline \(pipeline.name)?",
+                    subtitle: "Return confirms · Cannot be undone",
+                    arg: deleteJSON,
+                    valid: true,
+                    variables: transitionVariables(
+                        stateJSON: deleteJSON,
+                        request: request
+                    ),
+                    text: ScriptFilterText(
+                        largetype: largeTypeDetails(
+                            for: pipeline,
+                            request: request
+                        )
+                    )
+                ),
+                ScriptFilterItem(
+                    title: "Cancel",
+                    subtitle: "Return keeps pipeline",
+                    arg: cancelJSON,
+                    valid: true,
+                    variables: transitionVariables(
+                        stateJSON: cancelJSON,
+                        request: request
+                    )
+                )
+            ],
+            request: request,
+            state: deleteState
         )
     }
 
@@ -392,16 +614,27 @@ enum PipelineMenu {
     }
 
     private static func inlinePipelineDetails(
-        steps: String,
+        inline: InlinePipeline,
         request: ParameterStepRequest
     ) -> String {
         var lines = [
             "Run inline pipeline",
             "",
-            "Steps",
-            steps,
+            inline.skipOptimisation
+                ? "Steps only"
+                : "Optimizes first",
+            inline.hideResult
+                ? "Hides Clop result"
+                : "Uses workflow Clop UI setting",
             "",
-            "Clop validates the pipeline syntax."
+            "Steps",
+            inline.steps,
+            "",
+            "Clop validates the pipeline syntax.",
+            "",
+            "Options",
+            "skip: run only the written steps",
+            "hide: hide Clop's floating result UI"
         ]
         if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
             lines += ["", "Inputs", inputs]
@@ -422,8 +655,15 @@ enum PipelineMenu {
             "crop(width: 1600) -> convert(to: webp)",
             "changeSpeed(factor: 2.0) -> removeAudio",
             "convert(to: gif)",
+            "convert(to: webp) ; skip hide",
             "",
-            "Type only the steps here. Saved pipeline creation uses:",
+            "Options",
+            "skip: run only the written steps",
+            "hide: hide Clop's floating result UI",
+            "",
+            "Without skip, Alfred Clop optimizes first.",
+            "",
+            "Saved pipeline creation uses:",
             "Name => steps ; options"
         ]
         if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
@@ -457,6 +697,114 @@ enum PipelineMenu {
         return parts.joined(separator: " · ")
     }
 
+    private static func inlineSettingsDescription(
+        for inline: InlinePipeline
+    ) -> String {
+        [
+            inline.skipOptimisation ? "Steps Only" : "Optimizes First",
+            inline.hideResult ? "Hide Result" : nil
+        ].compactMap(\.self).joined(separator: " · ")
+    }
+
+    private static func inlineSaveModifier(
+        _ inline: InlinePipeline,
+        request: ParameterStepRequest
+    ) -> ScriptFilterModifier {
+        let add = PipelineAddRequest(
+            name: "",
+            steps: inline.steps,
+            fileType: inferredPipelineFileType(for: request),
+            skipOptimisation: inline.skipOptimisation,
+            hideResult: inline.hideResult
+        )
+        let state = MenuState.pipeline(
+            request,
+            action: PipelineMenuAction(kind: .nameInline, add: add)
+        )
+        let stateJSON = encoded(state)
+        return ScriptFilterModifier(
+            arg: "",
+            subtitle: "Save Pipeline",
+            valid: true,
+            variables: queryTransitionVariables(
+                stateJSON: stateJSON,
+                request: request
+            )
+        )
+    }
+
+    private static func pipelineDeleteModifier(
+        _ pipeline: SavedPipeline,
+        request: ParameterStepRequest
+    ) -> ScriptFilterModifier {
+        let state = MenuState.pipeline(
+            request,
+            action: PipelineMenuAction(kind: .confirmDelete, pipeline: pipeline)
+        )
+        let stateJSON = encoded(state)
+        return ScriptFilterModifier(
+            arg: stateJSON,
+            subtitle: "Delete Pipeline \(pipeline.name)",
+            valid: true,
+            variables: transitionVariables(
+                stateJSON: stateJSON,
+                request: request
+            )
+        )
+    }
+
+    private static func inferredPipelineFileType(
+        for request: ParameterStepRequest
+    ) -> PipelineFileType? {
+        guard request.ambiguousKinds?.isEmpty != false,
+              let kind = homogeneousKind(for: request) else {
+            return nil
+        }
+        switch kind {
+        case .image:
+            return .image
+        case .video:
+            return .video
+        case .audio:
+            return .audio
+        case .pdf:
+            return .pdf
+        case .folder, .unknown:
+            return nil
+        }
+    }
+
+    private static func pipelineAddSummary(
+        _ request: PipelineAddRequest
+    ) -> String {
+        [
+            request.fileType?.title ?? "All file types",
+            request.skipOptimisation ? "Steps Only" : "Optimizes First",
+            request.hideResult ? "Hide Result" : nil
+        ].compactMap(\.self).joined(separator: " · ")
+    }
+
+    private static func pipelineAddDetails(
+        _ request: PipelineAddRequest
+    ) -> String {
+        [
+            request.name.isEmpty
+                ? "Save inline pipeline"
+                : "Save Pipeline \(request.name)",
+            "",
+            request.fileType.map { "\($0.title) pipeline" }
+                ?? "All-file pipeline",
+            pipelineAddSummary(request),
+            "",
+            "Steps",
+            request.steps,
+            "",
+            "Options",
+            "skip: run only the written steps",
+            "hide: hide Clop's floating result UI"
+        ].joined(separator: "\n")
+    }
+
     private static func inputDescription(for request: ParameterStepRequest) -> String {
         request.inputContext.inputDescription(
             inputs: request.inputs,
@@ -475,6 +823,32 @@ enum PipelineMenu {
             ActionMenu.inputContextVariable: request.inputContext.rawValue,
             ActionMenu.menuStateVariable: stateJSON
         ]
+    }
+
+    private static func transitionVariables(
+        stateJSON: String,
+        request: ParameterStepRequest
+    ) -> [String: String] {
+        var variables = preservedVariables(
+            for: request,
+            stateJSON: stateJSON
+        )
+        variables[ActionMenu.requestKindVariable] =
+            WorkflowRequestKind.parameterStep.rawValue
+        return variables
+    }
+
+    private static func queryTransitionVariables(
+        stateJSON: String,
+        request: ParameterStepRequest
+    ) -> [String: String] {
+        var variables = preservedVariables(
+            for: request,
+            stateJSON: stateJSON
+        )
+        variables[ActionMenu.requestKindVariable] =
+            WorkflowRequestKind.parameterStepQuery.rawValue
+        return variables
     }
 
     private static func menuInputJSON(for request: ParameterStepRequest) -> String {
@@ -544,6 +918,47 @@ enum PipelineMenu {
         "uploadwith",
         "openwith"
     ]
+}
+
+private struct InlinePipeline: Equatable {
+    var steps: String
+    var skipOptimisation: Bool
+    var hideResult: Bool
+}
+
+private enum InlinePipelineParser {
+    static func parse(_ value: String) -> InlinePipeline? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+
+        let parts = trimmed.components(separatedBy: ";")
+        let steps = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !steps.isEmpty else {
+            return nil
+        }
+
+        let optionText = parts.dropFirst().joined(separator: " ")
+        var skipOptimisation = false
+        var hideResult = false
+        for rawOption in optionText.split(whereSeparator: \.isWhitespace) {
+            switch rawOption.lowercased() {
+            case "skip":
+                skipOptimisation = true
+            case "hide":
+                hideResult = true
+            default:
+                return nil
+            }
+        }
+
+        return InlinePipeline(
+            steps: steps,
+            skipOptimisation: skipOptimisation,
+            hideResult: hideResult
+        )
+    }
 }
 
 private enum PipelineCategory: CaseIterable {

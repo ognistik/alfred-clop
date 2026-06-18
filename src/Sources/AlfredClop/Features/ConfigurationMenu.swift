@@ -444,6 +444,19 @@ enum ConfigurationMenu {
                     query: state.configurationValue ?? "",
                     category: nil
                 )
+            case .configurationResetPipelinesConfirmation:
+                let count = try pipelineProvider.listPipelines().count
+                response = confirmation(
+                    title: "Remove all \(count) saved pipelines?",
+                    subtitle: "Return confirms · Cannot be undone",
+                    nextMode: .configurationResetPipelines
+                )
+            case .configurationResetPipelines:
+                let count = try removeAllPipelines(provider: pipelineProvider)
+                response = message(
+                    title: "Removed \(count) saved \(count == 1 ? "pipeline" : "pipelines")",
+                    subtitle: "Pipeline library is empty."
+                )
             default:
                 return error(
                     "Unable to open Configuration",
@@ -527,6 +540,9 @@ enum ConfigurationMenu {
                 }
                 try pipelineProvider.deletePipeline(named: pipeline.name)
                 message = "Deleted pipeline \(pipeline.name)"
+            case .configurationResetPipelines:
+                let count = try removeAllPipelines(provider: pipelineProvider)
+                message = "Removed \(count) saved \(count == 1 ? "pipeline" : "pipelines")"
             default:
                 return environment.errorNotifications
                     ? "Unable to update settings: The Configuration action is invalid."
@@ -559,6 +575,8 @@ enum ConfigurationMenu {
         case .configurationPipelineDelete:
             return "\(pipelinesAutocomplete)\(state.configurationValue ?? "")"
         case .configurationPipelineAdd:
+            return pipelinesAutocomplete
+        case .configurationResetPipelines:
             return pipelinesAutocomplete
         default:
             return namespacePrefix
@@ -692,6 +710,16 @@ enum ConfigurationMenu {
         )
     }
 
+    private static func removeAllPipelines(
+        provider: any ClopPipelineProviding
+    ) throws -> Int {
+        let pipelines = try provider.listPipelines()
+        for pipeline in pipelines {
+            try provider.deletePipeline(named: pipeline.name)
+        }
+        return pipelines.count
+    }
+
     private static func pipelinesMenu(
         provider: any ClopPipelineProviding,
         query: String,
@@ -737,6 +765,9 @@ enum ConfigurationMenu {
                 guard count > 0 || category == .all else { return nil }
                 return pipelineCategoryItem(category, count: count)
             }
+            if !savedPipelines.isEmpty {
+                items.append(removePipelinesItem(count: savedPipelines.count))
+            }
             return ScriptFilterResponse(items: items, skipKnowledge: true)
         }
 
@@ -749,6 +780,9 @@ enum ConfigurationMenu {
             .sorted(by: pipelineDisplayOrder)
             .map { pipelineItem($0, returnQuery: trimmed) }
         items = categoryItems + pipelineItems
+        if !savedPipelines.isEmpty {
+            items.append(removePipelinesItem(count: savedPipelines.count))
+        }
 
         let search = FuzzySearch<ScriptFilterItem>(
             query: trimmed,
@@ -826,6 +860,21 @@ enum ConfigurationMenu {
             match: category.matchText,
             variables: queryTransitionVariables(),
             text: ScriptFilterText(largetype: pipelineAddReference)
+        )
+    }
+
+    private static func removePipelinesItem(count: Int) -> ScriptFilterItem {
+        let stateJSON = encoded(.configuration(
+            mode: .configurationResetPipelinesConfirmation
+        ))
+        return ScriptFilterItem(
+            title: "Remove all saved pipelines",
+            subtitle: "\(count) Saved \(count == 1 ? "Pipeline" : "Pipelines") in Clop",
+            arg: stateJSON,
+            valid: true,
+            autocomplete: "\(pipelinesPrefix) remove all",
+            match: "remove reset delete saved pipelines",
+            variables: transitionVariables(stateJSON)
         )
     }
 
@@ -1518,7 +1567,9 @@ enum ConfigurationMenu {
     ) -> String {
         [
             request.fileType?.title ?? "All file types",
-            request.skipOptimisation ? "Skip optimization" : nil,
+            request.skipOptimisation
+                ? "Steps only"
+                : "Optimizes first",
             request.hideResult ? "Hide result" : nil
         ].compactMap(\.self).joined(separator: " · ")
     }
@@ -1546,19 +1597,21 @@ enum ConfigurationMenu {
         Name => steps ; options
 
         Options:
-        img or image
-        vid or video
-        aud or audio
-        pdf
-        all
-        skip
-        hide
+        img or image: image files
+        vid or video: video files
+        aud or audio: audio files
+        pdf: PDF files
+        all: any supported file type
+        skip: run only the written steps
+        hide: hide Clop's floating result UI
+
+        Without skip, Clop optimizes before running the saved steps.
 
         Examples:
         to WebP => convert(to: webp) ; img skip
         2x silent => changeSpeed(factor: 2.0) -> removeAudio ; vid skip hide
 
-        Steps are passed directly to Clop.
+        Steps are passed directly to Clop. Return adds. Command-Return replaces.
         """
     }
 

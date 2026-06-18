@@ -111,6 +111,21 @@ non-matching searches stay in creation mode so users can continue into the
 add syntax, while category branches remain focused on filtering and deleting
 existing pipelines.
 
+The Pipeline polish checkpoint normalizes inline pipeline execution with saved
+pipeline creation. The user-facing options remain concise:
+`steps ; skip hide` for inline runs and `Name => steps ; img skip hide` for
+saved creation. `skip` means "steps only": saved pipeline creation maps it to
+Clop's `--skip-optimisation`, while inline execution omits Alfred Clop's
+prepended `optimise` step. Without `skip`, saved pipelines keep Clop's implicit
+optimization setting and inline pipelines should run as `optimise -> steps`.
+`hide` means hide Clop's floating result UI: saved creation maps it to
+`--hide-result`, while inline and External Trigger execution suppress the
+runtime `--gui` flag. The Pipeline menu should also let users save an inline
+pipeline with Control-Return and delete visible saved pipelines with
+Control-Return plus confirmation, while Configuration remains the full
+unfiltered library management surface, including removing all saved pipelines
+through a confirmation row.
+
 ## Completed
 
 ### Swift foundation
