@@ -102,7 +102,13 @@ the empty guide row teaches both saved search and inline steps, syntax-looking
 queries such as `crop(width: 1600) -> convert(to: webp)` become runnable
 inline rows, plain unmatched searches stay non-executable, and Large Type
 contains the longer syntax reference. Inline step text is passed directly to
-Clop for final grammar validation.
+Clop for final grammar validation. The Pipeline menu and `:pipelines` creation
+flow now share one lightweight syntax guide: they recognize the current known
+Clop 3.0 step names, show categorized Large Type help, preserve semicolons
+inside quoted step values, and provide non-executable guidance for obvious
+mistakes such as unknown step names, invalid `; skip hide` options, unbalanced
+parentheses, or unclosed quotes. This is intentionally not a full Clop DSL
+parser; Clop remains the authority for parameter-level validation.
 Pipeline management lives in Configuration under `:pipelines`; it supports
 category browsing, global search, Large Type details, adding named pipelines
 with `NAME => STEPS ; OPTIONS`, Command-Return replacement, and confirmed

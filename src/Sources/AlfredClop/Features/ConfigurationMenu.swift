@@ -952,6 +952,17 @@ enum ConfigurationMenu {
     ) -> ScriptFilterResponse {
         let value = normalizedAddValue(query)
         guard let request = PipelineAddParser.parse(value) else {
+            if let issue = PipelineAddParser.guidanceIssue(for: value) {
+                return ScriptFilterResponse(items: [
+                    ScriptFilterItem(
+                        title: issue.title,
+                        subtitle: "\(issue.subtitle) · ⌘L Reference",
+                        arg: "",
+                        valid: false,
+                        text: ScriptFilterText(largetype: issue.detail)
+                    )
+                ], skipKnowledge: true)
+            }
             return ScriptFilterResponse(items: [
                 ScriptFilterItem(
                     title: "Type pipeline name and steps",
@@ -959,6 +970,17 @@ enum ConfigurationMenu {
                     arg: "",
                     valid: false,
                     text: ScriptFilterText(largetype: pipelineAddReference)
+                )
+            ], skipKnowledge: true)
+        }
+        if let issue = PipelineSyntax.guidanceIssue(for: request.steps) {
+            return ScriptFilterResponse(items: [
+                ScriptFilterItem(
+                    title: issue.title,
+                    subtitle: "\(issue.subtitle) · ⌘L Reference",
+                    arg: "",
+                    valid: false,
+                    text: ScriptFilterText(largetype: issue.detail)
                 )
             ], skipKnowledge: true)
         }
@@ -1590,29 +1612,11 @@ enum ConfigurationMenu {
     }
 
     private static var pipelineAddReference: String {
-        """
-        Pipeline add syntax
-
-        Use:
-        Name => steps ; options
-
-        Options:
-        img or image: image files
-        vid or video: video files
-        aud or audio: audio files
-        pdf: PDF files
-        all: any supported file type
-        skip: run only the written steps
-        hide: hide Clop's floating result UI
-
-        Without skip, Clop optimizes before running the saved steps.
-
-        Examples:
-        to WebP => convert(to: webp) ; img skip
-        2x silent => changeSpeed(factor: 2.0) -> removeAudio ; vid skip hide
-
-        Steps are passed directly to Clop. Return adds. Command-Return replaces.
-        """
+        [
+            PipelineSyntax.syntaxReference(savedCreation: true),
+            "",
+            "Steps are passed directly to Clop. Return adds. Command-Return replaces."
+        ].joined(separator: "\n")
     }
 
     private static func presetDisplayOrder(
@@ -1937,18 +1941,16 @@ private enum PipelineAddParser {
             return nil
         }
 
-        let stepParts = remainder.components(separatedBy: ";")
-        let steps = stepParts[0].trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !steps.isEmpty else {
+        guard let split = PipelineSyntax.splitOptions(from: remainder),
+              !split.steps.isEmpty else {
             return nil
         }
 
-        let optionText = stepParts.dropFirst().joined(separator: " ")
         var fileType: PipelineFileType?
         var sawAll = false
         var skipOptimisation = false
         var hideResult = false
-        for rawOption in optionText.split(whereSeparator: \.isWhitespace) {
+        for rawOption in split.options.split(whereSeparator: \.isWhitespace) {
             switch rawOption.lowercased() {
             case "img", "image":
                 guard fileType == nil, !sawAll else { return nil }
@@ -1976,10 +1978,51 @@ private enum PipelineAddParser {
 
         return PipelineAddRequest(
             name: name,
-            steps: steps,
+            steps: split.steps,
             fileType: fileType,
             skipOptimisation: skipOptimisation,
             hideResult: hideResult
         )
+    }
+
+    static func guidanceIssue(for value: String) -> PipelineSyntax.GuidanceIssue? {
+        let parts = value.components(separatedBy: "=>")
+        guard parts.count >= 2 else {
+            return nil
+        }
+        let name = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let remainder = parts.dropFirst().joined(separator: "=>")
+        guard !name.isEmpty else {
+            return PipelineSyntax.GuidanceIssue(
+                title: "Name this pipeline",
+                subtitle: "Use Name => steps ; img skip hide",
+                detail: PipelineSyntax.syntaxReference(savedCreation: true)
+            )
+        }
+        guard let split = PipelineSyntax.splitOptions(from: remainder) else {
+            return PipelineSyntax.GuidanceIssue(
+                title: "Add pipeline steps",
+                subtitle: "Use Name => steps ; img skip hide",
+                detail: PipelineSyntax.syntaxReference(savedCreation: true)
+            )
+        }
+
+        if !split.options.isEmpty {
+            let allowed = PipelineSyntax.optionNames.union([
+                "img", "image", "vid", "video", "aud", "audio", "pdf", "all"
+            ])
+            if let invalid = split.options
+                .split(whereSeparator: \.isWhitespace)
+                .map(String.init)
+                .first(where: { !allowed.contains($0.lowercased()) }) {
+                return PipelineSyntax.GuidanceIssue(
+                    title: "Unknown pipeline option \(invalid)",
+                    subtitle: "Use img, vid, aud, pdf, all, skip, or hide",
+                    detail: PipelineSyntax.syntaxReference(savedCreation: true)
+                )
+            }
+        }
+
+        return PipelineSyntax.guidanceIssue(for: split.steps)
     }
 }

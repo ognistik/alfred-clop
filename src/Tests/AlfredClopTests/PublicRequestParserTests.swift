@@ -484,6 +484,12 @@ struct PublicRequestParserTests {
 
         /tmp/image.png
         """)
+        let newerStep = try PublicRequestParser.parse("""
+        execute: Pipeline
+        pipeline: normalize
+
+        /tmp/audio.wav
+        """)
 
         #expect(saved.route == .execute(action: .pipeline(PipelineRunRequest(
             pipeline: "To WebP",
@@ -497,6 +503,9 @@ struct PublicRequestParserTests {
         ))))
         #expect(legacyName.route == .execute(action: .pipeline(
             PipelineRunRequest(pipeline: "To WebP")
+        )))
+        #expect(newerStep.route == .execute(action: .pipeline(
+            PipelineRunRequest(pipeline: "normalize", isInline: true)
         )))
     }
 
@@ -589,6 +598,13 @@ struct PublicRequestParserTests {
             PublicRequestError.invalidParameter(
                 "skip",
                 "only works with inline pipeline steps"
+            )
+        ),
+        (
+            "execute: Pipeline\npipeline: convertt(to: webp)\n\n/tmp/image.jpg",
+            PublicRequestError.invalidParameter(
+                "pipeline",
+                "Unknown pipeline step convertt"
             )
         ),
         (

@@ -533,10 +533,11 @@ shelveWith, uploadWith, openWith
 
 Pipelines make multi-step conversion and processing possible in one Clop
 request. Alfred Clop exposes saved-pipeline listing, execution, creation, and
-deletion while keeping pipeline step expressions opaque user input. The
+deletion while keeping the full pipeline step grammar owned by Clop. The
 interactive runner also supports inline pipeline execution when the typed query
-looks like Clop pipeline syntax; Alfred Clop passes the steps through and lets
-Clop validate the full grammar.
+looks like Clop pipeline syntax. Alfred Clop keeps a lightweight known-step
+reference for discovery and obvious typo guidance, but still passes preserved
+step text through and lets Clop validate parameters and complete DSL behavior.
 
 ## Output templates
 
@@ -670,7 +671,8 @@ omitting `--output` for the selected command.
   that exact remote-URL false failure as a successful submission; other
   failures in the same batch remain reportable.
 - Generic `--types audio` remains worth a runtime fixture test if exposed.
-- Pipeline syntax beyond the examples should be treated as opaque user input
-  until Clop publishes a complete step grammar.
+- Pipeline syntax beyond the known-step reference should be treated as opaque
+  user input until Clop publishes a complete machine-readable grammar or
+  completion API.
 - Clop must be running for commands that communicate with the app; the
   workflow should detect and explain connection failures.

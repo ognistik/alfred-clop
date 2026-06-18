@@ -147,6 +147,7 @@ enum PipelineMenu {
         let visible = pipelines
             .filter { isVisible($0, category: category, request: request) }
             .sorted(by: pipelineDisplayOrder)
+        let guidanceItem = inlineGuidanceItem(query: query, request: request)
         let inlineItem = inlinePipelineItem(
             query: query,
             request: request,
@@ -155,6 +156,13 @@ enum PipelineMenu {
 
         guard !visible.isEmpty else {
             let items = [guideItem(for: request, category: category, emptySavedList: pipelines.isEmpty)]
+            if let guidanceItem {
+                return response(
+                    items: [guidanceItem],
+                    request: request,
+                    state: state
+                )
+            }
             if let inlineItem {
                 return response(
                     items: [inlineItem],
@@ -192,7 +200,9 @@ enum PipelineMenu {
         )
         let matches = search.sorted(items)
         var resultItems = [ScriptFilterItem]()
-        if let inlineItem {
+        if let guidanceItem {
+            resultItems.append(guidanceItem)
+        } else if let inlineItem {
             resultItems.append(inlineItem)
         }
         resultItems.append(contentsOf: matches.map { items[$0.targetIndex] })
@@ -304,6 +314,26 @@ enum PipelineMenu {
                 inline: inline,
                 request: request
             ))
+        )
+    }
+
+    private static func inlineGuidanceItem(
+        query: String,
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem? {
+        guard let issue = PipelineSyntax.guidanceIssue(for: query),
+              PipelineSyntax.looksLikePipelineAttempt(query) else {
+            return nil
+        }
+        return ScriptFilterItem(
+            uid: "pipeline.inline.guidance.\(query)",
+            title: issue.title,
+            subtitle: "\(inputDescription(for: request)) · \(issue.subtitle) · ⌘L Syntax",
+            arg: "",
+            valid: false,
+            autocomplete: query,
+            match: "\(query) pipeline syntax help",
+            text: ScriptFilterText(largetype: issue.detail)
         )
     }
 
@@ -647,24 +677,9 @@ enum PipelineMenu {
         for request: ParameterStepRequest
     ) -> String {
         var lines = [
-            "Pipeline syntax",
-            "",
             "Search saved pipelines by name, or type inline Clop pipeline steps.",
             "",
-            "Examples",
-            "crop(width: 1600) -> convert(to: webp)",
-            "changeSpeed(factor: 2.0) -> removeAudio",
-            "convert(to: gif)",
-            "convert(to: webp) ; skip hide",
-            "",
-            "Options",
-            "skip: run only the written steps",
-            "hide: hide Clop's floating result UI",
-            "",
-            "Without skip, Alfred Clop optimizes first.",
-            "",
-            "Saved pipeline creation uses:",
-            "Name => steps ; options"
+            PipelineSyntax.syntaxReference()
         ]
         if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
             lines += ["", "Inputs", inputs]
@@ -673,17 +688,7 @@ enum PipelineMenu {
     }
 
     private static func looksLikeInlinePipeline(_ value: String) -> Bool {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            return false
-        }
-        if trimmed.contains("->") {
-            return true
-        }
-        if trimmed.contains("("), trimmed.contains(")") {
-            return true
-        }
-        return knownPipelineSteps.contains(trimmed.lowercased())
+        PipelineSyntax.looksLikeInlinePipeline(value)
     }
 
     private static func settingsDescription(
@@ -895,29 +900,6 @@ enum PipelineMenu {
         ])
     }
 
-    private static let knownPipelineSteps: Set<String> = [
-        "optimise",
-        "downscale",
-        "lowerbitrate",
-        "convert",
-        "crop",
-        "extractpagesasimages",
-        "copy",
-        "move",
-        "rename",
-        "delete",
-        "if",
-        "ifnot",
-        "removeaudio",
-        "changespeed",
-        "runscript",
-        "runshortcut",
-        "copytoclipboard",
-        "copylinkforsending",
-        "shelvewith",
-        "uploadwith",
-        "openwith"
-    ]
 }
 
 private struct InlinePipeline: Equatable {
@@ -928,21 +910,14 @@ private struct InlinePipeline: Equatable {
 
 private enum InlinePipelineParser {
     static func parse(_ value: String) -> InlinePipeline? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        guard let split = PipelineSyntax.splitOptions(from: value),
+              !split.steps.isEmpty else {
             return nil
         }
 
-        let parts = trimmed.components(separatedBy: ";")
-        let steps = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !steps.isEmpty else {
-            return nil
-        }
-
-        let optionText = parts.dropFirst().joined(separator: " ")
         var skipOptimisation = false
         var hideResult = false
-        for rawOption in optionText.split(whereSeparator: \.isWhitespace) {
+        for rawOption in split.options.split(whereSeparator: \.isWhitespace) {
             switch rawOption.lowercased() {
             case "skip":
                 skipOptimisation = true
@@ -954,7 +929,7 @@ private enum InlinePipelineParser {
         }
 
         return InlinePipeline(
-            steps: steps,
+            steps: split.steps,
             skipOptimisation: skipOptimisation,
             hideResult: hideResult
         )

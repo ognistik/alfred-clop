@@ -1174,7 +1174,9 @@ skip optimization or hide result, and the current inputs. Inline pipeline rows
 should also keep subtitles compact, such as
 `Selected file · Optimizes First · ⌃↩ Save Pipeline · ⌘L Syntax`, and use
 Large Type for examples, the current inline steps, and the meaning of `skip`
-and `hide`. Do not put long raw pipeline expressions in ordinary subtitles.
+and `hide`. Large Type should include a categorized known-step reference from
+the currently verified Clop CLI/source surface. Do not put long raw pipeline
+expressions in ordinary subtitles.
 
 Normalize the user-facing pipeline options across saved and inline pipelines.
 Inline runs accept `steps ; skip hide`; saved creation accepts
@@ -1219,9 +1221,12 @@ Use this add grammar:
 :pipelines NAME => STEPS ; OPTIONS
 ```
 
-`NAME` is the saved pipeline name. `STEPS` is passed through exactly to Clop;
-Alfred Clop does not parse or validate the pipeline step grammar. `OPTIONS` is
-optional and space-separated:
+`NAME` is the saved pipeline name. `STEPS` is preserved as user text and passed
+to Clop for real grammar validation. Alfred Clop may apply only lightweight
+guidance before execution or saving: recognized step names, unknown-step
+suggestions, unbalanced parentheses or quotes, and workflow option tokens after
+a top-level semicolon. It must not attempt to parse or visually compose the
+full Clop DSL. `OPTIONS` is optional and space-separated:
 
 - `img` or `image`;
 - `vid` or `video`;
@@ -1240,7 +1245,9 @@ normal Return must fail safely or show a non-destructive row; Command-Return
 may replace using `--force`.
 
 Do not attempt to parse or visually compose every pipeline step until Clop
-publishes a stable complete grammar. Preserve inline step text exactly.
+publishes a stable complete grammar or machine-readable completion endpoint.
+Preserve inline step text exactly, including semicolons inside quoted or
+parenthesized Clop step values.
 
 ### Advanced execution options
 

@@ -384,6 +384,12 @@ enum PublicRequestParser {
                     "only works with inline pipeline steps"
                 )
             }
+            if isInline, let issue = PipelineSyntax.guidanceIssue(for: pipeline) {
+                throw PublicRequestError.invalidParameter(
+                    "pipeline",
+                    issue.title
+                )
+            }
             return .pipeline(PipelineRunRequest(
                 pipeline: pipeline,
                 isInline: isInline,
@@ -823,17 +829,7 @@ enum PublicRequestParser {
     }
 
     private static func looksLikeInlinePipeline(_ value: String) -> Bool {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            return false
-        }
-        if trimmed.contains("->") {
-            return true
-        }
-        if trimmed.contains("("), trimmed.contains(")") {
-            return true
-        }
-        return knownPipelineSteps.contains(trimmed.lowercased())
+        PipelineSyntax.looksLikeInlinePipeline(value)
     }
 
     private static let actionNames: [String: ClopAction] = [
@@ -857,27 +853,4 @@ enum PublicRequestParser {
         "output template"
     ]
 
-    private static let knownPipelineSteps: Set<String> = [
-        "optimise",
-        "downscale",
-        "lowerbitrate",
-        "convert",
-        "crop",
-        "extractpagesasimages",
-        "copy",
-        "move",
-        "rename",
-        "delete",
-        "if",
-        "ifnot",
-        "removeaudio",
-        "changespeed",
-        "runscript",
-        "runshortcut",
-        "copytoclipboard",
-        "copylinkforsending",
-        "shelvewith",
-        "uploadwith",
-        "openwith"
-    ]
 }

@@ -278,7 +278,10 @@ the written steps. `skip: true` runs only the written steps. `hide: true`
 hides Clop's floating result UI by suppressing the runtime UI flag. `skip` is
 not accepted for saved pipeline names because saved pipelines already carry
 their own Clop optimization setting. The older `name` field remains accepted
-as a compatibility alias, but new requests should use `pipeline`.
+as a compatibility alias, but new requests should use `pipeline`. Values that
+clearly look like inline pipeline steps receive the same lightweight guidance
+as the Pipeline menu for obvious mistakes such as unknown step names or
+unbalanced parentheses; Clop still validates the full step grammar.
 
 ### Current Grammar
 

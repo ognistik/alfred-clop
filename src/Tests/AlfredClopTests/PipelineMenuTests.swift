@@ -114,6 +114,93 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func newerBareKnownPipelineStepsCanRunInline() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.audio]),
+            query: "normalize",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Run inline pipeline")
+
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((item.arg ?? "").utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: "normalize",
+            isInline: true
+        )))
+    }
+
+    @Test
+    func inlineSyntaxGuidesUnknownStepNames() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convertt(to: webp)",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Unknown pipeline step convertt")
+        #expect(item.subtitle.contains("Did you mean convert?"))
+        #expect(item.valid == false)
+        #expect(item.text?.largetype?.contains("Known steps") == true)
+    }
+
+    @Test
+    func inlineSyntaxGuidesUnknownOptions() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convert(to: webp) ; hidden",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Unknown pipeline option hidden")
+        #expect(item.subtitle.contains("Use skip, hide"))
+        #expect(item.valid == false)
+    }
+
+    @Test
+    func inlineSyntaxGuidesUnbalancedParentheses() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convert(to: webp",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Close the pipeline step")
+        #expect(item.subtitle.contains("Add the missing )"))
+        #expect(item.valid == false)
+    }
+
+    @Test
+    func inlineOptionParserIgnoresSemicolonsInsideStepValues() throws {
+        let steps = #"runScript(code: "echo one; echo two") ; skip"#
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: steps,
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Run inline pipeline")
+
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((item.arg ?? "").utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: #"runScript(code: "echo one; echo two")"#,
+            isInline: true,
+            skipOptimisation: true
+        )))
+    }
+
+    @Test
     func plainUnmatchedSearchDoesNotRunInline() {
         let response = PipelineMenu.response(
             stateJSON: stateJSON(mediaKinds: [.image]),
@@ -378,6 +465,7 @@ struct PipelineMenuTests {
         #expect(remove.title == "Remove all saved pipelines")
         #expect(remove.subtitle == "4 Saved Pipelines in Clop")
         #expect(image.text?.largetype?.contains("Pipeline add syntax") == true)
+        #expect(image.text?.largetype?.contains("targetSize: fit under a size limit") == true)
     }
 
     @Test
@@ -433,6 +521,50 @@ struct PipelineMenuTests {
         #expect(add == PipelineAddRequest(
             name: "New Pipeline",
             steps: "removeAudio",
+            skipOptimisation: true
+        ))
+    }
+
+    @Test
+    func pipelinesConfigurationGuidesInvalidPipelineSteps() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines New Pipeline => convertt(to: webp) ; img",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Unknown pipeline step convertt")
+        #expect(item.subtitle.contains("Did you mean convert?"))
+        #expect(item.valid == false)
+    }
+
+    @Test
+    func pipelinesConfigurationIgnoresSemicolonsInsideStepValues() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: #":pipelines Script => runScript(code: "echo one; echo two") ; img skip"#,
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Add Pipeline Script")
+        #expect(item.subtitle == "Image · Steps only · ⌘L Reference")
+
+        let state = try JSONDecoder().decode(
+            MenuState.self,
+            from: Data((item.arg ?? "").utf8)
+        )
+        #expect(state.pipelineAction?.add == PipelineAddRequest(
+            name: "Script",
+            steps: #"runScript(code: "echo one; echo two")"#,
+            fileType: .image,
             skipOptimisation: true
         ))
     }
