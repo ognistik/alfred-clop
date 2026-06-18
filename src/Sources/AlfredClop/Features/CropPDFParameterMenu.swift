@@ -230,6 +230,7 @@ enum CropPDFParameterMenu {
                     subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · ⌘L Reference",
                     arg: "",
                     valid: false,
+                    icon: WorkflowIcon.guide,
                     text: ScriptFilterText(
                         largetype: largeTypeReference(
                             ratioReference(),
@@ -311,7 +312,8 @@ enum CropPDFParameterMenu {
                     title: "Unable to load PDF crop \(kind == .device ? "devices" : "paper sizes")",
                     subtitle: error.localizedDescription,
                     arg: "",
-                    valid: false
+                    valid: false,
+                    icon: WorkflowIcon.guide
                 )],
                 request: request,
                 stateJSON: stateJSON
@@ -343,6 +345,7 @@ enum CropPDFParameterMenu {
                 ].joined(separator: " · "),
                 arg: "",
                 valid: false,
+                icon: WorkflowIcon.guide,
                 text: ScriptFilterText(
                     largetype: largeTypeReference(
                         listReference(kind: kind, values: values),
@@ -403,7 +406,8 @@ enum CropPDFParameterMenu {
                     title: "No matching PDF crop \(kind == .device ? "devices" : "paper sizes")",
                     subtitle: "Try another search term.",
                     arg: "",
-                    valid: false
+                    valid: false,
+                    icon: WorkflowIcon.guide
                 )],
                 request: request,
                 stateJSON: stateJSON
@@ -607,6 +611,7 @@ enum CropPDFParameterMenu {
             valid: true,
             autocomplete: autocomplete ?? "\(branchPrefix(for: preset.request.target))\(preset.request.target.value) ",
             match: match ?? preset.displayValue,
+            icon: savedPreset == nil ? nil : WorkflowIcon.preset,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -658,6 +663,7 @@ enum CropPDFParameterMenu {
             subtitle: "\(inputDescription(for: request)) · Use 16:9 / 1200x630 · ⌘L Reference",
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(
                     CropPDFControlParser.largeTypeReference,
@@ -684,6 +690,7 @@ enum CropPDFParameterMenu {
                     subtitle: "Return confirms · Cannot be undone",
                     arg: removeJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: transitionVariables(
                         stateJSON: removeJSON,
                         request: request
@@ -1111,7 +1118,8 @@ enum CropPDFParameterMenu {
                 title: title,
                 subtitle: subtitle,
                 arg: "",
-                valid: false
+                valid: false,
+                icon: WorkflowIcon.guide
             )
         ])
     }

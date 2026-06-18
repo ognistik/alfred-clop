@@ -140,6 +140,14 @@ or inline `; hide` can hide Clop's result UI for that pipeline, and
 Result setting. Folder recursion remains a workflow runtime setting for
 `pipeline run`, not saved pipeline metadata.
 
+The first workflow icon differentiation checkpoint is implemented. Alfred
+Script Filter rows now use derived icons from the workflow mark to distinguish
+saved action presets and saved pipelines, inline pipeline execution, guide or
+syntax-help rows, and destructive confirmation rows. The variants live in
+`workflow/assets/`, are referenced through one Swift icon catalog, and have
+focused tests for preset, inline pipeline, guide, and destructive row
+assignment.
+
 ## Completed
 
 ### Swift foundation

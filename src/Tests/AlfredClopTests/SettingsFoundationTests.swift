@@ -618,6 +618,9 @@ struct SettingsFoundationTests {
         #expect(response.items.map(\.title).contains("Downscale Presets"))
         #expect(response.items.map(\.title).contains("Convert Image Presets"))
         #expect(response.items.map(\.title).contains("Remove all action presets"))
+        #expect(response.items.first {
+            $0.title == "Remove all action presets"
+        }?.icon == WorkflowIcon.destructive)
         let image = try #require(response.items.first {
             $0.title == "Convert Image Presets"
         })
@@ -653,6 +656,7 @@ struct SettingsFoundationTests {
         #expect(global.items.contains {
             $0.title.contains("1200x630")
                 && $0.subtitle.contains("Return to review removal")
+                && $0.icon == WorkflowIcon.preset
         })
         #expect(!global.items.contains {
             $0.title == "Downscale Presets"
@@ -679,6 +683,7 @@ struct SettingsFoundationTests {
             environment: environment
         )
         #expect(removal.items.first?.title == "Remove all action presets")
+        #expect(removal.items.first?.icon == WorkflowIcon.destructive)
         #expect(!removal.items.contains { $0.title == "Optimize Presets" })
     }
 
@@ -716,6 +721,7 @@ struct SettingsFoundationTests {
         let cropPreset = try #require(cropList.items.first {
             $0.title.contains("1200x630")
         })
+        #expect(cropPreset.icon == WorkflowIcon.preset)
         let confirmation = ConfigurationMenu.response(
             stateJSON: try #require(
                 cropPreset.variables?[ActionMenu.menuStateVariable]
@@ -725,6 +731,7 @@ struct SettingsFoundationTests {
         )
 
         #expect(confirmation.items.map(\.title).contains("Cancel"))
+        #expect(confirmation.items.first?.icon == WorkflowIcon.destructive)
         #expect(
             confirmation.items.first?.variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.configurationMutationReturn.rawValue

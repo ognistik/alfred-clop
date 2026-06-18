@@ -405,6 +405,7 @@ enum ConversionParameterMenu {
             valid: true,
             autocomplete: controlQuery(for: choice),
             match: choice.displayValue,
+            icon: savedPreset == nil ? nil : WorkflowIcon.preset,
             variables: operationVariables,
             mods: operationModifiers(
                 choice: choice,
@@ -446,6 +447,7 @@ enum ConversionParameterMenu {
             valid: true,
             autocomplete: controlQuery(for: preset.choice),
             match: preset.displayValue,
+            icon: WorkflowIcon.preset,
             variables: operationVariables,
             mods: operationModifiers(
                 choice: preset.choice,
@@ -558,6 +560,7 @@ enum ConversionParameterMenu {
                     subtitle: "Return confirms · Cannot be undone",
                     arg: stateJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: transitionVariables(
                         stateJSON: stateJSON,
                         request: request
@@ -635,6 +638,7 @@ enum ConversionParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: choice, request: request)
             )
@@ -654,6 +658,7 @@ enum ConversionParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: choice, request: request)
             )

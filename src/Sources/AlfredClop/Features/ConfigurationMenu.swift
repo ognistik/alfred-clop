@@ -671,7 +671,6 @@ enum ConfigurationMenu {
             valid: true,
             autocomplete: ":settings",
             match: "workflow configuration settings file folder reveal finder",
-            icon: ScriptFilterIcon(path: filePath, type: .fileIcon),
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.workflowSettings.rawValue
@@ -874,6 +873,7 @@ enum ConfigurationMenu {
             valid: true,
             autocomplete: "\(pipelinesPrefix) remove all",
             match: "remove reset delete saved pipelines",
+            icon: WorkflowIcon.destructive,
             variables: transitionVariables(stateJSON)
         )
     }
@@ -899,6 +899,7 @@ enum ConfigurationMenu {
             valid: false,
             autocomplete: "\(pipelinesPrefix) \(pipeline.name)",
             match: "\(pipeline.name) \(pipeline.fileType?.rawValue ?? "all") \(pipeline.rawText)",
+            icon: WorkflowIcon.preset,
             variables: queryTransitionVariables(),
             mods: ScriptFilterMods(command: ScriptFilterModifier(
                 arg: confirmJSON,
@@ -930,6 +931,7 @@ enum ConfigurationMenu {
                     subtitle: "Return confirms · Cannot be undone · ⌘↩ Confirm and close",
                     arg: removeJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: returnMutationVariables(removeJSON),
                     mods: closeModifier(removeJSON),
                     text: ScriptFilterText(largetype: pipelineDetails(pipeline))
@@ -1238,6 +1240,7 @@ enum ConfigurationMenu {
             valid: true,
             autocomplete: "\(presetsPrefix) remove all",
             match: "remove reset delete action presets",
+            icon: WorkflowIcon.destructive,
             variables: transitionVariables(stateJSON)
         )
     }
@@ -1400,6 +1403,7 @@ enum ConfigurationMenu {
             valid: true,
             autocomplete: "\(presetsPrefix) \(presetDisplayValue(preset))",
             match: "\(categoryTitle) \(presetDisplayValue(preset))",
+            icon: WorkflowIcon.preset,
             variables: transitionVariables(stateJSON)
         )
     }
@@ -1421,6 +1425,7 @@ enum ConfigurationMenu {
                     subtitle: "Return confirms · Cannot be undone · ⌘↩ Confirm and close",
                     arg: removeJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: returnMutationVariables(removeJSON),
                     mods: closeModifier(removeJSON)
                 ),

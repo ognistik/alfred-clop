@@ -245,6 +245,7 @@ enum PipelineMenu {
             valid: true,
             autocomplete: pipeline.name,
             match: "\(pipeline.name) \(pipeline.fileType?.rawValue ?? "all") \(pipeline.rawText)",
+            icon: WorkflowIcon.preset,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -302,6 +303,7 @@ enum PipelineMenu {
             valid: true,
             autocomplete: steps,
             match: "\(steps) inline pipeline steps",
+            icon: WorkflowIcon.inlinePipeline,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -333,6 +335,7 @@ enum PipelineMenu {
             valid: false,
             autocomplete: query,
             match: "\(query) pipeline syntax help",
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(largetype: issue.detail)
         )
     }
@@ -394,6 +397,7 @@ enum PipelineMenu {
                         ].joined(separator: " · "),
                         arg: "",
                         valid: false,
+                        icon: WorkflowIcon.guide,
                         text: ScriptFilterText(largetype: pipelineAddDetails(base))
                     )
                 ],
@@ -435,6 +439,7 @@ enum PipelineMenu {
                     subtitle: subtitle,
                     arg: exists ? "" : addJSON,
                     valid: !exists,
+                    icon: exists ? WorkflowIcon.guide : WorkflowIcon.inlinePipeline,
                     variables: exists ? nil : transitionVariables(
                         stateJSON: addJSON,
                         request: request
@@ -474,6 +479,7 @@ enum PipelineMenu {
                     subtitle: "Return confirms · Cannot be undone",
                     arg: deleteJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: transitionVariables(
                         stateJSON: deleteJSON,
                         request: request
@@ -604,6 +610,7 @@ enum PipelineMenu {
             subtitle: subtitle,
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(largetype: inlinePipelineReference(for: request))
         )
     }

@@ -550,6 +550,7 @@ enum DownscaleParameterMenu {
             valid: true,
             autocomplete: autocompletePrefix + preset.displayValue,
             match: "\(preset.displayValue) \(preset.stableFactor)",
+            icon: savedPreset == nil ? nil : WorkflowIcon.preset,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -590,6 +591,7 @@ enum DownscaleParameterMenu {
             valid: true,
             autocomplete: autocompletePrefix + preset.displayValue,
             match: "\(preset.displayValue) \(preset.stableFactor)",
+            icon: WorkflowIcon.preset,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -628,6 +630,7 @@ enum DownscaleParameterMenu {
                     subtitle: "Return confirms · Cannot be undone",
                     arg: stateJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: transitionVariables(
                         stateJSON: stateJSON,
                         request: request
@@ -827,6 +830,7 @@ enum DownscaleParameterMenu {
             arg: "",
             valid: false,
             autocomplete: controlsPrefix,
+            icon: WorkflowIcon.guide,
             mods: ScriptFilterMods(
                 control: controlsModifier(
                     request: request,
@@ -848,6 +852,7 @@ enum DownscaleParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )
@@ -866,6 +871,7 @@ enum DownscaleParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )
@@ -884,6 +890,7 @@ enum DownscaleParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )
@@ -902,6 +909,7 @@ enum DownscaleParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )

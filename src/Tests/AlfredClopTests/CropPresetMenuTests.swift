@@ -15,6 +15,7 @@ struct CropPresetMenuTests {
         let second = fixture.response(query: "")
 
         #expect(first.items[0].title == "Type crop or resize parameters")
+        #expect(first.items[0].icon == WorkflowIcon.guide)
         #expect(
             first.items.dropFirst().map(\.title)
                 == [
@@ -25,6 +26,9 @@ struct CropPresetMenuTests {
                 ]
         )
         #expect(first.items.dropFirst().allSatisfy { $0.uid != nil })
+        #expect(first.items.dropFirst().allSatisfy {
+            $0.icon == WorkflowIcon.preset
+        })
         #expect(first.items.map(\.uid) == second.items.map(\.uid))
         #expect(first.skipKnowledge == true)
     }
@@ -65,6 +69,7 @@ struct CropPresetMenuTests {
         #expect(matchingItems.count == 1)
         #expect(matchingItems[0].title == "Width 128, auto height")
         #expect(matchingItems[0].subtitle.contains("Saved Preset"))
+        #expect(matchingItems[0].icon == WorkflowIcon.preset)
         #expect(matchingItems[0].autocomplete == "w128")
         #expect(response.items.count == 1)
         #expect(!response.items.contains {
@@ -347,6 +352,7 @@ struct CropPresetMenuTests {
             confirmation.items[0].title
                 == "Remove Preset Width 128, auto height?"
         )
+        #expect(confirmation.items[0].icon == WorkflowIcon.destructive)
         #expect(confirmation.items[1].title == "Cancel")
         #expect(confirmation.items[1].subtitle == "Return keeps preset")
         #expect(try fixture.store.load().presets.count == 2)

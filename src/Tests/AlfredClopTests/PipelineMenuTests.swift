@@ -19,6 +19,9 @@ struct PipelineMenuTests {
         #expect(response.items[0].subtitle == "Selected file · Example: convert(to: webp) · ⌘L Syntax")
         #expect(response.items[1].subtitle == "Selected file · ⌃↩ Delete Pipeline · ⌘L Details")
         #expect(response.items[2].subtitle == "Selected file · ⌃↩ Delete Pipeline · ⌘L Details")
+        #expect(response.items[0].icon == WorkflowIcon.guide)
+        #expect(response.items[1].icon == WorkflowIcon.preset)
+        #expect(response.items[2].icon == WorkflowIcon.preset)
         #expect(response.items[2].text?.largetype?.contains("Steps\nconvert(to: webp)") == true)
 
         let operation = try JSONDecoder().decode(
@@ -80,6 +83,7 @@ struct PipelineMenuTests {
         let item = try #require(response.items.first)
         #expect(item.title == "Run inline pipeline")
         #expect(item.subtitle == "Selected file · Optimizes First · ⌃↩ Save Pipeline · ⌘L Syntax")
+        #expect(item.icon == WorkflowIcon.inlinePipeline)
         #expect(item.text?.largetype?.contains("Steps\n\(steps)") == true)
 
         let operation = try JSONDecoder().decode(
@@ -369,6 +373,7 @@ struct PipelineMenuTests {
             "Delete Pipeline To WebP?",
             "Cancel"
         ])
+        #expect(confirmation.items.first?.icon == WorkflowIcon.destructive)
 
         let deleteJSON = try #require(confirmation.items.first?.arg)
         _ = PipelineMenu.response(
@@ -464,6 +469,7 @@ struct PipelineMenuTests {
         let remove = try #require(response.items.last)
         #expect(remove.title == "Remove all saved pipelines")
         #expect(remove.subtitle == "4 Saved Pipelines in Clop")
+        #expect(remove.icon == WorkflowIcon.destructive)
         #expect(image.text?.largetype?.contains("Pipeline add syntax") == true)
         #expect(image.text?.largetype?.contains("targetSize") == true)
         #expect(image.text?.largetype?.contains("copyToClipboard is a step") == true)
@@ -481,7 +487,10 @@ struct PipelineMenuTests {
         )
 
         #expect(response.items.first?.title == "Add pipeline")
-        #expect(response.items.dropFirst().map(\.title).contains("To WebP"))
+        let pipeline = try #require(response.items.dropFirst().first {
+            $0.title == "To WebP"
+        })
+        #expect(pipeline.icon == WorkflowIcon.preset)
     }
 
     @Test
@@ -614,6 +623,7 @@ struct PipelineMenuTests {
 
         let pipeline = try #require(list.items.first { $0.title == "To WebP" })
         #expect(pipeline.valid == false)
+        #expect(pipeline.icon == WorkflowIcon.preset)
         let confirmJSON = try #require(pipeline.mods?.command?.arg)
         let confirmation = ConfigurationMenu.response(
             stateJSON: confirmJSON,
@@ -626,6 +636,7 @@ struct PipelineMenuTests {
             "Delete Pipeline To WebP?",
             "Cancel"
         ])
+        #expect(confirmation.items.first?.icon == WorkflowIcon.destructive)
         #expect(confirmation.items[1].arg == ":pipelines image")
     }
 
@@ -643,6 +654,7 @@ struct PipelineMenuTests {
         let remove = try #require(list.items.first {
             $0.title == "Remove all saved pipelines"
         })
+        #expect(remove.icon == WorkflowIcon.destructive)
         let confirmation = ConfigurationMenu.response(
             stateJSON: try #require(remove.arg),
             query: "",

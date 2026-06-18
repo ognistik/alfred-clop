@@ -782,6 +782,7 @@ enum CropParameterMenu {
             valid: true,
             autocomplete: autocompletePrefix + preset.displayValue,
             match: "\(preset.displayValue) \(preset.size)",
+            icon: savedPreset == nil ? nil : WorkflowIcon.preset,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -828,6 +829,7 @@ enum CropParameterMenu {
             valid: true,
             autocomplete: autocompletePrefix + preset.displayValue,
             match: "\(preset.displayValue) \(preset.size)",
+            icon: WorkflowIcon.preset,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
@@ -866,6 +868,7 @@ enum CropParameterMenu {
                     subtitle: "Return confirms · Cannot be undone",
                     arg: stateJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: transitionVariables(
                         stateJSON: stateJSON,
                         request: request
@@ -1079,6 +1082,7 @@ enum CropParameterMenu {
             arg: "",
             valid: false,
             autocomplete: controlsPrefix,
+            icon: WorkflowIcon.guide,
             mods: ScriptFilterMods(
                 command: nil,
                 option: nil,
@@ -1108,6 +1112,7 @@ enum CropParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )
@@ -1126,6 +1131,7 @@ enum CropParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )
@@ -1144,6 +1150,7 @@ enum CropParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )
@@ -1162,6 +1169,7 @@ enum CropParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )

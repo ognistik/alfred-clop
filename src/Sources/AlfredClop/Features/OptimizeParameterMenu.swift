@@ -342,6 +342,7 @@ enum OptimizeParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: media, request: request)
             )
@@ -361,6 +362,7 @@ enum OptimizeParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: media, request: request)
             )
@@ -392,6 +394,7 @@ enum OptimizeParameterMenu {
             valid: true,
             autocomplete: controlQuery(for: optimize),
             match: OptimizeControlParser.displayValue(for: optimize),
+            icon: savedPreset == nil ? nil : WorkflowIcon.preset,
             variables: operationVariables,
             mods: operationModifiers(
                 optimize: optimize,
@@ -436,6 +439,7 @@ enum OptimizeParameterMenu {
             valid: true,
             autocomplete: controlQuery(for: preset.request),
             match: preset.displayValue,
+            icon: WorkflowIcon.preset,
             variables: operationVariables,
             mods: operationModifiers(
                 optimize: preset.request,
@@ -646,6 +650,7 @@ enum OptimizeParameterMenu {
                     subtitle: "Return confirms · Cannot be undone",
                     arg: stateJSON,
                     valid: true,
+                    icon: WorkflowIcon.destructive,
                     variables: transitionVariables(
                         stateJSON: stateJSON,
                         request: request
@@ -705,6 +710,7 @@ enum OptimizeParameterMenu {
                     arg: "",
                     valid: false,
                     autocomplete: "\(media.rawValue) controls: ",
+                    icon: WorkflowIcon.guide,
                     text: ScriptFilterText(
                         largetype: largeTypeReference(
                             for: media,
@@ -1032,6 +1038,7 @@ enum OptimizeParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: media, request: request)
             )
