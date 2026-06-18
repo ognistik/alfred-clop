@@ -56,7 +56,7 @@ struct ClopPipelineProvider: ClopPipelineProviding {
         if let fileType = request.fileType {
             arguments += ["--file-type", fileType.rawValue]
         }
-        if request.skipOptimisation {
+        if !request.optimizeFirst {
             arguments.append("--skip-optimisation")
         }
         if request.hideResult {
@@ -65,7 +65,7 @@ struct ClopPipelineProvider: ClopPipelineProviding {
         if request.replace {
             arguments.append("--force")
         }
-        arguments += [request.name, request.steps]
+        arguments += [request.name, PipelineSyntax.normalizedSteps(request.steps)]
         try ensureSuccess(try runner.run(command(arguments: arguments)))
     }
 

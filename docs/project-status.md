@@ -95,8 +95,10 @@ lists are invalidated through the target-list cache schema.
 The Pipeline checkpoint is implemented. The main action menu now exposes a
 saved-pipeline runner that lists Clop pipelines from `pipeline list --json`,
 filters clear single-media input to compatible saved pipelines plus all-file
-pipelines, shows shallow media filters for mixed or ambiguous input, and runs
-chosen saved pipelines with only the shared options supported by `pipeline run`.
+pipelines, shows shallow media filters for mixed or ambiguous input, adds an
+All-File branch when a present media type has no specific saved pipeline, and
+runs chosen saved pipelines with only the shared options supported by
+`pipeline run`.
 The runner also supports inline pipeline execution from the same menu:
 the empty guide row teaches both saved search and inline steps, syntax-looking
 queries such as `crop(width: 1600) -> convert(to: webp)` become runnable
@@ -106,7 +108,7 @@ Clop for final grammar validation. The Pipeline menu and `:pipelines` creation
 flow now share one lightweight syntax guide: they recognize the current known
 Clop 3.0 step names, show categorized Large Type help, preserve semicolons
 inside quoted step values, and provide non-executable guidance for obvious
-mistakes such as unknown step names, invalid `; skip hide` options, unbalanced
+mistakes such as unknown step names, invalid `; opt hide` options, unbalanced
 parentheses, or unclosed quotes. This is intentionally not a full Clop DSL
 parser; Clop remains the authority for parameter-level validation.
 Pipeline management lives in Configuration under `:pipelines`; it supports
@@ -119,11 +121,12 @@ existing pipelines.
 
 The Pipeline polish checkpoint normalizes inline pipeline execution with saved
 pipeline creation. The user-facing options remain concise:
-`steps ; skip hide` for inline runs and `Name => steps ; img skip hide` for
-saved creation. `skip` means "steps only": saved pipeline creation maps it to
-Clop's `--skip-optimisation`, while inline execution omits Alfred Clop's
-prepended `optimise` step. Without `skip`, saved pipelines keep Clop's implicit
-optimization setting and inline pipelines should run as `optimise -> steps`.
+`steps ; opt hide` for inline runs and `Name => steps ; img opt hide` for
+saved creation. Written steps run as written by default. `opt` means
+"optimize first": inline execution prepends Clop's `optimise` step, while
+saved pipeline creation omits Clop's `--skip-optimisation` so Clop bakes in
+its implicit optimization. Without `opt`, saved pipeline creation passes
+`--skip-optimisation` and inline execution sends only the written steps.
 `hide` means hide Clop's floating result UI: saved creation maps it to
 `--hide-result`, while inline and External Trigger execution suppress the
 runtime `--gui` flag. The Pipeline menu should also let users save an inline
@@ -604,7 +607,7 @@ assignment.
   pipelines by file type, typed searches match across all pipelines, and
   Large Type shows raw steps without crowding subtitles
 - `:pipelines NAME => STEPS ; OPTIONS` saves Clop pipelines with optional
-  `img`, `vid`, `aud`, `pdf`, `all`, `skip`, and `hide` controls; existing
+  `img`, `vid`, `aud`, `pdf`, `all`, `opt`, and `hide` controls; existing
   names require the explicit Command-Return replacement path
 - Pipeline deletion uses a visible confirmation and Cancel row, then returns
   to the source pipeline filter

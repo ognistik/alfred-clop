@@ -968,7 +968,7 @@ enum ConfigurationMenu {
             return ScriptFilterResponse(items: [
                 ScriptFilterItem(
                     title: "Type pipeline name and steps",
-                    subtitle: "Use Name => steps ; img skip hide · ⌘L Reference",
+                    subtitle: "Use Name => steps ; img opt hide · ⌘L Reference",
                     arg: "",
                     valid: false,
                     text: ScriptFilterText(largetype: pipelineAddReference)
@@ -1041,11 +1041,11 @@ enum ConfigurationMenu {
     private static func addPipelineGuideItem() -> ScriptFilterItem {
         ScriptFilterItem(
             title: "Add pipeline",
-            subtitle: "Use Name => steps ; img skip hide · ⌘L Reference",
+            subtitle: "Use Name => steps ; img opt hide · ⌘L Reference",
             arg: "\(pipelinesAutocomplete)add ",
             valid: true,
             autocomplete: "\(pipelinesAutocomplete)add ",
-            match: "add create pipeline image video audio pdf skip hide",
+            match: "add create pipeline image video audio pdf opt hide",
             variables: queryTransitionVariables(),
             text: ScriptFilterText(largetype: pipelineAddReference)
         )
@@ -1055,7 +1055,7 @@ enum ConfigurationMenu {
         ScriptFilterResponse(items: [
             ScriptFilterItem(
                 title: "Add a new pipeline",
-                subtitle: "Use Name => steps ; img skip hide · ⌘L Reference",
+                subtitle: "Use Name => steps ; img opt hide · ⌘L Reference",
                 arg: "\(pipelinesAutocomplete)\(query)",
                 valid: true,
                 autocomplete: "\(pipelinesAutocomplete)\(query)",
@@ -1574,11 +1574,11 @@ enum ConfigurationMenu {
                 name: request.name,
                 fileType: request.fileType,
                 rawText: request.steps,
-                skipOptimisation: request.skipOptimisation,
+                skipOptimisation: !request.optimizeFirst,
                 hideResult: request.hideResult
             )),
             pipelineSettingsDescription(
-                skipOptimisation: request.skipOptimisation,
+                skipOptimisation: !request.optimizeFirst,
                 hideResult: request.hideResult
             ),
             "",
@@ -1594,9 +1594,9 @@ enum ConfigurationMenu {
     ) -> String {
         [
             request.fileType?.title ?? "All file types",
-            request.skipOptimisation
-                ? "Steps only"
-                : "Optimizes first",
+            request.optimizeFirst
+                ? "Optimizes first"
+                : "Steps only",
             request.hideResult ? "Hide result" : nil
         ].compactMap(\.self).joined(separator: " · ")
     }
@@ -1608,7 +1608,7 @@ enum ConfigurationMenu {
         var parts = [
             skipOptimisation
                 ? "Steps only"
-                : "Includes implicit optimization"
+                : "Optimizes first"
         ]
         if hideResult {
             parts.append("Hides Clop result")
@@ -1953,7 +1953,7 @@ private enum PipelineAddParser {
 
         var fileType: PipelineFileType?
         var sawAll = false
-        var skipOptimisation = false
+        var optimizeFirst = false
         var hideResult = false
         for rawOption in split.options.split(whereSeparator: \.isWhitespace) {
             switch rawOption.lowercased() {
@@ -1972,8 +1972,8 @@ private enum PipelineAddParser {
             case "all":
                 guard fileType == nil, !sawAll else { return nil }
                 sawAll = true
-            case "skip":
-                skipOptimisation = true
+            case "opt":
+                optimizeFirst = true
             case "hide":
                 hideResult = true
             default:
@@ -1983,9 +1983,9 @@ private enum PipelineAddParser {
 
         return PipelineAddRequest(
             name: name,
-            steps: split.steps,
+            steps: PipelineSyntax.normalizedSteps(split.steps),
             fileType: fileType,
-            skipOptimisation: skipOptimisation,
+            optimizeFirst: optimizeFirst,
             hideResult: hideResult
         )
     }
@@ -2000,14 +2000,14 @@ private enum PipelineAddParser {
         guard !name.isEmpty else {
             return PipelineSyntax.GuidanceIssue(
                 title: "Name this pipeline",
-                subtitle: "Use Name => steps ; img skip hide",
+                subtitle: "Use Name => steps ; img opt hide",
                 detail: PipelineSyntax.syntaxReference(savedCreation: true)
             )
         }
         guard let split = PipelineSyntax.splitOptions(from: remainder) else {
             return PipelineSyntax.GuidanceIssue(
                 title: "Add pipeline steps",
-                subtitle: "Use Name => steps ; img skip hide",
+                subtitle: "Use Name => steps ; img opt hide",
                 detail: PipelineSyntax.syntaxReference(savedCreation: true)
             )
         }
@@ -2022,7 +2022,7 @@ private enum PipelineAddParser {
                 .first(where: { !allowed.contains($0.lowercased()) }) {
                 return PipelineSyntax.GuidanceIssue(
                     title: "Unknown pipeline option \(invalid)",
-                    subtitle: "Use img, vid, aud, pdf, all, skip, or hide",
+                    subtitle: "Use img, vid, aud, pdf, all, opt, or hide",
                     detail: PipelineSyntax.syntaxReference(savedCreation: true)
                 )
             }

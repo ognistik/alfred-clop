@@ -512,10 +512,13 @@ struct ClopCommandBuilder {
     }
 
     private func pipelineExpression(for pipeline: PipelineRunRequest) -> String {
-        guard pipeline.isInline, !pipeline.skipOptimisation else {
-            return pipeline.pipeline
+        let expression = pipeline.isInline
+            ? PipelineSyntax.normalizedSteps(pipeline.pipeline)
+            : pipeline.pipeline
+        guard pipeline.isInline, pipeline.optimizeFirst else {
+            return expression
         }
-        return "optimise -> \(pipeline.pipeline)"
+        return "optimise -> \(expression)"
     }
 }
 

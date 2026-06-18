@@ -472,8 +472,8 @@ struct PublicRequestParserTests {
         """)
         let inline = try PublicRequestParser.parse("""
         execute: Pipeline
-        pipeline: crop(width: 1600) -> convert(to: webp)
-        skip: true
+        pipeline: crop(width: 1600) -> optimize -> convert(to: webp)
+        opt: true
         hide: true
 
         /tmp/image.png
@@ -496,9 +496,9 @@ struct PublicRequestParserTests {
             hideResult: true
         ))))
         #expect(inline.route == .execute(action: .pipeline(PipelineRunRequest(
-            pipeline: "crop(width: 1600) -> convert(to: webp)",
+            pipeline: "crop(width: 1600) -> optimise -> convert(to: webp)",
             isInline: true,
-            skipOptimisation: true,
+            optimizeFirst: true,
             hideResult: true
         ))))
         #expect(legacyName.route == .execute(action: .pipeline(
@@ -594,9 +594,9 @@ struct PublicRequestParserTests {
             PublicRequestError.missingParameter("output template")
         ),
         (
-            "execute: Pipeline\npipeline: To WebP\nskip: true\n\n/tmp/image.jpg",
+            "execute: Pipeline\npipeline: To WebP\nopt: true\n\n/tmp/image.jpg",
             PublicRequestError.invalidParameter(
-                "skip",
+                "opt",
                 "only works with inline pipeline steps"
             )
         ),

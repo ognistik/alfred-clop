@@ -186,7 +186,7 @@ enum PipelineSyntax {
         )
     ]
 
-    static let optionNames: Set<String> = ["skip", "hide"]
+    static let optionNames: Set<String> = ["opt", "hide"]
 
     private static let stepLookup = Dictionary(
         uniqueKeysWithValues: steps.map { ($0.name.lowercased(), $0) }
@@ -197,7 +197,8 @@ enum PipelineSyntax {
     }
 
     static func isKnownStep(_ name: String) -> Bool {
-        stepLookup[name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] != nil
+        let normalized = normalizedStepName(name)
+        return stepLookup[normalized] != nil
     }
 
     static func looksLikeInlinePipeline(_ value: String) -> Bool {
@@ -253,7 +254,7 @@ enum PipelineSyntax {
         guard let split = splitOptions(from: trimmed) else {
             return GuidanceIssue(
                 title: "Finish the pipeline steps",
-                subtitle: "Use step(...) -> step ; skip hide",
+                subtitle: "Use step(...) -> step ; opt hide",
                 detail: syntaxReference()
             )
         }
@@ -266,15 +267,15 @@ enum PipelineSyntax {
             if let invalid = invalidOptions.first {
                 return GuidanceIssue(
                     title: "Unknown pipeline option \(invalid)",
-                    subtitle: "Use skip, hide, or remove the option suffix",
+                    subtitle: "Use opt, hide, or remove the option suffix",
                     detail: """
                     Pipeline options
 
-                    skip: run only the written steps
+                    opt: optimize before the written steps
                     hide: hide Clop's floating result UI
 
                     Example:
-                    convert(to: webp) ; skip hide
+                    convert(to: webp) ; opt hide
                     """
                 )
             }
@@ -326,14 +327,14 @@ enum PipelineSyntax {
             savedCreation ? "Name => steps ; options" : "step(key: value) -> step ; options",
             "",
             "Options",
-            "skip: run only the written steps",
+            "opt: optimize before the written steps",
             "hide: hide Clop's floating result UI"
         ]
         if savedCreation {
             lines.insert("img / vid / aud / pdf / all: file type", at: lines.endIndex)
-            lines += ["", "Without skip, Clop optimizes before running the saved steps."]
+            lines += ["", "Without opt, Clop saves the written steps only."]
         } else {
-            lines += ["", "Without skip, Alfred Clop optimizes first."]
+            lines += ["", "Without opt, Alfred Clop runs only the written steps."]
         }
 
         lines += [
@@ -363,14 +364,15 @@ enum PipelineSyntax {
                 "targetSize(size: 10MB)",
                 "changeSpeed(factor: 2.0) -> removeAudio",
                 "extractPagesAsImages(format: jpeg, quality: high)",
-                "convert(to: webp) ; skip hide"
+                "convert(to: webp) ; opt hide"
             ]
             if savedCreation {
                 lines += [
                     "",
                     "Saved examples",
-                    "to WebP => convert(to: webp) ; img skip",
-                    "2x silent => changeSpeed(factor: 2.0) -> removeAudio ; vid skip hide"
+                    "to WebP => convert(to: webp) ; img",
+                    "2x silent => changeSpeed(factor: 2.0) -> removeAudio ; vid hide",
+                    "small WebP => convert(to: webp) ; img opt"
                 ]
             }
         }
@@ -389,10 +391,31 @@ enum PipelineSyntax {
         return name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private static func normalizedStepName(_ name: String) -> String {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return normalized == "optimize" ? "optimise" : normalized
+    }
+
+    static func normalizedSteps(_ value: String) -> String {
+        splitTopLevelArrows(value).map { expression in
+            normalizeStepSpelling(expression)
+        }.joined(separator: " -> ")
+    }
+
     private static func stepExpressions(in value: String) -> [String] {
         splitTopLevelArrows(value).map {
             $0.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+    }
+
+    private static func normalizeStepSpelling(_ expression: String) -> String {
+        let trimmed = expression.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let name = stepName(from: trimmed),
+              name.caseInsensitiveCompare("optimize") == .orderedSame,
+              let range = trimmed.range(of: name) else {
+            return trimmed
+        }
+        return trimmed.replacingCharacters(in: range, with: "optimise")
     }
 
     private static func containsTopLevelArrow(_ value: String) -> Bool {

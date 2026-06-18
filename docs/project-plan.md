@@ -1160,33 +1160,38 @@ pipelines whose declared `fileType` matches that media type plus pipelines with
 no file-type restriction. In that clear filtered view, subtitles should avoid
 repeating the accepted media type. For mixed clear input or ambiguous broad
 input, use shallow media filter rows inspired by the Optimize controls menu:
-image, video, audio, or PDF as applicable. All-file pipelines should appear
-inside the relevant media branches instead of as a competing top-level branch
-when the input media is known. Typing in the pipeline runner searches runnable
-pipelines by name and related metadata unless the query is detected as inline
-step syntax. When input is ambiguous, preserve honest broad choices and let
-Clop own final compatibility.
+image, video, audio, or PDF as applicable, but only when there is at least one
+saved pipeline specific to that media type. All-file pipelines should appear
+inside relevant media branches instead of as a competing top-level branch when
+each present media type has a specific branch. If any present media type has no
+specific saved pipeline, add an All-File branch so users can intentionally run
+the whole batch through unrestricted pipelines without implying media-specific
+input filtering. Typing in the pipeline runner searches runnable pipelines by
+name and related metadata unless the query is detected as inline step syntax.
+When input is ambiguous, preserve honest broad choices and let Clop own final
+compatibility.
 
 Pipeline row subtitles should stay compact, such as
 `Selected file · ⌃↩ Delete Pipeline · ⌘L Details`. Use Large Type for the
 pipeline name, accepted file type, raw step text, saved Clop settings such as
-skip optimization or hide result, and the current inputs. Inline pipeline rows
+optimization behavior or hide result, and the current inputs. Inline pipeline rows
 should also keep subtitles compact, such as
-`Selected file · Optimizes First · ⌃↩ Save Pipeline · ⌘L Syntax`, and use
-Large Type for examples, the current inline steps, and the meaning of `skip`
+`Selected file · Steps Only · ⌃↩ Save Pipeline · ⌘L Syntax`, and use
+Large Type for examples, the current inline steps, and the meaning of `opt`
 and `hide`. Large Type should include a categorized known-step reference from
 the currently verified Clop CLI/source surface. Do not put long raw pipeline
 expressions in ordinary subtitles.
 
 Normalize the user-facing pipeline options across saved and inline pipelines.
-Inline runs accept `steps ; skip hide`; saved creation accepts
-`Name => steps ; img skip hide`. In both places, `skip` means "steps only".
-For saved pipeline creation, it maps to Clop's `--skip-optimisation`; for
-inline execution, Alfred Clop omits its prepended `optimise` step. Without
-`skip`, inline execution should run `optimise -> steps` so it matches Clop's
-saved-pipeline default of optimizing before running saved steps. `hide` means
-hide Clop's floating result UI: saved creation maps it to `--hide-result`,
-while inline execution suppresses the runtime `--gui` flag. The Pipeline menu
+Inline runs accept `steps ; opt hide`; saved creation accepts
+`Name => steps ; img opt hide`. In both places, written steps run as written
+by default. `opt` means "optimize first": inline execution prepends Clop's
+`optimise` step, while saved pipeline creation omits Clop's
+`--skip-optimisation` so Clop bakes in its implicit optimization. Without
+`opt`, saved pipeline creation passes `--skip-optimisation` and inline
+execution sends only the written steps. `hide` means hide Clop's floating
+result UI: saved creation maps it to `--hide-result`, while inline execution
+suppresses the runtime `--gui` flag. The Pipeline menu
 should let Control-Return save a valid inline pipeline and Control-Return
 delete a visible saved pipeline through confirmation. Configuration remains
 the complete unfiltered pipeline library manager.
@@ -1245,7 +1250,7 @@ full Clop DSL. `OPTIONS` is optional and space-separated:
 - `aud` or `audio`;
 - `pdf`;
 - `all`, meaning no `--file-type`;
-- `skip`, meaning steps only via `--skip-optimisation`;
+- `opt`, meaning optimize before the written steps;
 - `hide`, meaning hide Clop's result UI via `--hide-result`.
 
 The older `:pipelines add NAME => STEPS ; OPTIONS` form may remain accepted as

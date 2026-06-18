@@ -34,18 +34,18 @@ enum PipelineFileType: String, Codable, CaseIterable, Equatable {
 struct PipelineRunRequest: Codable, Equatable {
     var pipeline: String
     var isInline: Bool
-    var skipOptimisation: Bool
+    var optimizeFirst: Bool
     var hideResult: Bool
 
     init(
         pipeline: String,
         isInline: Bool = false,
-        skipOptimisation: Bool = false,
+        optimizeFirst: Bool = false,
         hideResult: Bool = false
     ) {
         self.pipeline = pipeline
         self.isInline = isInline
-        self.skipOptimisation = skipOptimisation
+        self.optimizeFirst = optimizeFirst
         self.hideResult = hideResult
     }
 
@@ -57,7 +57,7 @@ struct PipelineRunRequest: Codable, Equatable {
         case pipeline
         case name
         case isInline
-        case skipOptimisation
+        case optimizeFirst
         case hideResult
     }
 
@@ -67,8 +67,8 @@ struct PipelineRunRequest: Codable, Equatable {
         if isInline {
             try container.encode(true, forKey: .isInline)
         }
-        if skipOptimisation {
-            try container.encode(true, forKey: .skipOptimisation)
+        if optimizeFirst {
+            try container.encode(true, forKey: .optimizeFirst)
         }
         if hideResult {
             try container.encode(true, forKey: .hideResult)
@@ -85,9 +85,9 @@ struct PipelineRunRequest: Codable, Equatable {
             Bool.self,
             forKey: .isInline
         ) ?? false
-        skipOptimisation = try container.decodeIfPresent(
+        optimizeFirst = try container.decodeIfPresent(
             Bool.self,
-            forKey: .skipOptimisation
+            forKey: .optimizeFirst
         ) ?? false
         hideResult = try container.decodeIfPresent(
             Bool.self,
@@ -125,7 +125,7 @@ struct PipelineAddRequest: Codable, Equatable {
     var name: String
     var steps: String
     var fileType: PipelineFileType?
-    var skipOptimisation: Bool
+    var optimizeFirst: Bool
     var hideResult: Bool
     var replace: Bool
 
@@ -133,14 +133,14 @@ struct PipelineAddRequest: Codable, Equatable {
         name: String,
         steps: String,
         fileType: PipelineFileType? = nil,
-        skipOptimisation: Bool = false,
+        optimizeFirst: Bool = false,
         hideResult: Bool = false,
         replace: Bool = false
     ) {
         self.name = name
         self.steps = steps
         self.fileType = fileType
-        self.skipOptimisation = skipOptimisation
+        self.optimizeFirst = optimizeFirst
         self.hideResult = hideResult
         self.replace = replace
     }

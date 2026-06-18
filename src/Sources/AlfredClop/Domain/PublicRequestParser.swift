@@ -358,7 +358,8 @@ enum PublicRequestParser {
             try rejectUnknown(values, allowed: [
                 "pipeline",
                 "name",
-                "skip",
+                "opt",
+                "optimize",
                 "hide"
             ])
             let pipelineValue = values["pipeline"] ?? values["name"]
@@ -371,16 +372,22 @@ enum PublicRequestParser {
                     "use pipeline or name, not both"
                 )
             }
-            let hasSkip = values["skip"] != nil
-            let skip = try boolean(
-                values["skip"],
-                name: "skip",
+            if values["opt"] != nil, values["optimize"] != nil {
+                throw PublicRequestError.invalidParameter(
+                    "opt",
+                    "use opt or optimize, not both"
+                )
+            }
+            let hasOptimize = values["opt"] != nil || values["optimize"] != nil
+            let optimizeFirst = try boolean(
+                values["opt"] ?? values["optimize"],
+                name: values["opt"] == nil ? "optimize" : "opt",
                 defaultValue: false
             )
             let isInline = looksLikeInlinePipeline(pipeline)
-            if hasSkip, !isInline {
+            if hasOptimize, !isInline {
                 throw PublicRequestError.invalidParameter(
-                    "skip",
+                    values["opt"] == nil ? "optimize" : "opt",
                     "only works with inline pipeline steps"
                 )
             }
@@ -391,9 +398,9 @@ enum PublicRequestParser {
                 )
             }
             return .pipeline(PipelineRunRequest(
-                pipeline: pipeline,
+                pipeline: PipelineSyntax.normalizedSteps(pipeline),
                 isInline: isInline,
-                skipOptimisation: skip,
+                optimizeFirst: optimizeFirst,
                 hideResult: try boolean(
                     values["hide"],
                     name: "hide",

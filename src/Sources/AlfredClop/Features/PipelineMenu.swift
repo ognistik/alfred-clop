@@ -104,7 +104,11 @@ enum PipelineMenu {
         }
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let route = categoryRoute(from: trimmed, request: request) {
+        if let route = categoryRoute(
+            from: trimmed,
+            request: request,
+            pipelines: pipelines
+        ) {
             return pipelineList(
                 pipelines,
                 request: request,
@@ -118,7 +122,7 @@ enum PipelineMenu {
 
         if trimmed.isEmpty, shouldShowCategoryRows(for: request) {
             return response(
-                items: branchingItems(for: request),
+                items: branchingItems(for: request, pipelines: pipelines),
                 request: request,
                 state: state
             )
@@ -285,7 +289,7 @@ enum PipelineMenu {
             action: .pipeline(PipelineRunRequest(
                 pipeline: inline.steps,
                 isInline: true,
-                skipOptimisation: inline.skipOptimisation,
+                optimizeFirst: inline.optimizeFirst,
                 hideResult: inline.hideResult
             )),
             execution: pipelineExecutionOptions(environment: environment)
@@ -341,9 +345,10 @@ enum PipelineMenu {
     }
 
     private static func categoryRows(
-        for request: ParameterStepRequest
+        for request: ParameterStepRequest,
+        pipelines: [SavedPipeline]
     ) -> [ScriptFilterItem] {
-        categories(for: request).map { category in
+        categories(for: request, pipelines: pipelines).map { category in
             ScriptFilterItem(
                 uid: "pipeline.category.\(category.query)",
                 title: category.title,
@@ -548,24 +553,35 @@ enum PipelineMenu {
     }
 
     private static func categories(
-        for request: ParameterStepRequest
+        for request: ParameterStepRequest,
+        pipelines: [SavedPipeline]
     ) -> [PipelineCategory] {
         if request.ambiguousKinds?.isEmpty == false {
             return PipelineCategory.allCases
         }
         let known = Set(request.mediaKinds ?? [])
-        return PipelineCategory.mediaCases.filter { category in
+        let pipelineMediaKinds = Set(pipelines.compactMap { $0.fileType?.mediaKind })
+        let mediaCategories = PipelineCategory.mediaCases.filter { category in
             guard let fileType = category.fileType else { return false }
             return known.contains(fileType.mediaKind)
+                && pipelineMediaKinds.contains(fileType.mediaKind)
         }
+        let hasKnownMediaWithoutSpecificPipeline = known.contains {
+            !pipelineMediaKinds.contains($0)
+        }
+        let hasAllFilePipelines = pipelines.contains { $0.fileType == nil }
+        return hasKnownMediaWithoutSpecificPipeline && hasAllFilePipelines
+            ? mediaCategories + [.allFile]
+            : mediaCategories
     }
 
     private static func categoryRoute(
         from query: String,
-        request: ParameterStepRequest
+        request: ParameterStepRequest,
+        pipelines: [SavedPipeline]
     ) -> (category: PipelineCategory, query: String)? {
         let normalized = query.lowercased()
-        for category in categories(for: request) {
+        for category in categories(for: request, pipelines: pipelines) {
             for alias in category.aliases where normalized == alias
                 || normalized.hasPrefix("\(alias) ") {
                 let value = normalized == alias
@@ -578,9 +594,13 @@ enum PipelineMenu {
     }
 
     private static func branchingItems(
-        for request: ParameterStepRequest
+        for request: ParameterStepRequest,
+        pipelines: [SavedPipeline]
     ) -> [ScriptFilterItem] {
-        [guideItem(for: request)] + categoryRows(for: request)
+        [guideItem(for: request)] + categoryRows(
+            for: request,
+            pipelines: pipelines
+        )
     }
 
     private static func guideItem(
@@ -657,9 +677,9 @@ enum PipelineMenu {
         var lines = [
             "Run inline pipeline",
             "",
-            inline.skipOptimisation
-                ? "Steps only"
-                : "Optimizes first",
+            inline.optimizeFirst
+                ? "Optimizes first"
+                : "Steps only",
             inline.hideResult
                 ? "Hides Clop result"
                 : "Uses workflow Clop UI setting",
@@ -670,7 +690,7 @@ enum PipelineMenu {
             "Clop validates the pipeline syntax.",
             "",
             "Options",
-            "skip: run only the written steps",
+            "opt: optimize before the written steps",
             "hide: hide Clop's floating result UI"
         ]
         if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
@@ -702,7 +722,7 @@ enum PipelineMenu {
         for pipeline: SavedPipeline
     ) -> String {
         var parts = [String]()
-        parts.append(pipeline.skipOptimisation ? "Steps only" : "Includes implicit optimization")
+        parts.append(pipeline.skipOptimisation ? "Steps only" : "Optimizes first")
         if pipeline.hideResult {
             parts.append("Hides Clop result")
         }
@@ -713,7 +733,7 @@ enum PipelineMenu {
         for inline: InlinePipeline
     ) -> String {
         [
-            inline.skipOptimisation ? "Steps Only" : "Optimizes First",
+            inline.optimizeFirst ? "Optimizes First" : "Steps Only",
             inline.hideResult ? "Hide Result" : nil
         ].compactMap(\.self).joined(separator: " · ")
     }
@@ -726,7 +746,7 @@ enum PipelineMenu {
             name: "",
             steps: inline.steps,
             fileType: inferredPipelineFileType(for: request),
-            skipOptimisation: inline.skipOptimisation,
+            optimizeFirst: inline.optimizeFirst,
             hideResult: inline.hideResult
         )
         let state = MenuState.pipeline(
@@ -791,7 +811,7 @@ enum PipelineMenu {
     ) -> String {
         [
             request.fileType?.title ?? "All file types",
-            request.skipOptimisation ? "Steps Only" : "Optimizes First",
+            request.optimizeFirst ? "Optimizes First" : "Steps Only",
             request.hideResult ? "Hide Result" : nil
         ].compactMap(\.self).joined(separator: " · ")
     }
@@ -812,7 +832,7 @@ enum PipelineMenu {
             request.steps,
             "",
             "Options",
-            "skip: run only the written steps",
+            "opt: optimize before the written steps",
             "hide: hide Clop's floating result UI"
         ].joined(separator: "\n")
     }
@@ -911,7 +931,7 @@ enum PipelineMenu {
 
 private struct InlinePipeline: Equatable {
     var steps: String
-    var skipOptimisation: Bool
+    var optimizeFirst: Bool
     var hideResult: Bool
 }
 
@@ -922,12 +942,12 @@ private enum InlinePipelineParser {
             return nil
         }
 
-        var skipOptimisation = false
+        var optimizeFirst = false
         var hideResult = false
         for rawOption in split.options.split(whereSeparator: \.isWhitespace) {
             switch rawOption.lowercased() {
-            case "skip":
-                skipOptimisation = true
+            case "opt":
+                optimizeFirst = true
             case "hide":
                 hideResult = true
             default:
@@ -936,8 +956,8 @@ private enum InlinePipelineParser {
         }
 
         return InlinePipeline(
-            steps: split.steps,
-            skipOptimisation: skipOptimisation,
+            steps: PipelineSyntax.normalizedSteps(split.steps),
+            optimizeFirst: optimizeFirst,
             hideResult: hideResult
         )
     }

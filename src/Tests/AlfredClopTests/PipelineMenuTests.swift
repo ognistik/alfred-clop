@@ -47,6 +47,54 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func mixedInputShowsAllFileBranchWhenAMediaTypeHasNoSpecificPipeline() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image, .audio]),
+            query: "",
+            provider: PipelineProviderStub(pipelines: [
+                SavedPipeline(
+                    name: "To WebP",
+                    fileType: .image,
+                    rawText: "convert(to: webp)",
+                    skipOptimisation: true
+                ),
+                SavedPipeline(
+                    name: "Any",
+                    rawText: "copyToClipboard"
+                )
+            ])
+        )
+
+        #expect(response.items.map(\.title).contains("Image Pipelines"))
+        #expect(!response.items.map(\.title).contains("Audio Pipelines"))
+        #expect(response.items.map(\.title).contains("All-File Pipelines"))
+
+        let allFile = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image, .audio]),
+            query: "all-file",
+            provider: PipelineProviderStub(pipelines: [
+                SavedPipeline(
+                    name: "To WebP",
+                    fileType: .image,
+                    rawText: "convert(to: webp)",
+                    skipOptimisation: true
+                ),
+                SavedPipeline(
+                    name: "Any",
+                    rawText: "copyToClipboard"
+                )
+            ])
+        )
+
+        #expect(allFile.items.map(\.title) == ["Any"])
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((try #require(allFile.items.first?.arg)).utf8)
+        )
+        #expect(operation.inputs == ["/tmp/image.png"])
+    }
+
+    @Test
     func mediaFilterShowsAcceptedTypeAndIncludesAllFilePipelines() {
         let response = PipelineMenu.response(
             stateJSON: stateJSON(mediaKinds: [.image, .video]),
@@ -82,7 +130,7 @@ struct PipelineMenuTests {
 
         let item = try #require(response.items.first)
         #expect(item.title == "Run inline pipeline")
-        #expect(item.subtitle == "Selected file · Optimizes First · ⌃↩ Save Pipeline · ⌘L Syntax")
+        #expect(item.subtitle == "Selected file · Steps Only · ⌃↩ Save Pipeline · ⌘L Syntax")
         #expect(item.icon == WorkflowIcon.inlinePipeline)
         #expect(item.text?.largetype?.contains("Steps\n\(steps)") == true)
 
@@ -163,7 +211,7 @@ struct PipelineMenuTests {
 
         let item = try #require(response.items.first)
         #expect(item.title == "Unknown pipeline option hidden")
-        #expect(item.subtitle.contains("Use skip, hide"))
+        #expect(item.subtitle.contains("Use opt, hide"))
         #expect(item.valid == false)
     }
 
@@ -183,7 +231,7 @@ struct PipelineMenuTests {
 
     @Test
     func inlineOptionParserIgnoresSemicolonsInsideStepValues() throws {
-        let steps = #"runScript(code: "echo one; echo two") ; skip"#
+        let steps = #"runScript(code: "echo one; echo two") ; opt"#
         let response = PipelineMenu.response(
             stateJSON: stateJSON(mediaKinds: [.image]),
             query: steps,
@@ -200,7 +248,7 @@ struct PipelineMenuTests {
         #expect(operation.action == .pipeline(PipelineRunRequest(
             pipeline: #"runScript(code: "echo one; echo two")"#,
             isInline: true,
-            skipOptimisation: true
+            optimizeFirst: true
         )))
     }
 
@@ -239,15 +287,15 @@ struct PipelineMenuTests {
     }
 
     @Test
-    func inlineOptionsNormalizeSkipAndHide() throws {
+    func inlineOptionsNormalizeOptAndHide() throws {
         let response = PipelineMenu.response(
             stateJSON: stateJSON(mediaKinds: [.image]),
-            query: "convert(to: webp) ; skip hide",
+            query: "convert(to: webp) ; opt hide",
             provider: PipelineProviderStub()
         )
 
         let item = try #require(response.items.first)
-        #expect(item.subtitle == "Selected file · Steps Only · Hide Result · ⌃↩ Save Pipeline · ⌘L Syntax")
+        #expect(item.subtitle == "Selected file · Optimizes First · Hide Result · ⌃↩ Save Pipeline · ⌘L Syntax")
 
         let operation = try JSONDecoder().decode(
             OperationRequest.self,
@@ -256,13 +304,13 @@ struct PipelineMenuTests {
         #expect(operation.action == .pipeline(PipelineRunRequest(
             pipeline: "convert(to: webp)",
             isInline: true,
-            skipOptimisation: true,
+            optimizeFirst: true,
             hideResult: true
         )))
     }
 
     @Test
-    func inlinePipelineCommandPrependsOptimiseUnlessSkippedAndCanHideUI() throws {
+    func inlinePipelineCommandUsesWrittenStepsUnlessOptedIntoOptimise() throws {
         let builder = ClopCommandBuilder(discovery: StubDiscovery(
             diagnostics: ClopDiagnostics(
                 found: true,
@@ -281,7 +329,7 @@ struct PipelineMenuTests {
             recursiveFolders: false
         )
 
-        let optimizing = try builder.command(for: OperationRequest(
+        let stepsOnly = try builder.command(for: OperationRequest(
             inputs: ["/tmp/image.png"],
             action: .pipeline(PipelineRunRequest(
                 pipeline: "convert(to: webp)",
@@ -289,36 +337,46 @@ struct PipelineMenuTests {
             )),
             execution: execution
         ))
-        #expect(optimizing.arguments == [
+        #expect(stepsOnly.arguments == [
             "pipeline",
             "run",
             "--json",
             "--no-progress",
             "--skip-errors",
             "--gui",
-            "optimise -> convert(to: webp)",
+            "convert(to: webp)",
             "/tmp/image.png"
         ])
 
-        let hiddenStepsOnly = try builder.command(for: OperationRequest(
+        let hiddenOptimizing = try builder.command(for: OperationRequest(
             inputs: ["/tmp/image.png"],
             action: .pipeline(PipelineRunRequest(
                 pipeline: "convert(to: webp)",
                 isInline: true,
-                skipOptimisation: true,
+                optimizeFirst: true,
                 hideResult: true
             )),
             execution: execution
         ))
-        #expect(hiddenStepsOnly.arguments == [
+        #expect(hiddenOptimizing.arguments == [
             "pipeline",
             "run",
             "--json",
             "--no-progress",
             "--skip-errors",
-            "convert(to: webp)",
+            "optimise -> convert(to: webp)",
             "/tmp/image.png"
         ])
+
+        let normalized = try builder.command(for: OperationRequest(
+            inputs: ["/tmp/image.png"],
+            action: .pipeline(PipelineRunRequest(
+                pipeline: "optimize -> convert(to: webp)",
+                isInline: true
+            )),
+            execution: execution
+        ))
+        #expect(normalized.arguments.contains("optimise -> convert(to: webp)"))
     }
 
     @Test
@@ -326,7 +384,7 @@ struct PipelineMenuTests {
         let provider = PipelineProviderStub(pipelines: [])
         let inline = PipelineMenu.response(
             stateJSON: stateJSON(mediaKinds: [.image]),
-            query: "convert(to: webp) ; skip hide",
+            query: "convert(to: webp) ; opt hide",
             provider: provider
         )
         let nameStateJSON = try #require(inline.items.first?.mods?.control?.variables?[ActionMenu.menuStateVariable])
@@ -348,7 +406,7 @@ struct PipelineMenuTests {
             name: "To WebP",
             steps: "convert(to: webp)",
             fileType: .image,
-            skipOptimisation: true,
+            optimizeFirst: true,
             hideResult: true
         ))
     }
@@ -427,7 +485,7 @@ struct PipelineMenuTests {
             PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
         ])
         let response = ConfigurationMenu.namespaceResponse(
-            query: ":pipelines add To WebP => convert(to: webp) ; img skip hide",
+            query: ":pipelines add To WebP => convert(to: webp) ; img opt hide",
             environment: environment,
             pipelineProvider: PipelineProviderStub()
         )
@@ -446,7 +504,7 @@ struct PipelineMenuTests {
             name: "To WebP",
             steps: "convert(to: webp)",
             fileType: .image,
-            skipOptimisation: true,
+            optimizeFirst: true,
             hideResult: true,
             replace: true
         ))
@@ -513,7 +571,7 @@ struct PipelineMenuTests {
             PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
         ])
         let response = ConfigurationMenu.namespaceResponse(
-            query: ":pipelines New Pipeline => removeAudio ; skip",
+            query: ":pipelines New Pipeline => removeAudio",
             environment: environment,
             pipelineProvider: PipelineProviderStub()
         )
@@ -530,8 +588,7 @@ struct PipelineMenuTests {
         let add = try #require(state.pipelineAction?.add)
         #expect(add == PipelineAddRequest(
             name: "New Pipeline",
-            steps: "removeAudio",
-            skipOptimisation: true
+            steps: "removeAudio"
         ))
     }
 
@@ -558,14 +615,14 @@ struct PipelineMenuTests {
             PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
         ])
         let response = ConfigurationMenu.namespaceResponse(
-            query: #":pipelines Script => runScript(code: "echo one; echo two") ; img skip"#,
+            query: #":pipelines Script => runScript(code: "echo one; echo two") ; img opt"#,
             environment: environment,
             pipelineProvider: PipelineProviderStub()
         )
 
         let item = try #require(response.items.first)
         #expect(item.title == "Add Pipeline Script")
-        #expect(item.subtitle == "Image · Steps only · ⌘L Reference")
+        #expect(item.subtitle == "Image · Optimizes first · ⌘L Reference")
 
         let state = try JSONDecoder().decode(
             MenuState.self,
@@ -575,8 +632,52 @@ struct PipelineMenuTests {
             name: "Script",
             steps: #"runScript(code: "echo one; echo two")"#,
             fileType: .image,
-            skipOptimisation: true
+            optimizeFirst: true
         ))
+    }
+
+    @Test
+    func pipelineProviderAddsSavedPipelinesAsStepsOnlyUnlessOptedIn() throws {
+        let runner = CapturingPipelineRunner()
+        let provider = ClopPipelineProvider(
+            discovery: StubDiscovery(diagnostics: ClopDiagnostics(
+                found: true,
+                path: "/tmp/Clop",
+                source: "test",
+                errors: []
+            )),
+            runner: runner
+        )
+
+        try provider.addPipeline(PipelineAddRequest(
+            name: "To WebP",
+            steps: "optimize -> convert(to: webp)",
+            fileType: .image
+        ))
+        try provider.addPipeline(PipelineAddRequest(
+            name: "Small WebP",
+            steps: "convert(to: webp)",
+            fileType: .image,
+            optimizeFirst: true
+        ))
+
+        #expect(runner.arguments[0] == [
+            "pipeline",
+            "add",
+            "--file-type",
+            "image",
+            "--skip-optimisation",
+            "To WebP",
+            "optimise -> convert(to: webp)"
+        ])
+        #expect(runner.arguments[1] == [
+            "pipeline",
+            "add",
+            "--file-type",
+            "image",
+            "Small WebP",
+            "convert(to: webp)"
+        ])
     }
 
     @Test
@@ -591,7 +692,7 @@ struct PipelineMenuTests {
         )
 
         #expect(response.items.map(\.title) == ["Add a new pipeline"])
-        #expect(response.items.first?.subtitle == "Use Name => steps ; img skip hide · ⌘L Reference")
+        #expect(response.items.first?.subtitle == "Use Name => steps ; img opt hide · ⌘L Reference")
         #expect(response.items.first?.autocomplete == ":pipelines New Pipeline")
     }
 
@@ -740,7 +841,7 @@ private final class PipelineProviderStub: ClopPipelineProviding {
             name: request.name,
             fileType: request.fileType,
             rawText: request.steps,
-            skipOptimisation: request.skipOptimisation,
+            skipOptimisation: !request.optimizeFirst,
             hideResult: request.hideResult
         ))
     }
@@ -751,5 +852,18 @@ private final class PipelineProviderStub: ClopPipelineProviding {
         pipelines.removeAll {
             $0.name.caseInsensitiveCompare(name) == .orderedSame
         }
+    }
+}
+
+private final class CapturingPipelineRunner: ClopProcessRunning {
+    var arguments = [[String]]()
+
+    func run(_ command: ClopCommand) throws -> ClopProcessResult {
+        arguments.append(command.arguments)
+        return ClopProcessResult(
+            terminationStatus: 0,
+            standardOutput: Data(),
+            standardError: Data()
+        )
     }
 }
