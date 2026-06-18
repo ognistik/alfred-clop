@@ -345,9 +345,9 @@
 		</array>
 	</dict>
 	<key>createdby</key>
-	<string></string>
+	<string>Robert J. P. Oberg</string>
 	<key>description</key>
-	<string></string>
+	<string>Image, video, PDF and clipboard optimiser</string>
 	<key>disabled</key>
 	<false/>
 	<key>name</key>
@@ -1721,7 +1721,7 @@ fi</string>
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<true/>
+				<false/>
 				<key>required</key>
 				<false/>
 				<key>text</key>
@@ -1765,6 +1765,6 @@ fi</string>
 	<key>version</key>
 	<string></string>
 	<key>webaddress</key>
-	<string></string>
+	<string>https://github.com/ognistik/alfred-clop</string>
 </dict>
 </plist>
