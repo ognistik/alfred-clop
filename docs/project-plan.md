@@ -1197,6 +1197,18 @@ appropriate. Do not apply workflow output templates, copy-result settings,
 aggressive optimization modifiers, or other workflow-owned operation switches
 to pipeline runs; pipelines use their saved Clop settings.
 
+When explaining pipeline execution, distinguish workflow wrapper settings from
+pipeline-owned behavior. The workflow may choose runtime flags such as `--gui`,
+`--recursive`, `--skip-errors`, and `--no-progress`, but saved pipeline
+metadata and explicit pipeline steps can still determine what Clop does inside
+the pipeline. A saved pipeline with `--hide-result` hides its own floating
+result even if the workflow normally shows Clop UI. Inline `; hide` suppresses
+the runtime UI flag for that run. A `copyToClipboard(...)` pipeline step is
+Clop pipeline behavior and is separate from the workflow-level Copy Result
+setting, which Alfred Clop intentionally does not apply to pipeline runs.
+Recursive folder processing is a runtime `pipeline run` setting inherited from
+the workflow, not saved pipeline metadata.
+
 Pipeline management should support:
 
 - listing saved pipelines regardless of current input;

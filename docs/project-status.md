@@ -132,6 +132,14 @@ Control-Return plus confirmation, while Configuration remains the full
 unfiltered library management surface, including removing all saved pipelines
 through a confirmation row.
 
+Pipeline UI/output behavior is documented as two layers: Alfred Clop wraps the
+run with supported `pipeline run` flags, while saved pipeline metadata and
+explicit steps remain Clop-owned behavior. In particular, saved `hide-result`
+or inline `; hide` can hide Clop's result UI for that pipeline, and
+`copyToClipboard(...)` is a pipeline step rather than the workflow-level Copy
+Result setting. Folder recursion remains a workflow runtime setting for
+`pipeline run`, not saved pipeline metadata.
+
 ## Completed
 
 ### Swift foundation

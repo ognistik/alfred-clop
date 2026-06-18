@@ -522,6 +522,14 @@ shelveWith, uploadWith, openWith
 `pipeline run` supports `--gui`, `--no-progress`, `--async`, `--recursive`,
 `--skip-errors`, `--json`, and `--types`.
 
+Alfred Clop treats these as runtime wrapper options. Saved pipeline metadata
+and explicit pipeline steps can still affect UI and output behavior inside
+Clop: `--hide-result` on a saved pipeline hides that pipeline's floating
+result, inline `; hide` suppresses the runtime `--gui` flag, and
+`copyToClipboard(...)` is a pipeline step separate from the workflow-level Copy
+Result setting. `--recursive` belongs to `pipeline run`, so folder recursion is
+inherited from the workflow runtime setting rather than saved with a pipeline.
+
 `pipeline add` supports:
 
 | Option | Meaning |

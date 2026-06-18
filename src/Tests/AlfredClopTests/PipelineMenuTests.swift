@@ -465,7 +465,8 @@ struct PipelineMenuTests {
         #expect(remove.title == "Remove all saved pipelines")
         #expect(remove.subtitle == "4 Saved Pipelines in Clop")
         #expect(image.text?.largetype?.contains("Pipeline add syntax") == true)
-        #expect(image.text?.largetype?.contains("targetSize: fit under a size limit") == true)
+        #expect(image.text?.largetype?.contains("targetSize") == true)
+        #expect(image.text?.largetype?.contains("copyToClipboard is a step") == true)
     }
 
     @Test

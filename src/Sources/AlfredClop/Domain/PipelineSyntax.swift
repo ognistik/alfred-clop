@@ -336,15 +336,22 @@ enum PipelineSyntax {
             lines += ["", "Without skip, Alfred Clop optimizes first."]
         }
 
-        lines += ["", "Known steps"]
+        lines += [
+            "",
+            "Execution notes",
+            "Workflow settings wrap the run; pipeline steps and saved settings can still do their own UI/output work.",
+            "hide affects Clop result UI for this pipeline.",
+            "copyToClipboard is a step, separate from workflow Copy Result.",
+            "",
+            "Known steps"
+        ]
         for category in Category.allCases {
             let categorySteps = steps.filter { $0.category == category }
             guard !categorySteps.isEmpty else { continue }
             lines += [
                 "",
                 category.rawValue,
-                categorySteps.map { "\($0.name): \($0.summary)" }
-                    .joined(separator: "\n")
+                categorySteps.map(\.name).joined(separator: ", ")
             ]
         }
 
