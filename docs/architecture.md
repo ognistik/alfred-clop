@@ -27,9 +27,13 @@ The project optimizes for:
 |-- docs/
 |   |-- architecture.md
 |   |-- clop-cli-reference.md
-|   `-- external-trigger.md
+|   |-- external-trigger.md
+|   `-- release.md
 |-- scripts/
 |   |-- build.sh
+|   |-- package.sh
+|   |-- release.sh
+|   |-- sign.sh
 |   `-- test.sh
 |-- src/                 Swift package, source, and tests
 `-- workflow/            Alfred workflow plist and built executable
@@ -182,6 +186,18 @@ Build the workflow executable:
 
 ```sh
 ./scripts/build.sh
+```
+
+Build and sign the workflow executable:
+
+```sh
+./scripts/build.sh --sign
+```
+
+Package a signed and notarized release archive:
+
+```sh
+./scripts/package.sh --sign --notarize
 ```
 
 Validate the Alfred workflow plist:

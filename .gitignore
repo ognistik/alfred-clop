@@ -31,6 +31,7 @@ dist/
 # Local environment and logs
 .env
 .env.*
+.release.env
 *.log
 
 # Python cache files from local tooling
