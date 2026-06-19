@@ -642,6 +642,12 @@ enum ConfigurationMenu {
         guard !trimmed.isEmpty else {
             return ScriptFilterResponse(items: items)
         }
+        if let exactItem = exactConfigurationItem(
+            in: items,
+            matching: trimmed
+        ) {
+            return ScriptFilterResponse(items: [exactItem])
+        }
         let search = FuzzySearch<ScriptFilterItem>(
             query: trimmed,
             targetText: {
@@ -691,6 +697,47 @@ enum ConfigurationMenu {
         )
     }
 
+    private static func exactConfigurationItem(
+        in items: [ScriptFilterItem],
+        matching query: String
+    ) -> ScriptFilterItem? {
+        let normalized = normalizedCommand(query)
+        let titleMatches: [String: [String]] = [
+            "Output Template": ["template", "output template"],
+            "Workflow Settings": [
+                "settings",
+                "workflow settings",
+                "workflow configuration"
+            ],
+            "Reset output template": [
+                "reset output",
+                "reset output template"
+            ],
+            "Manage action presets": [
+                "presets",
+                "action presets",
+                "manage presets",
+                "manage action presets"
+            ],
+            "Manage pipelines": [
+                "pipelines",
+                "manage pipelines",
+                "saved pipelines"
+            ],
+            "Clear cached clipboard images": [
+                "clear cache",
+                "clear cached clipboard images"
+            ]
+        ]
+
+        return items.first { item in
+            guard let matches = titleMatches[item.title] else {
+                return false
+            }
+            return matches.contains(normalized)
+        }
+    }
+
     private static func managePipelinesItem(
         provider: any ClopPipelineProviding
     ) -> ScriptFilterItem {
@@ -737,6 +784,13 @@ enum ConfigurationMenu {
         }
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isPipelineRemoveAllQuery(trimmed),
+           !savedPipelines.isEmpty {
+            return ScriptFilterResponse(
+                items: [removePipelinesItem(count: savedPipelines.count)],
+                skipKnowledge: true
+            )
+        }
         if let promptTask = pipelinePromptTask(from: trimmed) {
             return pipelinePromptResponse(task: promptTask)
         }
@@ -801,10 +855,17 @@ enum ConfigurationMenu {
         guard !matches.isEmpty else {
             return addPipelinePromptItem(query: trimmed)
         }
+        let resultItems = matches.map {
+            items[$0.targetIndex]
+        }
+        if resultItems.contains(where: isFocusedPipelineCommand) {
+            return ScriptFilterResponse(
+                items: resultItems,
+                skipKnowledge: true
+            )
+        }
         return ScriptFilterResponse(
-            items: [addPipelineGuideItem()] + matches.map {
-                items[$0.targetIndex]
-            },
+            items: [addPipelineGuideItem()] + resultItems,
             skipKnowledge: true
         )
     }
@@ -1126,7 +1187,25 @@ enum ConfigurationMenu {
 
     private static func isPipelineAddQuery(_ query: String) -> Bool {
         let normalized = query.lowercased()
-        return normalized.hasPrefix("add ") || query.contains("=>")
+        return normalized == "add"
+            || normalized.hasPrefix("add ")
+            || query.contains("=>")
+    }
+
+    private static func isPipelineRemoveAllQuery(_ query: String) -> Bool {
+        [
+            "remove all",
+            "remove all saved pipelines",
+            "delete all",
+            "delete all saved pipelines",
+            "reset pipelines"
+        ].contains(normalizedCommand(query))
+    }
+
+    private static func isFocusedPipelineCommand(
+        _ item: ScriptFilterItem
+    ) -> Bool {
+        item.title == "Remove all saved pipelines"
     }
 
     private static func pipelinePromptTask(from query: String) -> String? {
@@ -1141,9 +1220,14 @@ enum ConfigurationMenu {
     }
 
     private static func normalizedAddValue(_ query: String) -> String {
-        query.lowercased().hasPrefix("add ")
-            ? String(query.dropFirst("add ".count))
-            : query
+        let normalized = query.lowercased()
+        if normalized == "add" {
+            return ""
+        }
+        if normalized.hasPrefix("add ") {
+            return String(query.dropFirst("add ".count))
+        }
+        return query
     }
 
     private static func outputTemplateMenu(
@@ -1318,6 +1402,17 @@ enum ConfigurationMenu {
         )
     }
 
+    private static func isPresetRemoveAllQuery(_ query: String) -> Bool {
+        [
+            "remove all",
+            "remove all action presets",
+            "delete all",
+            "delete all action presets",
+            "reset presets",
+            "reset action presets"
+        ].contains(normalizedCommand(query))
+    }
+
     private static func presetsMenu(
         store: PresetStore,
         query: String,
@@ -1341,6 +1436,11 @@ enum ConfigurationMenu {
         }
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isPresetRemoveAllQuery(trimmed) {
+            return ScriptFilterResponse(items: [
+                removePresetsItem(count: document.presets.count)
+            ])
+        }
         if let categoryRoute = presetCategoryRoute(from: trimmed) {
             return categoryPresetMenu(
                 document.presets,
@@ -2034,6 +2134,14 @@ enum ConfigurationMenu {
 
     private static func formattedBytes(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+
+    private static func normalizedCommand(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
     }
 }
 

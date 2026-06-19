@@ -564,6 +564,16 @@ struct SettingsFoundationTests {
         )
         #expect(filtered.items.map(\.title) == ["Output Template"])
 
+        let exactSettings = ActionMenu.response(
+            for: InputSelection(
+                inputs: ["/tmp/photo.png"],
+                mediaKinds: [.image]
+            ),
+            query: ":settings",
+            environment: environment
+        )
+        #expect(exactSettings.items.map(\.title) == ["Workflow Settings"])
+
         let editor = ActionMenu.response(
             for: InputSelection(
                 inputs: ["/tmp/photo.png"],
@@ -685,6 +695,13 @@ struct SettingsFoundationTests {
         #expect(removal.items.first?.title == "Remove all action presets")
         #expect(removal.items.first?.icon == WorkflowIcon.destructive)
         #expect(!removal.items.contains { $0.title == "Optimize Presets" })
+
+        let exactRemoval = ConfigurationMenu.namespaceResponse(
+            query: ":presets remove all",
+            environment: environment
+        )
+        #expect(exactRemoval.items.map(\.title) == ["Remove all action presets"])
+        #expect(exactRemoval.items.first?.icon == WorkflowIcon.destructive)
     }
 
     @Test

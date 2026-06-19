@@ -591,6 +591,21 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func pipelinesConfigurationExactAddEntersAddBranch() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines add",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        #expect(response.items.map(\.title) == ["Type pipeline name and steps"])
+        #expect(response.items.first?.icon == WorkflowIcon.guide)
+    }
+
+    @Test
     func pipelinesConfigurationCanSearchForRemoveAllPipelines() throws {
         let environment = Environment(values: [
             PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
@@ -602,6 +617,21 @@ struct PipelineMenuTests {
         )
 
         #expect(response.items.map(\.title).contains("Remove all saved pipelines"))
+    }
+
+    @Test
+    func pipelinesConfigurationExactRemoveAllFocusesDestructiveCommand() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines remove all",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        #expect(response.items.map(\.title) == ["Remove all saved pipelines"])
+        #expect(response.items.first?.icon == WorkflowIcon.destructive)
     }
 
     @Test
