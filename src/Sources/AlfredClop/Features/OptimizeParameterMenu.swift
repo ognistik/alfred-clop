@@ -383,7 +383,8 @@ enum OptimizeParameterMenu {
             subtitle: [
                 Optional(inputDescription(for: request)),
                 Optional(savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset"),
-                savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset"
+                savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset",
+                "⌘L Reference"
             ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 optimize: optimize,

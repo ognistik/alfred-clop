@@ -115,7 +115,7 @@ struct CropPDFParameterMenuTests {
         #expect(response.items[0].valid == false)
         #expect(response.items[0].subtitle.contains("Use 16:9 / 1200x630") == true)
         #expect(response.items[1].valid == true)
-        #expect(response.items[1].subtitle == "Passed 2 files · Saved Preset · ⌃↩ Remove Preset")
+        #expect(response.items[1].subtitle == "Passed 2 files · Saved Preset · ⌃↩ Remove Preset · ⌘L Reference")
     }
 
     @Test

@@ -213,7 +213,7 @@ struct OptimizeParameterMenuTests {
         )
 
         #expect(response.items.first?.title == "Optimize Video · Compression 5")
-        #expect(response.items.first?.subtitle == "Selected file · ⌃↩ Save Preset")
+        #expect(response.items.first?.subtitle == "Selected file · ⌃↩ Save Preset · ⌘L Reference")
         #expect(response.items.dropFirst().map(\.title).contains(
             "Video · Compression 55"
         ))
@@ -369,7 +369,7 @@ struct OptimizeParameterMenuTests {
         #expect(exact.items.first?.title == "Optimize Image · Adaptive")
         #expect(
             exact.items.first?.subtitle
-                == "Selected file · Saved Preset · ⌃↩ Remove Preset"
+                == "Selected file · Saved Preset · ⌃↩ Remove Preset · ⌘L Reference"
         )
         #expect(
             exact.items.first?.mods?.control?.subtitle

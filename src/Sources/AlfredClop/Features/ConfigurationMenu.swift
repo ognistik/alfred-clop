@@ -968,6 +968,7 @@ enum ConfigurationMenu {
                         subtitle: "\(issue.subtitle) · ⌘L Reference",
                         arg: "",
                         valid: false,
+                        icon: WorkflowIcon.guide,
                         text: ScriptFilterText(largetype: issue.detail)
                     )
                 ], skipKnowledge: true)
@@ -978,6 +979,7 @@ enum ConfigurationMenu {
                     subtitle: "Use Name => steps ; img opt hide · ⌘L Reference",
                     arg: "",
                     valid: false,
+                    icon: WorkflowIcon.guide,
                     text: ScriptFilterText(largetype: pipelineAddReference)
                 )
             ], skipKnowledge: true)
@@ -989,6 +991,7 @@ enum ConfigurationMenu {
                     subtitle: "\(issue.subtitle) · ⌘L Reference",
                     arg: "",
                     valid: false,
+                    icon: WorkflowIcon.guide,
                     text: ScriptFilterText(largetype: issue.detail)
                 )
             ], skipKnowledge: true)
@@ -1053,6 +1056,7 @@ enum ConfigurationMenu {
             valid: true,
             autocomplete: "\(pipelinesAutocomplete)add ",
             match: "add create pipeline image video audio pdf opt hide",
+            icon: WorkflowIcon.guide,
             variables: queryTransitionVariables(),
             text: ScriptFilterText(largetype: pipelineAddReference)
         )
@@ -1113,6 +1117,7 @@ enum ConfigurationMenu {
                 arg: "\(pipelinesAutocomplete)\(query)",
                 valid: true,
                 autocomplete: "\(pipelinesAutocomplete)\(query)",
+                icon: WorkflowIcon.guide,
                 variables: queryTransitionVariables(),
                 text: ScriptFilterText(largetype: pipelineAddReference)
             )
@@ -1229,7 +1234,8 @@ enum ConfigurationMenu {
             arg: stateJSON,
             valid: true,
             variables: returnMutationVariables(stateJSON),
-            mods: closeModifier(stateJSON)
+            mods: closeModifier(stateJSON),
+            icon: nil
         )
     }
 
@@ -1239,13 +1245,15 @@ enum ConfigurationMenu {
         arg: String? = "",
         valid: Bool = false,
         variables: [String: String]? = nil,
-        mods: ScriptFilterMods? = nil
+        mods: ScriptFilterMods? = nil,
+        icon: ScriptFilterIcon? = WorkflowIcon.guide
     ) -> ScriptFilterItem {
         ScriptFilterItem(
             title: title,
             subtitle: subtitle,
             arg: arg,
             valid: valid,
+            icon: icon,
             variables: variables,
             mods: mods,
             text: ScriptFilterText(

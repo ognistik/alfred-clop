@@ -133,7 +133,7 @@ struct DownscaleParameterMenuTests {
             #expect(!item.subtitle.contains(
                 "Factor \(DownscaleFactorParser.factorValue(for: testCase.factor))"
             ))
-            #expect(item.subtitle == "Passed 2 files · ⌃↩ Save Preset")
+            #expect(item.subtitle == "Passed 2 files · ⌃↩ Save Preset · ⌘L Reference")
             #expect(components.factor == testCase.factor)
         }
     }
@@ -153,7 +153,7 @@ struct DownscaleParameterMenuTests {
         let components = try #require(downscaleComponents(operation.action))
 
         #expect(item.title == "Downscale to 50% · Adaptive · Mute Video")
-        #expect(item.subtitle == "Selected 2 files · ⌃↩ Save Preset")
+        #expect(item.subtitle == "Selected 2 files · ⌃↩ Save Preset · ⌘L Reference")
         #expect(!item.subtitle.contains("Use factor"))
         #expect(item.autocomplete == "controls: 50% ad m")
         #expect(components == (

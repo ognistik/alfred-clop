@@ -234,7 +234,7 @@ struct ConversionParameterMenuTests {
         )
         #expect(
             exact.items.first?.subtitle
-                == "Passed file · Saved Preset · ⌃↩ Remove Preset"
+                == "Passed file · Saved Preset · ⌃↩ Remove Preset · ⌘L Reference"
         )
         let confirmationState = try #require(
             preset.mods?.control?

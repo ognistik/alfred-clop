@@ -394,7 +394,8 @@ enum ConversionParameterMenu {
             subtitle: ([
                 inputDescription(for: request),
                 savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset",
-                savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset"
+                savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset",
+                "⌘L Reference"
             ] as [String?]).compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 choice: choice,

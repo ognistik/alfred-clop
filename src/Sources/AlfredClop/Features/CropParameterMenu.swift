@@ -578,6 +578,7 @@ enum CropParameterMenu {
                 ].joined(separator: " · "),
                 arg: "",
                 valid: false,
+                icon: WorkflowIcon.guide,
                 text: ScriptFilterText(
                     largetype: largeTypeReference(for: request)
                 )
@@ -592,6 +593,7 @@ enum CropParameterMenu {
                 ].joined(separator: " · "),
                 arg: "",
                 valid: false,
+                icon: WorkflowIcon.guide,
                 text: ScriptFilterText(
                     largetype: largeTypeReference(for: request)
                 )
@@ -776,7 +778,8 @@ enum CropParameterMenu {
             subtitle: [
                 inputDescription(for: request),
                 isSavedPreset ? "Saved Preset" : hints,
-                isSavedPreset ? Optional("⌃↩ Remove Preset") : nil
+                isSavedPreset ? Optional("⌃↩ Remove Preset") : nil,
+                "⌘L Reference"
             ].compactMap(\.self).joined(separator: " · "),
             arg: argument,
             valid: true,
@@ -1188,6 +1191,7 @@ enum CropParameterMenu {
             ].joined(separator: " · "),
             arg: "",
             valid: false,
+            icon: WorkflowIcon.guide,
             text: ScriptFilterText(
                 largetype: largeTypeReference(for: request)
             )

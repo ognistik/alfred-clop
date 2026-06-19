@@ -427,6 +427,7 @@ enum DownscaleParameterMenu {
                 ].joined(separator: " · "),
                 arg: "",
                 valid: false,
+                icon: WorkflowIcon.guide,
                 text: ScriptFilterText(
                     largetype: largeTypeReference(for: request)
                 )
@@ -540,7 +541,8 @@ enum DownscaleParameterMenu {
             subtitle: [
                 inputDescription(for: request),
                 savedPreset == nil ? "⌃↩ Save Preset" : "Saved Preset",
-                savedPreset == nil ? nil : Optional("⌃↩ Remove Preset")
+                savedPreset == nil ? nil : Optional("⌃↩ Remove Preset"),
+                "⌘L Reference"
             ].compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 for: preset,

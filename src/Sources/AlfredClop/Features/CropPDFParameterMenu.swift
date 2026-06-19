@@ -600,7 +600,8 @@ enum CropPDFParameterMenu {
                     savedPreset: savedPreset != nil,
                     opensControls: stateJSON != nil
                 ),
-                savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset"
+                savedPreset == nil ? Optional<String>.none : "⌃↩ Remove Preset",
+                "⌘L Reference"
             ] as [String?]).compactMap(\.self).joined(separator: " · "),
             arg: operationArgument(
                 for: preset.request,
