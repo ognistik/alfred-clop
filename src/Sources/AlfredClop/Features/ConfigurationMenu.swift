@@ -622,6 +622,12 @@ enum ConfigurationMenu {
             items.append(managePresetsItem(count: document.presets.count))
         }
         items.append(managePipelinesItem(provider: pipelineProvider))
+        items.append(diagnosticReportItem(
+            environment: environment,
+            fileManager: fileManager,
+            store: store,
+            pipelineProvider: pipelineProvider
+        ))
 
         let summary = cache.summary()
         if summary.fileCount > 0 {
@@ -697,6 +703,33 @@ enum ConfigurationMenu {
         )
     }
 
+    private static func diagnosticReportItem(
+        environment: Environment,
+        fileManager: FileManager,
+        store: PresetStore,
+        pipelineProvider: any ClopPipelineProviding
+    ) -> ScriptFilterItem {
+        let report = ClopDiagnosticReport.text(
+            environment: environment,
+            fileManager: fileManager,
+            store: store,
+            pipelineProvider: pipelineProvider
+        )
+        return ScriptFilterItem(
+            title: "Diagnostics",
+            subtitle: "Copy support details · ⌘L Preview",
+            arg: "",
+            valid: true,
+            autocomplete: ":diagnostics",
+            match: "diagnostics debug github issue cli",
+            variables: [
+                ActionMenu.requestKindVariable:
+                    WorkflowRequestKind.diagnosticReportCopy.rawValue
+            ],
+            text: ScriptFilterText(copy: report, largetype: report)
+        )
+    }
+
     private static func exactConfigurationItem(
         in items: [ScriptFilterItem],
         matching query: String
@@ -723,6 +756,11 @@ enum ConfigurationMenu {
                 "pipelines",
                 "manage pipelines",
                 "saved pipelines"
+            ],
+            "Diagnostics": [
+                "diagnostics",
+                "diagnostic report",
+                "copy diagnostic report"
             ],
             "Clear cached clipboard images": [
                 "clear cache",

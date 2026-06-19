@@ -989,6 +989,10 @@ printf '{"alfredworkflow":{"arg":"%s","variables":{"alfred_clop_notification":"%
   exit
 elif [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
   feedback="$(./alfred-clop configure --menu-state "${1:-}")"
+elif [[ "${alfred_clop_request_kind:-}" == "diagnosticReportCopy" ]]; then
+  report="$(./alfred-clop diagnostics-report)"
+  printf '%s' "$report" | /usr/bin/pbcopy
+  feedback="Copied diagnostic report"
 elif [[ "${alfred_clop_request_kind:-}" == "pipelinePromptCopy" ]]; then
   prompt="$(./alfred-clop pipeline-prompt --task "${1:-}")"
   if [[ "$prompt" == Unable\ to\ generate\ AI\ pipeline\ prompt:* ]]; then

@@ -9,6 +9,7 @@ enum AlfredClopCommand {
                "configure",
                "request",
                "automate",
+               "diagnostics-report",
                "pipeline-prompt"
            ].contains(command) {
             do {
@@ -36,6 +37,10 @@ enum AlfredClopCommand {
             execute(arguments: Array(arguments.dropFirst()))
         case "configure":
             configure(arguments: Array(arguments.dropFirst()))
+        case "diagnostics-report":
+            printText(ClopDiagnosticReport.text(
+                pipelineProvider: ClopPipelineProvider()
+            ))
         case "pipeline-prompt":
             pipelinePrompt(arguments: Array(arguments.dropFirst()))
         case "request":

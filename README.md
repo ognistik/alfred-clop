@@ -77,6 +77,7 @@ This in-workflow Configuration menu is for things you may want to adjust while u
 - Workflow Settings
 - Manage action presets
 - Manage pipelines
+- Diagnostics
 - Clear cached clipboard images, when the workflow has cached raw clipboard images
 
 The separate Alfred workflow configuration panel is where you set persistent workflow preferences such as notifications, Hotkeys, the settings folder, and clipboard behavior. To open it manually:
@@ -87,6 +88,8 @@ The separate Alfred workflow configuration panel is where you set persistent wor
 4. Click the workflow configuration button in Alfred’s sidebar.
 
 You can also type `:` in Alfred Clop and choose `Workflow Settings` to open the same configuration panel. Command-Return on `Workflow Settings` reveals the active settings folder in Finder.
+
+Choose `Diagnostics` to copy a plain-text support report for GitHub issues or debugging. Command-L previews the same report in Large Type. The report includes workflow version and configuration, Clop CLI discovery details, app version when available, preset and pipeline counts, expected command families, and discovery errors; it does not include selected files, clipboard contents, or a full environment dump.
 
 The Alfred workflow configuration exposes these settings:
 
@@ -169,6 +172,7 @@ See [External Trigger reference](docs/external-trigger.md) for the exact syntax 
 - If the keyword should not read the clipboard, turn off `Read Clipboard`.
 - If the keyword has no current clipboard input but you want Alfred Clipboard History recovery, enable `Clipboard History Fallback`.
 - If Clop cannot be found, make sure the Clop app is installed and has not been moved to an unusual location.
+- If you need help with a bug, type `:` and choose `Diagnostics`, then paste the copied report into your GitHub issue.
 - If workflow objects were changed while developing locally, restart Alfred so it reloads the workflow canvas.
 
 ## Developer documentation

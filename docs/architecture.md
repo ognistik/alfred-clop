@@ -49,6 +49,7 @@ The workflow uses one Swift executable, `alfred-clop`, with explicit modes:
 | `handoff` | Prepare a public menu request for the shared Script Filter. |
 | `automate` | Run direct Hotkey/Universal Action optimize routes. |
 | `pipeline-prompt` | Generate the local AI pipeline prompt text. |
+| `diagnostics-report` | Generate the plain-text support report copied from Configuration. |
 | `probe` | Return basic CLI discovery diagnostics as JSON. |
 
 The Alfred canvas should remain thin. It handles input routing, native
@@ -83,7 +84,7 @@ fallback behavior.
 | `Features/InputCollector.swift` | Normalize clipboard, Finder, explicit, folder, and URL input. |
 | `Features/ActionMenu.swift` | Build the root action menu and route to submenus. |
 | `Features/*ParameterMenu.swift` | Action-specific parameter menus and preset handling. |
-| `Features/ConfigurationMenu.swift` | `:` namespace, output template, presets, pipelines, cache cleanup, settings affordances. |
+| `Features/ConfigurationMenu.swift` | `:` namespace, output template, presets, pipelines, diagnostics, cache cleanup, settings affordances. |
 | `Features/ClopRequestDispatcher.swift` | Convert normalized public/internal requests into menu or execution behavior. |
 | `Clop/ClopCommand.swift` | Build Clop CLI argument arrays. |
 | `Clop/ClopCLIDiscovery.swift` | Find and validate the Clop CLI. |
@@ -212,15 +213,21 @@ reopened:
 - a separate Alfred live progress UI;
 - automatic update implementation in this cleanup pass.
 
-## Near-term support item
+## Diagnostics
 
-Diagnostics should become a small Configuration item once implemented:
+The Configuration menu includes a small `Diagnostics` item for support and
+GitHub issue reports. Return copies a plain-text report to the clipboard, and
+Command-L previews the same report in Large Type.
+
+The report includes:
 
 - detected Clop CLI path and discovery source;
-- app/CLI version or build when available;
+- executable status;
+- app bundle version or build when available;
+- workflow version and key workflow configuration values;
+- settings schema, preset counts, and saved pipeline count when readable;
 - command families needed by the workflow;
-- copyable diagnostic report for user support.
+- discovery errors.
 
-Until that menu exists, do not document it as a finished user-facing command in
-the README.
-
+The report deliberately avoids selected input paths, clipboard contents, full
+environment dumps, and unrelated private data.

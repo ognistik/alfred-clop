@@ -601,6 +601,44 @@ struct SettingsFoundationTests {
     }
 
     @Test
+    func configurationOffersDiagnosticReportCopyAndPreview() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path,
+            "alfred_workflow_version": "9.9.9"
+        ])
+
+        let menu = ConfigurationMenu.namespaceResponse(
+            query: ":",
+            environment: environment,
+            pipelineProvider: SettingsPipelineStub(count: 3)
+        )
+        let item = try #require(menu.items.first {
+            $0.title == "Diagnostics"
+        })
+
+        #expect(item.subtitle == "Copy support details · ⌘L Preview")
+        #expect(item.autocomplete == ":diagnostics")
+        #expect(item.valid)
+        #expect(item.icon == nil)
+        #expect(
+            item.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.diagnosticReportCopy.rawValue
+        )
+        #expect(item.text?.copy == item.text?.largetype)
+        #expect(item.text?.largetype?.contains("- Version: 9.9.9") == true)
+        #expect(item.text?.largetype?.contains("- Saved pipelines: 3") == true)
+        #expect(item.text?.largetype?.contains("Expected Command Families") == true)
+
+        let exact = ConfigurationMenu.namespaceResponse(
+            query: ":diagnostics",
+            environment: environment,
+            pipelineProvider: SettingsPipelineStub(count: 3)
+        )
+        #expect(exact.items.map(\.title) == ["Diagnostics"])
+    }
+
+    @Test
     func presetsNamespaceShowsCategoriesAndShortcutReference() throws {
         let directory = try makeTemporaryDirectory()
         let environment = Environment(values: [
@@ -838,7 +876,11 @@ struct SettingsFoundationTests {
         #expect(response.items.allSatisfy {
             $0.quickLookURL == filePath
                 && $0.action?.file == .single(filePath)
-                && $0.text?.largetype?.contains("OUTPUT TEMPLATE\n%P/%f-processed") == true
+        })
+        #expect(response.items.filter {
+            $0.title != "Diagnostics"
+        }.allSatisfy {
+            $0.text?.largetype?.contains("OUTPUT TEMPLATE\n%P/%f-processed") == true
         })
         #expect(response.items.first {
             $0.title == "Reset output template"
@@ -890,4 +932,22 @@ struct SettingsFoundationTests {
             from: Data(try #require(json).utf8)
         )
     }
+}
+
+private struct SettingsPipelineStub: ClopPipelineProviding {
+    var count: Int
+
+    func listPipelines() throws -> [SavedPipeline] {
+        (0..<count).map {
+            SavedPipeline(name: "Settings Pipeline \($0)", rawText: "optimise")
+        }
+    }
+
+    func pipelinePrompt(task: String) throws -> String {
+        ""
+    }
+
+    func addPipeline(_ request: PipelineAddRequest) throws {}
+
+    func deletePipeline(named name: String) throws {}
 }
