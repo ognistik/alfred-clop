@@ -98,6 +98,32 @@
 				<false/>
 			</dict>
 		</array>
+		<key>12121212-1212-4212-8212-121212121212</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>13131313-1313-4313-8313-131313131313</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>13131313-1313-4313-8313-131313131313</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
 		<array>
 			<dict>
@@ -519,6 +545,41 @@
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>availableviaurlhandler</key>
+				<true/>
+				<key>triggerid</key>
+				<string>updateNotification</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.trigger.external</string>
+			<key>uid</key>
+			<string>12121212-1212-4212-8212-121212121212</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argument</key>
+				<string></string>
+				<key>passthroughargument</key>
+				<false/>
+				<key>variables</key>
+				<dict>
+					<key>alfred_clop_notification</key>
+					<string>{query}</string>
+				</dict>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.argument</string>
+			<key>uid</key>
+			<string>13131313-1313-4313-8313-131313131313</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>externaltriggerid</key>
 				<string>mainMenu</string>
 				<key>passinputasargument</key>
@@ -547,27 +608,6 @@
 			<string>alfred.workflow.trigger.external</string>
 			<key>uid</key>
 			<string>01F79503-40ED-4F46-A67F-4E5AE07021A4</string>
-			<key>version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>lastpathcomponent</key>
-				<false/>
-				<key>onlyshowifquerypopulated</key>
-				<false/>
-				<key>removeextension</key>
-				<false/>
-				<key>text</key>
-				<string>{var:alfred_clop_notification}</string>
-				<key>title</key>
-				<string>Clop</string>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.output.notification</string>
-			<key>uid</key>
-			<string>0FC6A55B-C1F9-4990-8113-952767ACD315</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
@@ -605,6 +645,27 @@ fi</string>
 			<string>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</string>
 			<key>version</key>
 			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>lastpathcomponent</key>
+				<false/>
+				<key>onlyshowifquerypopulated</key>
+				<false/>
+				<key>removeextension</key>
+				<false/>
+				<key>text</key>
+				<string>{var:alfred_clop_notification}</string>
+				<key>title</key>
+				<string>Clop</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.notification</string>
+			<key>uid</key>
+			<string>0FC6A55B-C1F9-4990-8113-952767ACD315</string>
+			<key>version</key>
+			<integer>1</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -983,10 +1044,15 @@ printf '{"alfredworkflow":{"arg":"%s","variables":{"alfred_clop_notification":"%
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>if [[ "${alfred_clop_request_kind:-}" == "revealSettingsFolder" ]]; then
+				<string>if [[ "${alfred_clop_request_kind:-}" == "openUpdateRelease" ]]; then
+  /usr/bin/open "${1:-}"
+  exit
+elif [[ "${alfred_clop_request_kind:-}" == "revealSettingsFolder" ]]; then
   /bin/mkdir -p -- "${1:-}"
   /usr/bin/open "${1:-}"
   exit
+elif [[ "${alfred_clop_request_kind:-}" == "updateCheck" ]]; then
+  feedback="$(./alfred-clop update-check)"
 elif [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
   feedback="$(./alfred-clop configure --menu-state "${1:-}")"
 elif [[ "${alfred_clop_request_kind:-}" == "diagnosticReportCopy" ]]; then
@@ -1525,7 +1591,7 @@ fi</string>
 		<key>0FC6A55B-C1F9-4990-8113-952767ACD315</key>
 		<dict>
 			<key>xpos</key>
-			<real>1720</real>
+			<real>1735</real>
 			<key>ypos</key>
 			<real>80</real>
 		</dict>
@@ -1537,6 +1603,22 @@ fi</string>
 			<real>225</real>
 			<key>ypos</key>
 			<real>205</real>
+		</dict>
+		<key>12121212-1212-4212-8212-121212121212</key>
+		<dict>
+			<key>note</key>
+			<string>Internal Update Notification</string>
+			<key>xpos</key>
+			<real>1445</real>
+			<key>ypos</key>
+			<real>20</real>
+		</dict>
+		<key>13131313-1313-4313-8313-131313131313</key>
+		<dict>
+			<key>xpos</key>
+			<real>1585</real>
+			<key>ypos</key>
+			<real>50</real>
 		</dict>
 		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
 		<dict>
@@ -1706,7 +1788,7 @@ fi</string>
 			<key>note</key>
 			<string>Workflow Settings</string>
 			<key>xpos</key>
-			<real>1540</real>
+			<real>1675</real>
 			<key>ypos</key>
 			<real>205</real>
 		</dict>
@@ -1743,7 +1825,7 @@ fi</string>
 		<key>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</key>
 		<dict>
 			<key>xpos</key>
-			<real>1610</real>
+			<real>1675</real>
 			<key>ypos</key>
 			<real>110</real>
 		</dict>
@@ -1930,6 +2012,25 @@ fi</string>
 				<key>required</key>
 				<false/>
 				<key>text</key>
+				<string>Check weekly and show update hints</string>
+			</dict>
+			<key>description</key>
+			<string>Checks while the workflow is used. New releases appear at the top of the menu and notify once.</string>
+			<key>label</key>
+			<string>Notify on Updates</string>
+			<key>type</key>
+			<string>checkbox</string>
+			<key>variable</key>
+			<string>notifyOnUpdates</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<true/>
+				<key>required</key>
+				<false/>
+				<key>text</key>
 				<string>Failed or incomplete operations.</string>
 			</dict>
 			<key>description</key>
@@ -2005,8 +2106,6 @@ fi</string>
 			<string>cacheRetention</string>
 		</dict>
 	</array>
-	<key>variablesdontexport</key>
-	<array/>
 	<key>version</key>
 	<string>0.1.0</string>
 	<key>webaddress</key>

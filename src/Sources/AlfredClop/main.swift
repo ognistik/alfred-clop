@@ -10,7 +10,8 @@ enum AlfredClopCommand {
                "request",
                "automate",
                "diagnostics-report",
-               "pipeline-prompt"
+               "pipeline-prompt",
+               "update-check"
            ].contains(command) {
             do {
                 try PresetStore().ensureExists()
@@ -43,6 +44,8 @@ enum AlfredClopCommand {
             ))
         case "pipeline-prompt":
             pipelinePrompt(arguments: Array(arguments.dropFirst()))
+        case "update-check":
+            printText(UpdateMenuIntegration.checkNow())
         case "request":
             request(arguments: Array(arguments.dropFirst()))
         case "route":
@@ -300,6 +303,17 @@ enum AlfredClopCommand {
 
     private static func menuResponse(arguments: [String]) -> ScriptFilterResponse {
         let query = value(after: "--query", in: arguments) ?? ""
+        let response = baseMenuResponse(arguments: arguments, query: query)
+        guard !arguments.contains("--menu-state") else {
+            return response
+        }
+        return UpdateMenuIntegration.decorate(response, query: query)
+    }
+
+    private static func baseMenuResponse(
+        arguments: [String],
+        query: String
+    ) -> ScriptFilterResponse {
 
         if let stateJSON = value(after: "--menu-state", in: arguments) {
             guard let state = try? JSONDecoder().decode(

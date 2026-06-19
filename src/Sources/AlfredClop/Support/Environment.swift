@@ -61,6 +61,10 @@ struct Environment {
         checkbox("recoverClipboardHistory")
     }
 
+    var notifyOnUpdates: Bool {
+        checkbox("notifyOnUpdates", default: true)
+    }
+
     func executionOptions(
         outputTemplate: String = SettingsDocument.builtInOutputTemplate,
         preserveOriginal override: Bool? = nil

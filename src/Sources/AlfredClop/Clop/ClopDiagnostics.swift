@@ -96,6 +96,7 @@ enum ClopDiagnosticReport {
             "- Clipboard History fallback: \(yesNo(environment.recoverClipboardHistory))",
             "- Completion notifications: \(yesNo(environment.completionNotifications))",
             "- Error notifications: \(yesNo(environment.errorNotifications))",
+            "- Notify on Updates: \(yesNo(environment.notifyOnUpdates))",
             "- Clipboard image retention: \(environment.clipboardImageRetentionDays) days",
             "",
             "Workflow Data",

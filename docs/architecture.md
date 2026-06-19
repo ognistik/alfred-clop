@@ -54,6 +54,7 @@ The workflow uses one Swift executable, `alfred-clop`, with explicit modes:
 | `automate` | Run direct Hotkey/Universal Action optimize routes. |
 | `pipeline-prompt` | Generate the local AI pipeline prompt text. |
 | `diagnostics-report` | Generate the plain-text support report copied from Configuration. |
+| `update-check` | Force a GitHub release check and return concise feedback. |
 | `probe` | Return basic CLI discovery diagnostics as JSON. |
 
 The Alfred canvas should remain thin. It handles input routing, native
@@ -90,6 +91,7 @@ fallback behavior.
 | `Features/*ParameterMenu.swift` | Action-specific parameter menus and preset handling. |
 | `Features/ConfigurationMenu.swift` | `:` namespace, output template, presets, pipelines, diagnostics, cache cleanup, settings affordances. |
 | `Features/ClopRequestDispatcher.swift` | Convert normalized public/internal requests into menu or execution behavior. |
+| `Features/UpdateChecker.swift` | Weekly GitHub release checks, cached update state, and update menu affordances. |
 | `Clop/ClopCommand.swift` | Build Clop CLI argument arrays. |
 | `Clop/ClopCLIDiscovery.swift` | Find and validate the Clop CLI. |
 | `Clop/ClopProcessRunner.swift` | Launch Clop and capture results. |
@@ -129,6 +131,11 @@ currently stores:
 - action presets;
 - output template.
 
+Transient update state lives separately in `update-state.json` in Alfred's
+workflow data folder. It records the last check attempt, newest stable release,
+and last version that produced a notification. It does not move with a custom
+`settings.json` folder.
+
 The built-in output template is:
 
 ```text
@@ -140,6 +147,10 @@ The built-in output template is:
 Workflow notifications should use Alfred’s native Post Notification object. The
 notification title is `Clop`; the message is passed through
 `alfred_clop_notification`.
+
+Automatic update notifications call the internal `updateNotification` trigger,
+which feeds the same native notification object. This trigger is an
+implementation detail, not part of the public automation contract.
 
 Do not add new `osascript display notification` snippets to workflow objects.
 
@@ -227,7 +238,20 @@ reopened:
 - raw include/exclude type filter UI;
 - `--async`/background submission as a workflow feature;
 - a separate Alfred live progress UI;
-- automatic update implementation in this cleanup pass.
+
+## Updates
+
+When `Notify on Updates` is enabled, opening the root workflow menu checks
+GitHub Releases at most once every seven days. Checks use the latest stable
+release endpoint, excluding drafts and prereleases. A newer release:
+
+- notifies once for that version through Alfred's native notification object;
+- remains visible as the first root-menu item until the workflow is updated;
+- opens the matching GitHub release when selected.
+
+Automatic failures are quiet and throttled for seven days so an unavailable
+network does not repeatedly slow the menu. Configuration includes a manual
+`Check for Updates` command that bypasses the schedule and reports its result.
 
 ## Diagnostics
 

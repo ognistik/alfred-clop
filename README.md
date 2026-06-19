@@ -77,6 +77,7 @@ This in-workflow Configuration menu is for things you may want to adjust while u
 - Workflow Settings
 - Manage action presets
 - Manage pipelines
+- Check for Updates
 - Diagnostics
 - Clear cached clipboard images, when the workflow has cached raw clipboard images
 
@@ -104,11 +105,23 @@ The Alfred workflow configuration exposes these settings:
 | Floating Result | Whether Clop’s own result UI appears during processing. |
 | Completion notifications | Whether successful processing and configuration updates can show notifications. |
 | Error notifications | Whether failures and incomplete operations can show notifications. |
+| Notify on Updates | Check GitHub weekly while the workflow is used, notify once for each new stable release, and show it at the top of the menu. |
 | Copy | Whether Alfred Clop asks Clop to copy the result. |
 | Recurse into folders | Whether folder inspection and execution include subfolders. |
 | Clipboard image retention | How long workflow-owned raw clipboard image files are kept. |
 
 Notifications use Alfred’s native notification object and are titled `Clop`.
+
+## Updates
+
+With `Notify on Updates` enabled, Alfred Clop checks for a newer stable GitHub
+release at most once every seven days when you use the workflow. There is no
+background service. When an update is available, Alfred notifies once and keeps
+an actionable update item at the top of the main menu. Press Return on that item
+to open the release page.
+
+To check immediately, type `:` and choose `Check for Updates`. Automatic check
+failures stay quiet so temporary network problems do not interrupt normal use.
 
 ## Output templates
 

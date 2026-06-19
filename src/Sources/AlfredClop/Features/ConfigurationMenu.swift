@@ -612,7 +612,8 @@ enum ConfigurationMenu {
                 autocomplete: templatePrefix,
                 match: "output template preserve original path filename"
             ),
-            workflowSettingsItem(store: store)
+            workflowSettingsItem(store: store),
+            checkForUpdatesItem(environment: environment)
         ]
 
         if document.outputTemplate != SettingsDocument.builtInOutputTemplate {
@@ -730,6 +731,26 @@ enum ConfigurationMenu {
         )
     }
 
+    private static func checkForUpdatesItem(
+        environment: Environment
+    ) -> ScriptFilterItem {
+        let automaticStatus = environment.notifyOnUpdates
+            ? "Automatic checks are enabled"
+            : "Automatic checks are disabled"
+        return ScriptFilterItem(
+            title: "Check for Updates",
+            subtitle: "\(automaticStatus) · Press Return to check now",
+            arg: "",
+            valid: true,
+            autocomplete: ":updates",
+            match: "check updates upgrade new version release github",
+            variables: [
+                ActionMenu.requestKindVariable:
+                    WorkflowRequestKind.updateCheck.rawValue
+            ]
+        )
+    }
+
     private static func exactConfigurationItem(
         in items: [ScriptFilterItem],
         matching query: String
@@ -741,6 +762,11 @@ enum ConfigurationMenu {
                 "settings",
                 "workflow settings",
                 "workflow configuration"
+            ],
+            "Check for Updates": [
+                "updates",
+                "check updates",
+                "check for updates"
             ],
             "Reset output template": [
                 "reset output",
@@ -768,12 +794,25 @@ enum ConfigurationMenu {
             ]
         ]
 
-        return items.first { item in
+        if let exact = items.first(where: { item in
             guard let matches = titleMatches[item.title] else {
                 return false
             }
             return matches.contains(normalized)
+        }) {
+            return exact
         }
+
+        guard normalized.count >= 3 else {
+            return nil
+        }
+        let prefixTitles = titleMatches.compactMap { title, matches in
+            matches.contains(where: { $0.hasPrefix(normalized) }) ? title : nil
+        }
+        guard prefixTitles.count == 1 else {
+            return nil
+        }
+        return items.first { $0.title == prefixTitles[0] }
     }
 
     private static func managePipelinesItem(

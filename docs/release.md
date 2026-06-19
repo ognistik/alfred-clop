@@ -88,6 +88,11 @@ For each release:
 
 ## GitHub Release
 
+The repository must be public before distributing the workflow. Alfred Clop's
+update checker uses GitHub's unauthenticated latest-release endpoint; releases
+in a private repository are visible to the signed-in maintainer but return 404
+for workflow users.
+
 Create a draft release for review:
 
 ```sh

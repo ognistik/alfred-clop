@@ -141,7 +141,7 @@ struct WorkflowRoutingTests {
         )
         #expect(gateConditions.first?["matchmode"] as? Int == 4)
         #expect(gateConditions.first?["matchstring"] as? String == ".+")
-        #expect(notificationRoutes.count == 11)
+        #expect(notificationRoutes.count == 12)
         #expect(notificationScripts.contains {
             $0.contains("alfred-clop configure")
                 && $0.contains("configurationMutation")
@@ -167,6 +167,7 @@ struct WorkflowRoutingTests {
             "recursiveFolders",
             "readClipboardForKeyword",
             "recoverClipboardHistory",
+            "notifyOnUpdates",
             "cacheRetention",
             "theKw"
         ]))
@@ -186,6 +187,14 @@ struct WorkflowRoutingTests {
         )
         #expect(clipboardHistoryConfig["default"] as? Bool == false)
 
+        let updateNotifications = try #require(settings.first {
+            $0["variable"] as? String == "notifyOnUpdates"
+        })
+        let updateNotificationsConfig = try #require(
+            updateNotifications["config"] as? [String: Any]
+        )
+        #expect(updateNotificationsConfig["default"] as? Bool == true)
+
         let objects = try #require(plist["objects"] as? [[String: Any]])
         let scriptFilter = try #require(objects.first {
             $0["type"] as? String == "alfred.workflow.input.scriptfilter"
@@ -203,6 +212,44 @@ struct WorkflowRoutingTests {
             completion["config"] as? [String: Any]
         )
         #expect(completionConfig["default"] as? Bool == true)
+    }
+
+    @Test
+    func updateRoutesUseGitHubReleaseAndNativeNotificationObjects() throws {
+        let plist = try workflowPlist()
+        let objects = try #require(plist["objects"] as? [[String: Any]])
+        let connections = try #require(
+            plist["connections"] as? [String: [[String: Any]]]
+        )
+        let updateTrigger = try #require(objects.first {
+            $0["uid"] as? String == "12121212-1212-4212-8212-121212121212"
+        })
+        let triggerConfig = try #require(
+            updateTrigger["config"] as? [String: Any]
+        )
+        let notificationVariables = try #require(objects.first {
+            $0["uid"] as? String == "13131313-1313-4313-8313-131313131313"
+        })
+        let variableConfig = try #require(
+            notificationVariables["config"] as? [String: Any]
+        )
+        let variables = try #require(
+            variableConfig["variables"] as? [String: String]
+        )
+        let action = try #require(objects.first {
+            $0["uid"] as? String == "B30C287D-7137-4B63-8FA2-95B849C440FA"
+        })
+        let actionConfig = try #require(action["config"] as? [String: Any])
+        let script = try #require(actionConfig["script"] as? String)
+
+        #expect(triggerConfig["triggerid"] as? String == "updateNotification")
+        #expect(triggerConfig["availableviaurlhandler"] as? Bool == true)
+        #expect(variables["alfred_clop_notification"] == "{query}")
+        #expect(connections["12121212-1212-4212-8212-121212121212"]?.first?["destinationuid"] as? String == "13131313-1313-4313-8313-131313131313")
+        #expect(connections["13131313-1313-4313-8313-131313131313"]?.first?["destinationuid"] as? String == "EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF")
+        #expect(script.contains("openUpdateRelease"))
+        #expect(script.contains("/usr/bin/open \"${1:-}\""))
+        #expect(script.contains("alfred-clop update-check"))
     }
 
     @Test
