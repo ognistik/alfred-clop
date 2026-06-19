@@ -60,11 +60,19 @@ enum ClopRequestDispatcher {
 
         let selection: InputSelection
         do {
+            let allowClipboardHistoryFallback: Bool
+            if case .menu = request.route {
+                allowClipboardHistoryFallback = request.input == .clipboard
+                    && environment.recoverClipboardHistory
+            } else {
+                allowClipboardHistoryFallback = false
+            }
             selection = try collector.collect(
                 request: request.input,
                 clipboard: clipboard,
                 finder: finder,
-                recursiveFolders: environment.checkbox("recursiveFolders")
+                recursiveFolders: environment.checkbox("recursiveFolders"),
+                allowClipboardHistoryFallback: allowClipboardHistoryFallback
             )
         } catch {
             if request.route == .configuration,
@@ -80,7 +88,9 @@ enum ClopRequestDispatcher {
             )
         }
 
-        let context = contextOverride ?? context(for: request.input)
+        let context = selection.recoveredFromClipboardHistory
+            ? ActionInputContext.clipboardHistory
+            : contextOverride ?? context(for: request.input)
         switch request.route {
         case let .menu(action):
             guard let action else {

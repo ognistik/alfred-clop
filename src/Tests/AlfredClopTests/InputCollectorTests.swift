@@ -181,6 +181,109 @@ struct InputCollectorTests {
     }
 
     @Test
+    func validCurrentClipboardDoesNotConsultHistory() throws {
+        let current = try temporaryFile(named: "current.png")
+        let older = current.deletingLastPathComponent()
+            .appendingPathComponent("older.pdf")
+        try Data().write(to: older)
+        defer { try? FileManager.default.removeItem(at: current.deletingLastPathComponent()) }
+        let history = StubClipboardHistoryReader([.files([older.path])])
+
+        let selection = try InputCollector(
+            clipboardHistory: history
+        ).collect(
+            clipboard: StubClipboard(urls: [current]),
+            allowHistoryFallback: true
+        )
+
+        #expect(selection.inputs == [current.path])
+        #expect(selection.recoveredFromClipboardHistory == false)
+        #expect(history.makeReaderCallCount == 0)
+    }
+
+    @Test
+    func historySkipsInvalidRecordsAndRecoversTextURLs() throws {
+        let history = StubClipboardHistoryReader([
+            .files(["/missing/recent-image.png"]),
+            .text("unrelated clipboard prose"),
+            .text("Use https://example.com/movie.mp4 when ready")
+        ])
+
+        let selection = try InputCollector(
+            clipboardHistory: history
+        ).collect(
+            clipboard: StubClipboard(text: "current unrelated text"),
+            allowHistoryFallback: true
+        )
+
+        #expect(selection.inputs == ["https://example.com/movie.mp4"])
+        #expect(selection.mediaKinds == [.video])
+        #expect(selection.recoveredFromClipboardHistory == true)
+    }
+
+    @Test
+    func incompleteHistoryFileGroupsAreSkippedAtomically() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let partial = directory.appendingPathComponent("partial.png")
+        let complete = directory.appendingPathComponent("complete.pdf")
+        try Data().write(to: partial)
+        try Data().write(to: complete)
+        let history = StubClipboardHistoryReader([
+            .files([partial.path, directory.appendingPathComponent("missing.mp4").path]),
+            .files([complete.path])
+        ])
+
+        let selection = try InputCollector(
+            clipboardHistory: history
+        ).collect(
+            clipboard: StubClipboard(),
+            allowHistoryFallback: true
+        )
+
+        #expect(selection.inputs == [complete.path])
+        #expect(selection.recoveredFromClipboardHistory == true)
+    }
+
+    @Test
+    func historyImagesUseTheWorkflowMaterializer() throws {
+        let output = try temporaryFile(named: "history.tiff")
+        defer { try? FileManager.default.removeItem(at: output.deletingLastPathComponent()) }
+        let image = ClipboardImage(
+            data: Data("history image".utf8),
+            format: .tiff
+        )
+        let materializer = RecordingImageMaterializer(fileURL: output)
+        let history = StubClipboardHistoryReader([.image(image)])
+
+        let selection = try InputCollector(
+            clipboardImageMaterializer: materializer,
+            clipboardHistory: history
+        ).collect(
+            clipboard: StubClipboard(),
+            allowHistoryFallback: true
+        )
+
+        #expect(selection.inputs == [output.path])
+        #expect(selection.recoveredFromClipboardHistory == true)
+        #expect(materializer.callCount == 1)
+    }
+
+    @Test
+    func historyFallbackMustBeExplicitlyAllowed() {
+        let history = StubClipboardHistoryReader([
+            .text("https://example.com/photo.png")
+        ])
+
+        #expect(throws: InputCollectionError.noInputs) {
+            try InputCollector(clipboardHistory: history).collect(
+                clipboard: StubClipboard()
+            )
+        }
+        #expect(history.makeReaderCallCount == 0)
+    }
+
+    @Test
     func validPathsJSONDecodesAndNormalizes() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

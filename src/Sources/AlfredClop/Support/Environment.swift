@@ -57,6 +57,10 @@ struct Environment {
         checkbox("readClipboardForKeyword", default: true)
     }
 
+    var recoverClipboardHistory: Bool {
+        checkbox("recoverClipboardHistory")
+    }
+
     func executionOptions(
         outputTemplate: String = SettingsDocument.builtInOutputTemplate,
         preserveOriginal override: Bool? = nil

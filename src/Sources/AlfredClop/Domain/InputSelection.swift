@@ -15,13 +15,15 @@ struct InputSelection: Codable, Equatable {
     var itemKinds: [InputItemKind]
     var ambiguousKinds: [AmbiguousInputKind]
     var processableItemCount: Int?
+    var recoveredFromClipboardHistory: Bool
 
     init(
         inputs: [String],
         mediaKinds: [MediaKind],
         itemKinds: [InputItemKind] = [],
         ambiguousKinds: [AmbiguousInputKind] = [],
-        processableItemCount: Int? = nil
+        processableItemCount: Int? = nil,
+        recoveredFromClipboardHistory: Bool = false
     ) {
         self.inputs = inputs
         self.mediaKinds = mediaKinds
@@ -30,5 +32,6 @@ struct InputSelection: Codable, Equatable {
             : itemKinds
         self.ambiguousKinds = ambiguousKinds
         self.processableItemCount = processableItemCount
+        self.recoveredFromClipboardHistory = recoveredFromClipboardHistory
     }
 }

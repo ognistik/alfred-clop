@@ -224,6 +224,31 @@ struct ActionMenuTests {
     }
 
     @Test
+    func clipboardMenuLabelsRecoveredHistoryConcIsely() throws {
+        let file = try temporaryFile(named: "history image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let collector = InputCollector(
+            clipboardHistory: StubClipboardHistoryReader([.files([file.path])])
+        )
+
+        let response = ActionMenu.response(
+            clipboard: ActionMenuClipboard(),
+            query: "exif",
+            collector: collector,
+            environment: Environment(values: [
+                "recoverClipboardHistory": "true"
+            ])
+        )
+
+        #expect(response.items.map(\.title) == ["Strip Metadata"])
+        #expect(response.items[0].subtitle.hasPrefix("History · file ·"))
+        #expect(
+            response.variables?[ActionMenu.inputContextVariable]
+                == ActionInputContext.clipboardHistory.rawValue
+        )
+    }
+
+    @Test
     func keywordClipboardCanBeDisabledWithoutAffectingExplicitRoutes() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

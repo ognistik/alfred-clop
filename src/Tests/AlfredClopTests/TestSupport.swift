@@ -36,3 +36,32 @@ func temporaryFile(named name: String) throws -> URL {
     try Data().write(to: file)
     return file
 }
+
+final class StubClipboardHistoryCandidateReader: ClipboardHistoryCandidateReading {
+    private var candidates: [ClipboardHistoryCandidate]
+
+    init(candidates: [ClipboardHistoryCandidate]) {
+        self.candidates = candidates
+    }
+
+    func next() throws -> ClipboardHistoryCandidate? {
+        guard !candidates.isEmpty else {
+            return nil
+        }
+        return candidates.removeFirst()
+    }
+}
+
+final class StubClipboardHistoryReader: ClipboardHistoryReading {
+    var candidates: [ClipboardHistoryCandidate]
+    private(set) var makeReaderCallCount = 0
+
+    init(_ candidates: [ClipboardHistoryCandidate]) {
+        self.candidates = candidates
+    }
+
+    func makeCandidateReader() throws -> any ClipboardHistoryCandidateReading {
+        makeReaderCallCount += 1
+        return StubClipboardHistoryCandidateReader(candidates: candidates)
+    }
+}

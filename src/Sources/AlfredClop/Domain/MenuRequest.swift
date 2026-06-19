@@ -1,6 +1,7 @@
 enum ActionInputContext: String, Codable {
     case selected
     case clipboard
+    case clipboardHistory
     case arguments
 
     var subtitlePrefix: String {
@@ -13,6 +14,8 @@ enum ActionInputContext: String, Codable {
             return "Selected"
         case .clipboard:
             return "Copied"
+        case .clipboardHistory:
+            return "History ·"
         case .arguments:
             return "Passed"
         }

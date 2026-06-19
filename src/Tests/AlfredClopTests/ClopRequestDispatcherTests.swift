@@ -109,6 +109,57 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func clipboardHistoryFallbackAppliesToDirectSubmenus() throws {
+        let file = try temporaryFile(named: "history image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let history = StubClipboardHistoryReader([.files([file.path])])
+        let request = ClopRequest(
+            input: .clipboard,
+            route: .menu(action: .crop)
+        )
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(for: request, prettyPrinted: false),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            collector: InputCollector(clipboardHistory: history),
+            environment: Environment(values: [
+                "recoverClipboardHistory": "true"
+            ])
+        )
+
+        #expect(response.items.first?.title == "Type crop or resize parameters")
+        #expect(response.items.contains {
+            $0.subtitle.hasPrefix("History · file ·")
+        })
+        #expect(history.makeReaderCallCount == 1)
+    }
+
+    @Test
+    func headlessClipboardExecutionNeverConsultsHistory() throws {
+        let file = try temporaryFile(named: "history image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let history = StubClipboardHistoryReader([.files([file.path])])
+        let request = ClopRequest(
+            input: .clipboard,
+            route: .execute(action: .optimise(aggressive: false))
+        )
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(for: request, prettyPrinted: false),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            collector: InputCollector(clipboardHistory: history),
+            environment: Environment(values: [
+                "recoverClipboardHistory": "true"
+            ])
+        )
+
+        #expect(response.items.first?.title == "No supported clipboard content")
+        #expect(history.makeReaderCallCount == 0)
+    }
+
+    @Test
     func menuHandoffKeepsRequestInVariableAndClearsVisibleArgument() throws {
         let publicRequest = """
         crop:

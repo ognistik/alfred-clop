@@ -166,6 +166,7 @@ struct WorkflowRoutingTests {
             "copyResult",
             "recursiveFolders",
             "readClipboardForKeyword",
+            "recoverClipboardHistory",
             "cacheRetention",
             "theKw"
         ]))
@@ -176,6 +177,14 @@ struct WorkflowRoutingTests {
             clipboardKeyword["config"] as? [String: Any]
         )
         #expect(clipboardKeywordConfig["default"] as? Bool == true)
+
+        let clipboardHistory = try #require(settings.first {
+            $0["variable"] as? String == "recoverClipboardHistory"
+        })
+        let clipboardHistoryConfig = try #require(
+            clipboardHistory["config"] as? [String: Any]
+        )
+        #expect(clipboardHistoryConfig["default"] as? Bool == false)
 
         let objects = try #require(plist["objects"] as? [[String: Any]])
         let scriptFilter = try #require(objects.first {
@@ -278,6 +287,9 @@ struct WorkflowRoutingTests {
         let parameterReturnConfig = try #require(
             parameterReturn["config"] as? [String: Any]
         )
+        let menuReturnJunction = try #require(objects.first {
+            $0["uid"] as? String == "B7AA13C4-9848-496F-9D8F-B81C7F792B9B"
+        })
 
         #expect(scriptFilterRoutes.contains {
             $0["modifiers"] as? Int == 1_048_576
@@ -296,6 +308,17 @@ struct WorkflowRoutingTests {
         #expect(parameterReturnConfig["passthroughargument"] as? Bool == false)
         #expect(
             connections["D922B7A2-2433-441D-B70D-4556591E487D"]?
+                .contains {
+                    $0["destinationuid"] as? String
+                        == "B7AA13C4-9848-496F-9D8F-B81C7F792B9B"
+                } == true
+        )
+        #expect(
+            menuReturnJunction["type"] as? String
+                == "alfred.workflow.utility.junction"
+        )
+        #expect(
+            connections["B7AA13C4-9848-496F-9D8F-B81C7F792B9B"]?
                 .contains {
                     $0["destinationuid"] as? String
                         == "A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0"
@@ -339,9 +362,15 @@ struct WorkflowRoutingTests {
         #expect(routes.contains {
             $0["sourceoutputuid"] as? String == outputUID
                 && $0["destinationuid"] as? String
-                    == "A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0"
+                    == "B7AA13C4-9848-496F-9D8F-B81C7F792B9B"
                 && $0["vitoclose"] as? Bool == false
         })
+        #expect(connections["B7AA13C4-9848-496F-9D8F-B81C7F792B9B"]?
+            .contains {
+                $0["destinationuid"] as? String
+                    == "A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0"
+            } == true
+        )
     }
 
     @Test

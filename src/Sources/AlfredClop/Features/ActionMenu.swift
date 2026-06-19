@@ -207,8 +207,12 @@ enum ActionMenu {
         do {
             let selection = try collector.collect(
                 clipboard: clipboard,
-                recursiveFolders: environment.checkbox("recursiveFolders")
+                recursiveFolders: environment.checkbox("recursiveFolders"),
+                allowHistoryFallback: environment.recoverClipboardHistory
             )
+            let context: ActionInputContext = selection.recoveredFromClipboardHistory
+                ? .clipboardHistory
+                : .clipboard
             let supportedKinds: Set<MediaKind> = [
                 .image, .video, .audio, .pdf
             ]
@@ -218,18 +222,18 @@ enum ActionMenu {
                     return configurationResponse(
                         query: query,
                         selection: selection,
-                        context: .clipboard,
+                        context: context,
                         environment: environment,
                         fileManager: fileManager,
                         writer: writer
                     )
                 }
-                return noSupportedInputResponse(context: .clipboard)
+                return noSupportedInputResponse(context: context)
             }
             return response(
                 for: selection,
                 query: query,
-                context: .clipboard,
+                context: context,
                 environment: environment,
                 fileManager: fileManager,
                 writer: writer
@@ -283,12 +287,17 @@ enum ActionMenu {
                 request: request,
                 clipboard: clipboard,
                 finder: finder,
-                recursiveFolders: environment.checkbox("recursiveFolders")
+                recursiveFolders: environment.checkbox("recursiveFolders"),
+                allowClipboardHistoryFallback: request == .clipboard
+                    && environment.recoverClipboardHistory
             )
+            let resolvedContext: ActionInputContext = selection.recoveredFromClipboardHistory
+                ? .clipboardHistory
+                : context
             return response(
                 for: selection,
                 query: query,
-                context: context,
+                context: resolvedContext,
                 environment: environment,
                 fileManager: fileManager,
                 writer: writer
@@ -496,7 +505,7 @@ enum ActionMenu {
                     fileManager: fileManager,
                     writer: writer
                 )
-            case .selected, .clipboard:
+            case .selected, .clipboard, .clipboardHistory:
                 return responseWithoutInputs(
                     context: context,
                     title: "No files selected",
@@ -663,7 +672,7 @@ enum ActionMenu {
         let title: String
         let subtitle: String
         switch context {
-        case .clipboard:
+        case .clipboard, .clipboardHistory:
             title = "No supported clipboard content"
             subtitle = "Copy a supported file, folder, URL, or image and try again."
         case .selected:

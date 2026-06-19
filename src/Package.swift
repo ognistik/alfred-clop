@@ -13,7 +13,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "AlfredClop",
-            path: "Sources/AlfredClop"
+            path: "Sources/AlfredClop",
+            linkerSettings: [
+                .linkedLibrary("sqlite3")
+            ]
         ),
         .testTarget(
             name: "AlfredClopTests",

@@ -215,18 +215,22 @@ struct InputCollector {
     var folderInspector: any FolderInspecting = FoundationFolderInspector()
     var clipboardImageMaterializer: any ClipboardImageMaterializing =
         FoundationClipboardImageMaterializer()
+    var clipboardHistory: any ClipboardHistoryReading =
+        AlfredClipboardHistoryReader()
 
     func collect(
         request: ClopInputRequest,
         clipboard: ClipboardReading,
         finder: any FinderSelectionReading,
-        recursiveFolders: Bool
+        recursiveFolders: Bool,
+        allowClipboardHistoryFallback: Bool = false
     ) throws -> InputSelection {
         switch request {
         case .clipboard:
             return try collect(
                 clipboard: clipboard,
-                recursiveFolders: recursiveFolders
+                recursiveFolders: recursiveFolders,
+                allowHistoryFallback: allowClipboardHistoryFallback
             )
         case .finderSelection:
             let items = try finder.selectedItems()
@@ -249,7 +253,36 @@ struct InputCollector {
 
     func collect(
         clipboard: ClipboardReading,
-        recursiveFolders: Bool = false
+        recursiveFolders: Bool = false,
+        allowHistoryFallback: Bool = false
+    ) throws -> InputSelection {
+        do {
+            let selection = try collectCurrentClipboard(
+                clipboard,
+                recursiveFolders: recursiveFolders
+            )
+            guard allowHistoryFallback,
+                  ActionCatalog.validActions(for: selection).isEmpty,
+                  let recovered = recoveredClipboardSelection(
+                    recursiveFolders: recursiveFolders
+                  ) else {
+                return selection
+            }
+            return recovered
+        } catch {
+            guard allowHistoryFallback,
+                  let recovered = recoveredClipboardSelection(
+                    recursiveFolders: recursiveFolders
+                  ) else {
+                throw error
+            }
+            return recovered
+        }
+    }
+
+    private func collectCurrentClipboard(
+        _ clipboard: ClipboardReading,
+        recursiveFolders: Bool
     ) throws -> InputSelection {
         let fileURLs = clipboard.fileURLs()
         if !fileURLs.isEmpty {
@@ -282,6 +315,57 @@ struct InputCollector {
         }
 
         throw InputCollectionError.noInputs
+    }
+
+    private func recoveredClipboardSelection(
+        recursiveFolders: Bool
+    ) -> InputSelection? {
+        guard let reader = try? clipboardHistory.makeCandidateReader() else {
+            return nil
+        }
+        while true {
+            let candidate: ClipboardHistoryCandidate?
+            do {
+                candidate = try reader.next()
+            } catch {
+                return nil
+            }
+            guard let candidate else {
+                return nil
+            }
+            let selection: InputSelection
+            do {
+                switch candidate {
+                case .text(let text):
+                    selection = try collect(
+                        items: [text],
+                        extractText: true,
+                        recursiveFolders: recursiveFolders
+                    )
+                case .files(let paths):
+                    selection = try collect(
+                        items: paths,
+                        extractText: false,
+                        recursiveFolders: recursiveFolders
+                    )
+                case .image(let image):
+                    let fileURL = try clipboardImageMaterializer.materialize(image)
+                    selection = try collect(
+                        items: [fileURL.path],
+                        extractText: false,
+                        recursiveFolders: recursiveFolders
+                    )
+                }
+            } catch {
+                continue
+            }
+            guard !ActionCatalog.validActions(for: selection).isEmpty else {
+                continue
+            }
+            var recovered = selection
+            recovered.recoveredFromClipboardHistory = true
+            return recovered
+        }
     }
 
     func collect(json: String) throws -> InputSelection {
