@@ -1566,13 +1566,13 @@ fi</string>
 	<key>readme</key>
 	<string># CLOP FOR ALFRED
 
-[![](assets/readme/clop.png)](https://lowtechguys.com/clop/)
+![](assets/readme/clop.png)
 
-[Visit Clop's website](https://lowtechguys.com/clop/) | [Clop for Alfred on GitHub](https://github.com/ognistik/alfred-clop) | [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) | [Buy Me a Coffee](https://buymeacoffee.com/afadingthought)
+[Clop for Alfred on GitHub](https://github.com/ognistik/alfred-clop) | [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) | [Buy Me a Coffee](https://buymeacoffee.com/afadingthought)
 
 [Clop](https://lowtechguys.com/clop/) is a powerful, flexible macOS app that makes images, videos, PDFs, and clipboard media smaller and easier to share. It can optimize files with minimal visible quality loss, resize and crop media, convert formats, and automate those operations through its command-line tool.
 
-Clop for Alfred puts those capabilities into a quick, searchable menu. It shows only the actions that fit your selected, copied, or passed files and URLs—without asking you to remember command-line options.
+Clop for Alfred puts those capabilities into a quick, searchable menu. It shows only the actions that fit your selected, copied, or passed files and URLs, without asking you to remember command-line options.
 
 *This is an independent, unofficial workflow and is not affiliated with Clop's developer.*
 
