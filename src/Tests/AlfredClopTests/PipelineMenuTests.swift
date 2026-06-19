@@ -198,7 +198,7 @@ struct PipelineMenuTests {
         #expect(item.title == "Unknown pipeline step convertt")
         #expect(item.subtitle.contains("Did you mean convert?"))
         #expect(item.valid == false)
-        #expect(item.text?.largetype?.contains("Known steps") == true)
+        #expect(item.text?.largetype?.contains("Supported steps") == true)
     }
 
     @Test
@@ -522,6 +522,8 @@ struct PipelineMenuTests {
         )
 
         #expect(response.items.first?.title == "Add pipeline")
+        #expect(response.items[1].title == "AI pipeline prompt")
+        #expect(response.items[1].autocomplete == ":pipelines prompt ")
         let image = try #require(response.items.first { $0.title == "Image Pipelines" })
         #expect(image.subtitle == "1 Saved Pipeline")
         let remove = try #require(response.items.last)
@@ -531,6 +533,42 @@ struct PipelineMenuTests {
         #expect(image.text?.largetype?.contains("Pipeline add syntax") == true)
         #expect(image.text?.largetype?.contains("targetSize") == true)
         #expect(image.text?.largetype?.contains("copyToClipboard is a step") == true)
+    }
+
+    @Test
+    func pipelinesConfigurationPromptBranchCopiesGeneratedPrompt() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines prompt shrink screenshots to webp under 500KB",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Copy AI pipeline prompt")
+        #expect(item.subtitle == "Generate prompt from typed task · ⌘L Details")
+        #expect(item.arg == "shrink screenshots to webp under 500KB")
+        #expect(item.variables?[ActionMenu.requestKindVariable] == WorkflowRequestKind.pipelinePromptCopy.rawValue)
+        #expect(item.mods?.command == nil)
+        #expect(item.text?.largetype?.contains("It does not send anything to AI.") == true)
+        #expect(item.text?.largetype?.contains("shrink screenshots to webp under 500KB") == true)
+    }
+
+    @Test
+    func pipelinesConfigurationPromptGuideAsksForTask() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines prompt",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        #expect(response.items.first?.title == "Describe the pipeline task")
+        #expect(response.items.first?.valid == false)
     }
 
     @Test
@@ -610,6 +648,37 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func pipelineSyntaxGuidesObviousParameterMistakes() throws {
+        let badScript = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: #"runScript(code: "echo hi -> cat")"#,
+            provider: PipelineProviderStub()
+        )
+        #expect(badScript.items.first?.title == "Adjust the inline script")
+
+        let badFactor = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "downscale(factor: 1.5)",
+            provider: PipelineProviderStub()
+        )
+        #expect(badFactor.items.first?.title == "Use a downscale factor from 0.0 to 1.0")
+
+        let badCrop = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "crop(location: sameFolder)",
+            provider: PipelineProviderStub()
+        )
+        #expect(badCrop.items.first?.title == "Add a crop size")
+
+        let badConvert = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convert(to: tga)",
+            provider: PipelineProviderStub()
+        )
+        #expect(badConvert.items.first?.title == "Unknown conversion target tga")
+    }
+
+    @Test
     func pipelinesConfigurationIgnoresSemicolonsInsideStepValues() throws {
         let environment = Environment(values: [
             PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
@@ -678,6 +747,30 @@ struct PipelineMenuTests {
             "Small WebP",
             "convert(to: webp)"
         ])
+    }
+
+    @Test
+    func pipelineProviderGeneratesPromptWithTaskArgument() throws {
+        let runner = CapturingPipelineRunner()
+        runner.standardOutput = Data("PROMPT".utf8)
+        let provider = ClopPipelineProvider(
+            discovery: StubDiscovery(diagnostics: ClopDiagnostics(
+                found: true,
+                path: "/tmp/Clop",
+                source: "test",
+                errors: []
+            )),
+            runner: runner
+        )
+
+        let prompt = try provider.pipelinePrompt(task: "shrink screenshots")
+
+        #expect(prompt == "PROMPT")
+        #expect(runner.arguments == [[
+            "pipeline",
+            "prompt",
+            "shrink screenshots"
+        ]])
     }
 
     @Test
@@ -830,6 +923,10 @@ private final class PipelineProviderStub: ClopPipelineProviding {
         pipelines
     }
 
+    func pipelinePrompt(task: String) throws -> String {
+        "Prompt for \(task)"
+    }
+
     func addPipeline(_ request: PipelineAddRequest) throws {
         added = request
         if request.replace {
@@ -857,12 +954,13 @@ private final class PipelineProviderStub: ClopPipelineProviding {
 
 private final class CapturingPipelineRunner: ClopProcessRunning {
     var arguments = [[String]]()
+    var standardOutput = Data()
 
     func run(_ command: ClopCommand) throws -> ClopProcessResult {
         arguments.append(command.arguments)
         return ClopProcessResult(
             terminationStatus: 0,
-            standardOutput: Data(),
+            standardOutput: standardOutput,
             standardError: Data()
         )
     }

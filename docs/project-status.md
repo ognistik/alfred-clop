@@ -151,6 +151,15 @@ syntax-help rows, and destructive confirmation rows. The variants live in
 focused tests for preset, inline pipeline, guide, and destructive row
 assignment.
 
+The Clop 3.1 pipeline prompt and guidance checkpoint is implemented.
+Configuration's `:pipelines` menu now includes an `AI pipeline prompt` row
+that autocompletes to `:pipelines prompt TASK`; Return copies Clop's generated
+local AI-assistant prompt to the clipboard. The workflow does not send content
+to an AI service. Pipeline Large Type references now keep the supported step
+list compact, and inline/saved pipeline guidance catches a few obvious
+parameter mistakes before launch while still leaving full DSL validation to
+Clop.
+
 ## Completed
 
 ### Swift foundation

@@ -7,6 +7,8 @@ enum ConfigurationMenu {
     static let presetsAutocomplete = ":presets "
     static let pipelinesPrefix = ":pipelines"
     static let pipelinesAutocomplete = ":pipelines "
+    private static let pipelinePromptPrefix = "prompt"
+    private static let pipelinePromptAutocomplete = ":pipelines prompt "
 
     private enum PresetCategory: String, CaseIterable, Equatable {
         case optimize
@@ -735,6 +737,9 @@ enum ConfigurationMenu {
         }
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let promptTask = pipelinePromptTask(from: trimmed) {
+            return pipelinePromptResponse(task: promptTask)
+        }
         if isPipelineAddQuery(trimmed) {
             return addPipelineResponse(
                 trimmed,
@@ -759,6 +764,7 @@ enum ConfigurationMenu {
         var items: [ScriptFilterItem]
         if trimmed.isEmpty {
             items = [addPipelineGuideItem()]
+            items.append(pipelinePromptGuideItem())
             items += PipelineCategory.allCases.compactMap { category in
                 let count = pipelines(in: savedPipelines, category: category).count
                 guard count > 0 || category == .all else { return nil }
@@ -775,10 +781,11 @@ enum ConfigurationMenu {
             guard count > 0 || category == .all else { return nil }
             return pipelineCategoryItem(category, count: count)
         }
+        let promptItem = pipelinePromptGuideItem()
         let pipelineItems = savedPipelines
             .sorted(by: pipelineDisplayOrder)
             .map { pipelineItem($0, returnQuery: trimmed) }
-        items = categoryItems + pipelineItems
+        items = [promptItem] + categoryItems + pipelineItems
         if !savedPipelines.isEmpty {
             items.append(removePipelinesItem(count: savedPipelines.count))
         }
@@ -1051,6 +1058,53 @@ enum ConfigurationMenu {
         )
     }
 
+    private static func pipelinePromptGuideItem() -> ScriptFilterItem {
+        ScriptFilterItem(
+            title: "AI pipeline prompt",
+            subtitle: "Generate a paste-ready prompt for an AI assistant",
+            arg: pipelinePromptAutocomplete,
+            valid: true,
+            autocomplete: pipelinePromptAutocomplete,
+            match: "ai prompt llm assistant generate pipeline help clop",
+            icon: WorkflowIcon.guide,
+            variables: queryTransitionVariables(),
+            text: ScriptFilterText(largetype: pipelinePromptReference(task: ""))
+        )
+    }
+
+    private static func pipelinePromptResponse(
+        task: String
+    ) -> ScriptFilterResponse {
+        let trimmed = task.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ScriptFilterResponse(items: [
+                ScriptFilterItem(
+                    title: "Describe the pipeline task",
+                    subtitle: "Use prompt resize videos to 1080p mp4 · ⌘L Details",
+                    arg: "",
+                    valid: false,
+                    autocomplete: pipelinePromptAutocomplete,
+                    icon: WorkflowIcon.guide,
+                    text: ScriptFilterText(largetype: pipelinePromptReference(task: ""))
+                )
+            ], skipKnowledge: true)
+        }
+
+        return ScriptFilterResponse(items: [
+            ScriptFilterItem(
+                title: "Copy AI pipeline prompt",
+                subtitle: "Generate prompt from typed task · ⌘L Details",
+                arg: trimmed,
+                valid: true,
+                autocomplete: "\(pipelinePromptAutocomplete)\(trimmed)",
+                match: "\(trimmed) ai prompt llm assistant",
+                icon: WorkflowIcon.guide,
+                variables: pipelinePromptVariables(.pipelinePromptCopy),
+                text: ScriptFilterText(largetype: pipelinePromptReference(task: trimmed))
+            )
+        ], skipKnowledge: true)
+    }
+
     private static func addPipelinePromptItem(query: String) -> ScriptFilterResponse {
         ScriptFilterResponse(items: [
             ScriptFilterItem(
@@ -1068,6 +1122,17 @@ enum ConfigurationMenu {
     private static func isPipelineAddQuery(_ query: String) -> Bool {
         let normalized = query.lowercased()
         return normalized.hasPrefix("add ") || query.contains("=>")
+    }
+
+    private static func pipelinePromptTask(from query: String) -> String? {
+        let normalized = query.lowercased()
+        if normalized == pipelinePromptPrefix {
+            return ""
+        }
+        guard normalized.hasPrefix("\(pipelinePromptPrefix) ") else {
+            return nil
+        }
+        return String(query.dropFirst(pipelinePromptPrefix.count + 1))
     }
 
     private static func normalizedAddValue(_ query: String) -> String {
@@ -1624,6 +1689,27 @@ enum ConfigurationMenu {
         ].joined(separator: "\n")
     }
 
+    private static func pipelinePromptReference(task: String) -> String {
+        var lines = [
+            "AI pipeline prompt",
+            "",
+            "Clop generates a local reference prompt for an AI assistant.",
+            "It does not send anything to AI.",
+            "",
+            "The generated prompt includes Clop pipeline syntax, supported steps, caveats, examples, and your task.",
+            "Paste it into an AI chat and ask for one pipeline string."
+        ]
+        let trimmed = task.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            lines.insert(contentsOf: [
+                "",
+                "Task",
+                trimmed
+            ], at: 2)
+        }
+        return lines.joined(separator: "\n")
+    }
+
     private static func presetDisplayOrder(
         _ lhs: ActionPreset,
         _ rhs: ActionPreset
@@ -1915,6 +2001,15 @@ enum ConfigurationMenu {
             ActionMenu.requestKindVariable:
                 WorkflowRequestKind.configurationMutationReturn.rawValue,
             ActionMenu.menuStateVariable: stateJSON
+        ]
+    }
+
+    private static func pipelinePromptVariables(
+        _ kind: WorkflowRequestKind
+    ) -> [String: String] {
+        [
+            ActionMenu.requestKindVariable: kind.rawValue,
+            ActionMenu.menuStateVariable: ""
         ]
     }
 

@@ -19,6 +19,7 @@ enum ClopPipelineError: Error, LocalizedError, Equatable {
 
 protocol ClopPipelineProviding {
     func listPipelines() throws -> [SavedPipeline]
+    func pipelinePrompt(task: String) throws -> String
     func addPipeline(_ request: PipelineAddRequest) throws
     func deletePipeline(named name: String) throws
 }
@@ -49,6 +50,18 @@ struct ClopPipelineProvider: ClopPipelineProviding {
             throw ClopPipelineError.invalidListJSON
         }
         return list.saved
+    }
+
+    func pipelinePrompt(task: String) throws -> String {
+        var arguments = ["pipeline", "prompt"]
+        let trimmed = task.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            arguments.append(trimmed)
+        }
+        let result = try runner.run(command(arguments: arguments))
+        try ensureSuccess(result)
+        return String(decoding: result.standardOutput, as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func addPipeline(_ request: PipelineAddRequest) throws {

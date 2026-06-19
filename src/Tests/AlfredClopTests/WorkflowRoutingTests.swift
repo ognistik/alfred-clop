@@ -98,8 +98,12 @@ struct WorkflowRoutingTests {
             return script
         }
 
+        let feedbackScripts = notificationScripts.filter {
+            $0.contains("if [[ -n \"$feedback\" ]]")
+        }
         #expect(notificationScripts.count == 11)
-        #expect(notificationScripts.allSatisfy {
+        #expect(feedbackScripts.count == 11)
+        #expect(feedbackScripts.allSatisfy {
             $0.contains("if [[ -n \"$feedback\" ]]")
                 && !$0.contains("${dnd")
         })

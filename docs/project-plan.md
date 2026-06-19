@@ -1226,6 +1226,7 @@ Pipeline management should support:
 
 - listing saved pipelines regardless of current input;
 - showing a saved pipeline's steps;
+- generating Clop's local AI-assistant prompt from a typed task;
 - adding a named pipeline from a text grammar;
 - replacing a named pipeline only through an explicit modifier or confirmation;
 - choosing an optional image, video, PDF, or audio restriction;
@@ -1240,6 +1241,19 @@ list without forcing the user through a branch. Normal pipeline rows are
 informational and expose details through Large Type; destructive actions use
 modifiers and confirmation, then return to the same filtered list.
 
+The top-level `:pipelines` menu includes an `AI pipeline prompt` row that
+autocompletes to:
+
+```text
+:pipelines prompt TASK
+```
+
+This calls Clop's `pipeline prompt` command. It generates a local,
+paste-ready reference prompt and never sends content to an AI service. Return
+copies the generated prompt to the clipboard. Script Filter subtitles must
+stay compact and avoid echoing the whole task; Large Type may show the full
+task and explain the local-only behavior.
+
 Use this add grammar:
 
 ```text
@@ -1250,8 +1264,12 @@ Use this add grammar:
 to Clop for real grammar validation. Alfred Clop may apply only lightweight
 guidance before execution or saving: recognized step names, unknown-step
 suggestions, unbalanced parentheses or quotes, and workflow option tokens after
-a top-level semicolon. It must not attempt to parse or visually compose the
-full Clop DSL. `OPTIONS` is optional and space-separated:
+a top-level semicolon. It may also catch narrowly obvious parameter mistakes
+such as invalid `runScript(code:)` separators, out-of-range downscale factors,
+missing crop dimensions, unknown conversion targets, invalid send-link
+expiration values, or unquoted custom locations. It must not attempt to parse
+or visually compose the full Clop DSL. `OPTIONS` is optional and
+space-separated:
 
 - `img` or `image`;
 - `vid` or `video`;

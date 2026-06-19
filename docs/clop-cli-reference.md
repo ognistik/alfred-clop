@@ -512,6 +512,7 @@ clop pipeline <subcommand>
 | `pipeline run ... PIPELINE [items...]` | Run a saved pipeline or inline steps |
 | `pipeline add ... NAME STEPS` | Save a pipeline to Clop's library |
 | `pipeline delete NAME` | Delete a saved pipeline |
+| `pipeline prompt [--copy] [TASK...]` | Print an LLM-ready pipeline DSL reference and optional task |
 
 Inline example:
 
@@ -529,10 +530,22 @@ Documented steps:
 
 ```text
 optimise, downscale, lowerBitrate, convert, crop, extractPagesAsImages,
-copy, move, rename, delete, if, ifNot, removeAudio, changeSpeed,
-runScript, runShortcut, copyToClipboard, copyLinkForSending,
-shelveWith, uploadWith, openWith
+targetSize, stripExif, watermark, removeAudio, changeSpeed, capFps, normalize,
+if, ifNot, copy, move, rename, delete, runScript, runShortcut,
+copyToClipboard, copyLinkForSending, shelveWith, uploadWith, openWith
 ```
+
+`pipeline prompt` prints a long reference prompt for an AI assistant. It does
+not contact an AI service. With a task argument, Clop appends the task and asks
+the assistant to return one inline pipeline string. With `--copy`, Clop copies
+the generated prompt to the macOS clipboard.
+
+```sh
+clop pipeline prompt -c "shrink screenshots to webp under 500KB"
+```
+
+Alfred Clop exposes this under `:pipelines prompt TASK`; Return copies the
+generated prompt to the clipboard.
 
 `pipeline run` supports `--gui`, `--no-progress`, `--async`, `--recursive`,
 `--skip-errors`, `--json`, and `--types`.

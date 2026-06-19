@@ -314,6 +314,12 @@ enum PipelineSyntax {
             )
         }
 
+        for expression in parts {
+            if let issue = parameterGuidanceIssue(for: expression) {
+                return issue
+            }
+        }
+
         return nil
     }
 
@@ -344,17 +350,9 @@ enum PipelineSyntax {
             "hide affects Clop result UI for this pipeline.",
             "copyToClipboard is a step, separate from workflow Copy Result.",
             "",
-            "Known steps"
+            "Supported steps",
+            steps.map(\.name).joined(separator: ", ")
         ]
-        for category in Category.allCases {
-            let categorySteps = steps.filter { $0.category == category }
-            guard !categorySteps.isEmpty else { continue }
-            lines += [
-                "",
-                category.rawValue,
-                categorySteps.map(\.name).joined(separator: ", ")
-            ]
-        }
 
         if includeExamples {
             lines += [
@@ -378,6 +376,247 @@ enum PipelineSyntax {
         }
 
         return lines.joined(separator: "\n")
+    }
+
+    private static func parameterGuidanceIssue(
+        for expression: String
+    ) -> GuidanceIssue? {
+        guard let name = stepName(from: expression) else {
+            return nil
+        }
+        let normalized = normalizedStepName(name)
+        let parameters = parameterValues(in: expression)
+        switch normalized {
+        case "runscript":
+            guard let code = parameters["code"] else { return nil }
+            if code.contains("->") || code.contains("\n") {
+                return GuidanceIssue(
+                    title: "Adjust the inline script",
+                    subtitle: #"runScript(code:) cannot contain -> or line breaks"#,
+                    detail: """
+                    runScript(code:) runs one shell line through zsh.
+
+                    Use ; or && inside the code, and keep -> only between pipeline steps.
+
+                    Example:
+                    runScript(code: "sips -Z 800 $1")
+                    """
+                )
+            }
+        case "downscale":
+            guard let factor = parameters["factor"].flatMap(Double.init),
+                  factor <= 0 || factor > 1 else { return nil }
+            return GuidanceIssue(
+                title: "Use a downscale factor from 0.0 to 1.0",
+                subtitle: "Example: downscale(factor: 0.5)",
+                detail: syntaxReference()
+            )
+        case "crop":
+            guard expression.contains("("),
+                  parameters["width"] == nil,
+                  parameters["height"] == nil,
+                  parameters["longEdge"] == nil else { return nil }
+            return GuidanceIssue(
+                title: "Add a crop size",
+                subtitle: "Use width, height, or longEdge",
+                detail: """
+                Crop examples
+
+                crop(width: 1600)
+                crop(height: 720)
+                crop(longEdge: 1920)
+                """
+            )
+        case "convert":
+            guard let target = parameters["to"],
+                  !conversionTargets.contains(target.lowercased()) else {
+                return nil
+            }
+            return GuidanceIssue(
+                title: "Unknown conversion target \(target)",
+                subtitle: "Use an image, video, or audio format",
+                detail: """
+                Convert targets
+
+                Images: webp, avif, heic, jxl, jpeg, png, gif
+                Video: mp4, hevc, x265, av1, webm, gif
+                Audio: m4a, mp3, ogg, flac, wav, aiff
+                """
+            )
+        case "copylinkforsending":
+            guard let expiration = parameters["expiration"],
+                  !linkExpirations.contains(expiration.lowercased()) else {
+                return nil
+            }
+            return GuidanceIssue(
+                title: "Unknown send-link expiration \(expiration)",
+                subtitle: "Use 1m, 15m, 1h, 6h, 1d, 3d, or never",
+                detail: syntaxReference()
+            )
+        default:
+            break
+        }
+        if let location = parameters["location"],
+           !knownLocations.contains(location),
+           !looksLikePathTemplate(location) {
+            return GuidanceIssue(
+                title: "Quote custom locations",
+                subtitle: "Use inPlace, sameFolder, temporaryFolder, or a quoted path",
+                detail: """
+                Location values
+
+                inPlace
+                sameFolder
+                temporaryFolder
+                "~/Pictures/%f"
+                """
+            )
+        }
+        return nil
+    }
+
+    private static let conversionTargets: Set<String> = [
+        "webp", "avif", "heic", "jxl", "jpeg", "jpg", "png", "gif",
+        "mp4", "hevc", "x265", "av1", "webm",
+        "m4a", "mp3", "ogg", "flac", "wav", "aiff"
+    ]
+
+    private static let linkExpirations: Set<String> = [
+        "1m", "15m", "1h", "6h", "1d", "3d", "never"
+    ]
+
+    private static let knownLocations: Set<String> = [
+        "inPlace", "sameFolder", "temporaryFolder"
+    ]
+
+    private static func parameterValues(in expression: String) -> [String: String] {
+        guard let open = expression.firstIndex(of: "("),
+              let close = matchingCloseParen(in: expression, from: open) else {
+            return [:]
+        }
+        let body = String(expression[expression.index(after: open)..<close])
+        var values = [String: String]()
+        for part in splitTopLevelCommas(body) {
+            let pieces = part.split(separator: ":", maxSplits: 1).map(String.init)
+            guard pieces.count == 2 else { continue }
+            let key = pieces[0].trimmingCharacters(in: .whitespacesAndNewlines)
+            let value = pieces[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !key.isEmpty, !value.isEmpty else { continue }
+            values[key] = unquoted(value)
+        }
+        return values
+    }
+
+    private static func splitTopLevelCommas(_ value: String) -> [String] {
+        var parts = [String]()
+        var current = ""
+        var depth = 0
+        var quote: Character?
+        var escaped = false
+        for char in value {
+            if escaped {
+                current.append(char)
+                escaped = false
+                continue
+            }
+            if char == "\\" {
+                current.append(char)
+                escaped = quote != nil
+                continue
+            }
+            if let activeQuote = quote {
+                current.append(char)
+                if char == activeQuote {
+                    quote = nil
+                }
+                continue
+            }
+            if char == "\"" || char == "'" {
+                quote = char
+                current.append(char)
+                continue
+            }
+            if char == "(" {
+                depth += 1
+            } else if char == ")" {
+                depth = max(0, depth - 1)
+            } else if char == ",", depth == 0 {
+                parts.append(current)
+                current = ""
+                continue
+            }
+            current.append(char)
+        }
+        parts.append(current)
+        return parts
+    }
+
+    private static func matchingCloseParen(
+        in value: String,
+        from open: String.Index
+    ) -> String.Index? {
+        var depth = 0
+        var quote: Character?
+        var escaped = false
+        var index = open
+        while index < value.endIndex {
+            let char = value[index]
+            if escaped {
+                escaped = false
+                index = value.index(after: index)
+                continue
+            }
+            if char == "\\" {
+                escaped = quote != nil
+                index = value.index(after: index)
+                continue
+            }
+            if let activeQuote = quote {
+                if char == activeQuote {
+                    quote = nil
+                }
+                index = value.index(after: index)
+                continue
+            }
+            if char == "\"" || char == "'" {
+                quote = char
+            } else if char == "(" {
+                depth += 1
+            } else if char == ")" {
+                depth -= 1
+                if depth == 0 {
+                    return index
+                }
+            }
+            index = value.index(after: index)
+        }
+        return nil
+    }
+
+    private static func unquoted(_ value: String) -> String {
+        guard value.count >= 2,
+              let first = value.first,
+              let last = value.last,
+              (first == "\"" && last == "\"") || (first == "'" && last == "'")
+        else {
+            return value
+        }
+        return String(value.dropFirst().dropLast())
+    }
+
+    private static func isQuotedValue(_ value: String) -> Bool {
+        guard value.count >= 2,
+              let first = value.first,
+              let last = value.last else {
+            return false
+        }
+        return (first == "\"" && last == "\"") || (first == "'" && last == "'")
+    }
+
+    private static func looksLikePathTemplate(_ value: String) -> Bool {
+        value.hasPrefix("/")
+            || value.hasPrefix("~/")
+            || value.contains("%")
     }
 
     private static func stepName(from expression: String) -> String? {

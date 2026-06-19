@@ -3,7 +3,14 @@ import Foundation
 enum AlfredClopCommand {
     static func run(arguments: [String] = Array(CommandLine.arguments.dropFirst())) {
         if let command = arguments.first,
-           ["menu", "execute", "configure", "request", "automate"].contains(command) {
+           [
+               "menu",
+               "execute",
+               "configure",
+               "request",
+               "automate",
+               "pipeline-prompt"
+           ].contains(command) {
             do {
                 try PresetStore().ensureExists()
             } catch {
@@ -29,6 +36,8 @@ enum AlfredClopCommand {
             execute(arguments: Array(arguments.dropFirst()))
         case "configure":
             configure(arguments: Array(arguments.dropFirst()))
+        case "pipeline-prompt":
+            pipelinePrompt(arguments: Array(arguments.dropFirst()))
         case "request":
             request(arguments: Array(arguments.dropFirst()))
         case "route":
@@ -47,6 +56,15 @@ enum AlfredClopCommand {
                 title: "Unknown Alfred Clop mode",
                 subtitle: "Unsupported mode: \(arguments[0])"
             ))
+        }
+    }
+
+    private static func pipelinePrompt(arguments: [String]) {
+        let task = value(after: "--task", in: arguments) ?? ""
+        do {
+            printText(try ClopPipelineProvider().pipelinePrompt(task: task))
+        } catch {
+            printText("Unable to generate AI pipeline prompt: \(error.localizedDescription)")
         }
     }
 

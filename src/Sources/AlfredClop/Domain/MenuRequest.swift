@@ -81,6 +81,7 @@ enum WorkflowRequestKind: String, Codable {
     case parameterStepQuery
     case configurationMutation
     case configurationMutationReturn
+    case pipelinePromptCopy
     case revealSettingsFolder
     case workflowSettings
 }

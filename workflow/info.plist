@@ -853,6 +853,14 @@ printf '%s' "${return_query:-:}"</string>
   exit
 elif [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
   feedback="$(./alfred-clop configure --menu-state "${1:-}")"
+elif [[ "${alfred_clop_request_kind:-}" == "pipelinePromptCopy" ]]; then
+  prompt="$(./alfred-clop pipeline-prompt --task "${1:-}")"
+  if [[ "$prompt" == Unable\ to\ generate\ AI\ pipeline\ prompt:* ]]; then
+    feedback="$prompt"
+  else
+    printf '%s' "$prompt" | /usr/bin/pbcopy
+    feedback="Copied AI pipeline prompt"
+  fi
 else
   feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
 fi
@@ -1301,236 +1309,236 @@ fi</string>
 		<key>01F79503-40ED-4F46-A67F-4E5AE07021A4</key>
 		<dict>
 			<key>xpos</key>
-			<real>225</real>
+			<integer>225</integer>
 			<key>ypos</key>
-			<real>80</real>
+			<integer>80</integer>
 		</dict>
 		<key>03E954FC-A80B-44A5-8A25-1E3A1A676063</key>
 		<dict>
 			<key>xpos</key>
-			<real>780</real>
+			<integer>780</integer>
 			<key>ypos</key>
-			<real>645</real>
+			<integer>645</integer>
 		</dict>
 		<key>086222E0-0634-41BB-8795-059C6B8AF42C</key>
 		<dict>
 			<key>xpos</key>
-			<real>715</real>
+			<integer>715</integer>
 			<key>ypos</key>
-			<real>205</real>
+			<integer>205</integer>
 		</dict>
 		<key>11111111-1111-4111-8111-111111111111</key>
 		<dict>
 			<key>note</key>
 			<string>Menu with Clipboard</string>
 			<key>xpos</key>
-			<real>225</real>
+			<integer>225</integer>
 			<key>ypos</key>
-			<real>205</real>
+			<integer>205</integer>
 		</dict>
 		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
 		<dict>
 			<key>xpos</key>
-			<real>430</real>
+			<integer>430</integer>
 			<key>ypos</key>
-			<real>80</real>
+			<integer>80</integer>
 		</dict>
 		<key>22222222-2222-4222-8222-222222222222</key>
 		<dict>
 			<key>note</key>
 			<string>Menu with Selection</string>
 			<key>xpos</key>
-			<real>225</real>
+			<integer>225</integer>
 			<key>ypos</key>
-			<real>350</real>
+			<integer>350</integer>
 		</dict>
 		<key>33333333-3333-4333-8333-333333333333</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Clipboard</string>
 			<key>xpos</key>
-			<real>225</real>
+			<integer>225</integer>
 			<key>ypos</key>
-			<real>500</real>
+			<integer>500</integer>
 		</dict>
 		<key>44444444-4444-4444-8444-444444444444</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Clipboard Aggressively</string>
 			<key>xpos</key>
-			<real>225</real>
+			<integer>225</integer>
 			<key>ypos</key>
-			<real>645</real>
+			<integer>645</integer>
 		</dict>
 		<key>55555555-5555-4555-8555-555555555555</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Selection</string>
 			<key>xpos</key>
-			<real>225</real>
+			<integer>225</integer>
 			<key>ypos</key>
-			<real>805</real>
+			<integer>805</integer>
 		</dict>
 		<key>66666666-6666-4666-8666-666666666666</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Selection Aggressively</string>
 			<key>xpos</key>
-			<real>225</real>
+			<integer>225</integer>
 			<key>ypos</key>
-			<real>950</real>
+			<integer>950</integer>
 		</dict>
 		<key>77777777-7777-4777-8777-777777777777</key>
 		<dict>
 			<key>xpos</key>
-			<real>615</real>
+			<integer>615</integer>
 			<key>ypos</key>
-			<real>500</real>
+			<integer>500</integer>
 		</dict>
 		<key>7F6EAFB5-64D9-47AC-879C-8F85DA25C72F</key>
 		<dict>
 			<key>xpos</key>
-			<real>430</real>
+			<integer>430</integer>
 			<key>ypos</key>
-			<real>350</real>
+			<integer>350</integer>
 		</dict>
 		<key>88888888-8888-4888-8888-888888888888</key>
 		<dict>
 			<key>xpos</key>
-			<real>615</real>
+			<integer>615</integer>
 			<key>ypos</key>
-			<real>645</real>
+			<integer>645</integer>
 		</dict>
 		<key>91B8DA36-20F9-40E0-A192-1DBD7779B33E</key>
 		<dict>
 			<key>xpos</key>
-			<real>615</real>
+			<integer>615</integer>
 			<key>ypos</key>
-			<real>380</real>
+			<integer>380</integer>
 		</dict>
 		<key>99999999-9999-4999-8999-999999999999</key>
 		<dict>
 			<key>xpos</key>
-			<real>615</real>
+			<integer>615</integer>
 			<key>ypos</key>
-			<real>805</real>
+			<integer>805</integer>
 		</dict>
 		<key>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</key>
 		<dict>
 			<key>note</key>
 			<string>Return to Configuration</string>
 			<key>xpos</key>
-			<real>1510</real>
+			<integer>1510</integer>
 			<key>ypos</key>
-			<real>65</real>
+			<integer>65</integer>
 		</dict>
 		<key>AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA</key>
 		<dict>
 			<key>xpos</key>
-			<real>615</real>
+			<integer>615</integer>
 			<key>ypos</key>
-			<real>950</real>
+			<integer>950</integer>
 		</dict>
 		<key>B1111111-1111-4111-8111-111111111111</key>
 		<dict>
 			<key>xpos</key>
-			<real>970</real>
+			<integer>970</integer>
 			<key>ypos</key>
-			<real>500</real>
+			<integer>500</integer>
 		</dict>
 		<key>B2222222-2222-4222-8222-222222222222</key>
 		<dict>
 			<key>xpos</key>
-			<real>970</real>
+			<integer>970</integer>
 			<key>ypos</key>
-			<real>645</real>
+			<integer>645</integer>
 		</dict>
 		<key>B30C287D-7137-4B63-8FA2-95B849C440FA</key>
 		<dict>
 			<key>xpos</key>
-			<real>1205</real>
+			<integer>1205</integer>
 			<key>ypos</key>
-			<real>405</real>
+			<integer>405</integer>
 		</dict>
 		<key>B3333333-3333-4333-8333-333333333333</key>
 		<dict>
 			<key>xpos</key>
-			<real>970</real>
+			<integer>970</integer>
 			<key>ypos</key>
-			<real>805</real>
+			<integer>805</integer>
 		</dict>
 		<key>B4444444-4444-4444-8444-444444444444</key>
 		<dict>
 			<key>xpos</key>
-			<real>970</real>
+			<integer>970</integer>
 			<key>ypos</key>
-			<real>950</real>
+			<integer>950</integer>
 		</dict>
 		<key>BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB</key>
 		<dict>
 			<key>note</key>
 			<string>Explicit Clipboard Input</string>
 			<key>xpos</key>
-			<real>465</real>
+			<integer>465</integer>
 			<key>ypos</key>
-			<real>235</real>
+			<integer>235</integer>
 		</dict>
 		<key>C0C0C0C0-C0C0-40C0-80C0-C0C0C0C0C0C0</key>
 		<dict>
 			<key>note</key>
 			<string>Restore Configuration Query</string>
 			<key>xpos</key>
-			<real>1380</real>
+			<integer>1380</integer>
 			<key>ypos</key>
-			<real>265</real>
+			<integer>265</integer>
 		</dict>
 		<key>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</key>
 		<dict>
 			<key>note</key>
 			<string>Workflow Settings</string>
 			<key>xpos</key>
-			<real>1510</real>
+			<integer>1510</integer>
 			<key>ypos</key>
-			<real>205</real>
+			<integer>205</integer>
 		</dict>
 		<key>C81E575B-0A6B-45AE-B968-6A2313FB84A7</key>
 		<dict>
 			<key>xpos</key>
-			<real>970</real>
+			<integer>970</integer>
 			<key>ypos</key>
-			<real>180</real>
+			<integer>180</integer>
 		</dict>
 		<key>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</key>
 		<dict>
 			<key>xpos</key>
-			<real>715</real>
+			<integer>715</integer>
 			<key>ypos</key>
-			<real>100</real>
+			<integer>100</integer>
 		</dict>
 		<key>D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0</key>
 		<dict>
 			<key>note</key>
 			<string>Hide After Terminal Command Action</string>
 			<key>xpos</key>
-			<real>1380</real>
+			<integer>1380</integer>
 			<key>ypos</key>
-			<real>435</real>
+			<integer>435</integer>
 		</dict>
 		<key>D922B7A2-2433-441D-B70D-4556591E487D</key>
 		<dict>
 			<key>xpos</key>
-			<real>1215</real>
+			<integer>1215</integer>
 			<key>ypos</key>
-			<real>95</real>
+			<integer>95</integer>
 		</dict>
 		<key>F0F0F0F0-F0F0-40F0-80F0-F0F0F0F0F0F0</key>
 		<dict>
 			<key>note</key>
 			<string>Apply Configuration and Return</string>
 			<key>xpos</key>
-			<real>1205</real>
+			<integer>1205</integer>
 			<key>ypos</key>
-			<real>235</real>
+			<integer>235</integer>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
