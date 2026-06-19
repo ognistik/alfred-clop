@@ -1,8 +1,26 @@
-# Alfred Clop
+<h1 align="center">Alfred Clop</h1>
 
-Alfred Clop is an Alfred workflow for running [Clop](https://lowtechguys.com/clop/) from a friendly, searchable menu.
+<p align="center">
+  <img src="workflow/icon.png" width="140" alt="Alfred Clop icon">
+</p>
 
-It lets you choose files, copied paths, Finder selections, URLs, clipboard images, or automation input, then shows only the Clop actions that make sense for that input. The workflow is meant to make Clop’s power easier to reach without asking normal users to remember CLI flags.
+<p align="center"><strong>A friendly, searchable Alfred menu for Clop.</strong></p>
+
+<p align="center">
+  <a href="https://buymeacoffee.com/afadingthought">Buy Me a Coffee</a>
+  ·
+  <a href="https://paypal.me/obergfilms">PayPal</a>
+</p>
+
+Alfred Clop is an independent, unofficial Alfred workflow for running [Clop](https://lowtechguys.com/clop/). It is not affiliated with or maintained by the makers of Clop.
+
+Choose selected files, copied paths, Finder selections, URLs, clipboard images, or automation input, and Alfred Clop shows only the actions that make sense for that input. It makes Clop’s power easier to reach without asking you to remember CLI flags.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/main-menu-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="workflow/assets/readme/main-menu-light.png">
+  <img src="workflow/assets/readme/main-menu-light.png" alt="Alfred Clop action menu for two selected images">
+</picture>
 
 ## Requirements
 
@@ -33,6 +51,12 @@ The workflow is built around searchable Alfred menus.
 - Delete the current query to go back to the broader menu.
 
 Many parameter menus accept direct typing. For example, in Crop / Resize you can type a size like `16:9`, `1200x630`, or `w128`; in Downscale you can type `50%`; in Convert menus you can search for formats.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/crop-menu-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="workflow/assets/readme/crop-menu-light.png">
+  <img src="workflow/assets/readme/crop-menu-light.png" alt="Typing a 16:9 crop ratio directly into Alfred Clop">
+</picture>
 
 ## Supported input
 
@@ -70,6 +94,12 @@ Some actions run immediately. Others open a parameter menu so you can choose siz
 ## Configuration
 
 Type `:` in the workflow menu to open Configuration. Delete the `:` to return to the normal action menu for the same input.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/configuration-menu-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="workflow/assets/readme/configuration-menu-light.png">
+  <img src="workflow/assets/readme/configuration-menu-light.png" alt="Alfred Clop configuration menu">
+</picture>
 
 This in-workflow Configuration menu is for things you may want to adjust while using Alfred:
 
@@ -194,3 +224,7 @@ See [External Trigger reference](docs/external-trigger.md) for the exact syntax 
 - [External Trigger reference](docs/external-trigger.md)
 - [Clop CLI reference](docs/clop-cli-reference.md)
 - [Release process](docs/release.md)
+
+## Support the workflow
+
+Alfred Clop is an independent project. If it makes your day a little easier, you can support its development through [Buy Me a Coffee](https://buymeacoffee.com/afadingthought) or [PayPal](https://paypal.me/obergfilms).

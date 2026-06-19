@@ -1564,7 +1564,82 @@ fi</string>
 		</dict>
 	</array>
 	<key>readme</key>
-	<string></string>
+	<string># ALFRED CLOP
+**An unofficial Alfred workflow for Clop**
+
+![](assets/readme/clop.png)
+
+[Visit on GitHub](https://github.com/ognistik/alfred-clop) | [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md)
+
+[Buy Me a Coffee](https://buymeacoffee.com/afadingthought) | [PayPal](https://paypal.me/obergfilms)
+
+Alfred Clop gives you a friendly, searchable menu for Clop. It shows only the actions that fit your selected, copied, or passed files and URLs.
+
+This is an independent workflow. It is not affiliated with or maintained by the makers of Clop.
+
+---
+
+## REQUIREMENTS
+
+* macOS
+* Alfred with the Powerpack
+* [Clop](https://lowtechguys.com/clop/) installed
+
+The workflow finds Clop’s bundled command-line tool automatically. No shell setup is required.
+
+---
+
+## GET STARTED
+
+**From a selection**
+
+Select files in Finder or Alfred, open Universal Actions, and choose `Clop Menu`.
+
+**From the clipboard**
+
+Copy a file, folder, path, URL, or image, then type the workflow keyword. The default is `cl`.
+
+**From a Hotkey**
+
+Assign the included Hotkeys in Alfred to open the menu or optimize immediately from Finder, a selection, or the clipboard.
+
+![The Alfred Clop action menu](assets/readme/main-menu-dark.png)
+
+---
+
+## NAVIGATE THE MENUS
+
+* Type to search actions, formats, sizes, presets, or pipelines.
+* Press Return to run an action or enter its parameter menu.
+* Follow the subtitle for available modifiers such as Command-Return, Shift-Return, or Command-L.
+* Type values directly where offered: `16:9`, `1200x630`, `w128`, or `50%`.
+* Delete the current query to return to the broader menu.
+
+The available actions change with your input. Image-only actions, for example, stay hidden when you pass only audio files.
+
+![Typing a crop ratio directly](assets/readme/crop-menu-dark.png)
+
+---
+
+## CONFIGURE ALFRED CLOP
+
+Type `:` in the action menu to open the in-workflow Configuration menu. Delete the `:` to return to your actions without losing the current input.
+
+![The Alfred Clop Configuration menu](assets/readme/configuration-menu-dark.png)
+
+From there you can edit the output template, open Workflow Settings, manage presets and pipelines, check for updates, and copy a Diagnostics report.
+
+The configuration panel you are viewing controls the keyword, clipboard behavior, output preservation, default optimization, Clop’s floating result, notifications, copying, folder recursion, and clipboard-image retention.
+
+Set any Hotkeys you want directly on the workflow canvas. The workflow works immediately with Universal Actions and the keyword; Hotkeys are optional.
+
+---
+
+## AUTOMATION &amp; HELP
+
+The public External Trigger can open menus or execute actions from scripts, Shortcuts, Keyboard Maestro, and other Alfred workflows. See the [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) for syntax and examples.
+
+For full documentation, troubleshooting, updates, and issue reporting, [visit Alfred Clop on GitHub](https://github.com/ognistik/alfred-clop). If you report a problem, type `:` and choose `Diagnostics` to copy a privacy-conscious support report.</string>
 	<key>uidata</key>
 	<dict>
 		<key>01F79503-40ED-4F46-A67F-4E5AE07021A4</key>
@@ -2106,6 +2181,10 @@ fi</string>
 			<string>cacheRetention</string>
 		</dict>
 	</array>
+	<key>variables</key>
+	<dict/>
+	<key>variablesdontexport</key>
+	<array/>
 	<key>version</key>
 	<string>0.1.0</string>
 	<key>webaddress</key>
