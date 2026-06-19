@@ -16,7 +16,7 @@
 
 [Clop](https://lowtechguys.com/clop/) is a powerful, flexible macOS app that makes images, videos, PDFs, and clipboard media smaller and easier to share. It can optimize files with minimal visible quality loss, resize and crop media, convert formats, and automate those operations through its command-line tool.
 
-Clop for Alfred puts those capabilities into a quick, searchable menu. Choose selected files, copied paths, Finder selections, URLs, clipboard images, or automation input, and the workflow shows only the actions that make sense, without asking you to remember command-line options.
+Clop for Alfred is a non-official workflow puts those capabilities into a quick, searchable menu. Choose selected files, copied paths, Finder selections, URLs, clipboard images, or automation input, and the workflow shows only the actions that make sense, without asking you to remember command-line options.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/main-menu-dark.png">
