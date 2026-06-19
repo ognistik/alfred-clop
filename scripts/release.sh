@@ -88,7 +88,7 @@ fi
 release_args=(
   release create "$tag"
   "$asset_path"
-  --title "Clop for Alfred $version"
+  --title "$tag"
 )
 
 if [[ -n "$notes_file" ]]; then

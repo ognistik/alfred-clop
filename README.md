@@ -24,9 +24,13 @@ Clop for Alfred puts those capabilities into a quick, searchable menu. Choose se
   <img src="workflow/assets/readme/main-menu-light.png" alt="Clop for Alfred action menu for two selected images">
 </picture>
 
+## Installation
+
+Download the `.alfredworkflow` file from the [latest release](https://github.com/ognistik/alfred-clop/releases/latest), open it, and confirm the import in Alfred.
+
 ## Requirements
 
-- macOS
+- macOS 13 or newer
 - Alfred with the Powerpack
 - [Clop](https://lowtechguys.com/clop/) installed
 

@@ -23,6 +23,7 @@ The project optimizes for:
 ```text
 .
 |-- AGENTS.md            Agent/contributor operating rules
+|-- LICENSE              MIT license for the workflow project
 |-- README.md            User-facing workflow manual
 |-- docs/
 |   |-- architecture.md
