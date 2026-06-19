@@ -340,7 +340,7 @@ enum PipelineSyntax {
             lines.insert("img / vid / aud / pdf / all: file type", at: lines.endIndex)
             lines += ["", "Without opt, Clop saves the written steps only."]
         } else {
-            lines += ["", "Without opt, Alfred Clop runs only the written steps."]
+            lines += ["", "Without opt, Clop for Alfred runs only the written steps."]
         }
 
         lines += [

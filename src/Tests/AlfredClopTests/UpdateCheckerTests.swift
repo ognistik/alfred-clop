@@ -25,7 +25,7 @@ struct UpdateCheckerTests {
 
         #expect(release?.version == "0.1.1")
         #expect(fixture.fetcher.callCount == 1)
-        #expect(fixture.notifier.messages == ["Alfred Clop 0.1.1 is available"])
+        #expect(fixture.notifier.messages == ["Clop for Alfred 0.1.1 is available"])
         #expect(state.lastAttemptAt == fixture.date)
         #expect(state.latestRelease == release)
         #expect(state.lastNotifiedVersion == "0.1.1")
@@ -63,7 +63,7 @@ struct UpdateCheckerTests {
         _ = fixture.coordinator.automaticRelease()
 
         #expect(fixture.fetcher.callCount == 2)
-        #expect(fixture.notifier.messages == ["Alfred Clop 0.1.1 is available"])
+        #expect(fixture.notifier.messages == ["Clop for Alfred 0.1.1 is available"])
     }
 
     @Test
@@ -111,7 +111,7 @@ struct UpdateCheckerTests {
 
         let item = fixture.coordinator.updateItem(for: release)
 
-        #expect(item.title == "Alfred Clop 0.2.0 is available")
+        #expect(item.title == "Clop for Alfred 0.2.0 is available")
         #expect(item.arg == release.url)
         #expect(item.quickLookURL == release.url)
         #expect(item.action?.url == .single(release.url))
@@ -138,8 +138,8 @@ struct UpdateCheckerTests {
             ))]
         )
 
-        #expect(available.coordinator.checkNow() == "Alfred Clop 0.1.1 is available")
-        #expect(current.coordinator.checkNow() == "Alfred Clop is up to date (0.1.1)")
+        #expect(available.coordinator.checkNow() == "Clop for Alfred 0.1.1 is available")
+        #expect(current.coordinator.checkNow() == "Clop for Alfred is up to date (0.1.1)")
     }
 
     @Test

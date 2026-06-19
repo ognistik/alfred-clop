@@ -38,7 +38,7 @@ enum JSONOutput {
             let output = try string(for: value)
             FileHandle.standardOutput.write(Data("\(output)\n".utf8))
         } catch {
-            let fallback = #"{"items":[{"title":"Unable to encode Alfred Clop output","subtitle":"JSON encoding failed","arg":"","valid":false}]}"#
+            let fallback = #"{"items":[{"title":"Unable to encode Clop for Alfred output","subtitle":"JSON encoding failed","arg":"","valid":false}]}"#
             FileHandle.standardOutput.write(Data("\(fallback)\n".utf8))
         }
     }

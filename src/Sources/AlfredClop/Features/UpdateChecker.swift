@@ -274,7 +274,7 @@ struct UpdateCoordinator {
                 if isNewer(release), state.lastNotifiedVersion != release.version {
                     state.lastNotifiedVersion = release.version
                     try store.persist(state)
-                    notifier.send("Alfred Clop \(release.version) is available")
+                    notifier.send("Clop for Alfred \(release.version) is available")
                 } else {
                     try store.persist(state)
                 }
@@ -293,9 +293,9 @@ struct UpdateCoordinator {
             state.latestRelease = release
             try store.persist(state)
             if isNewer(release) {
-                return "Alfred Clop \(release.version) is available"
+                return "Clop for Alfred \(release.version) is available"
             }
-            return "Alfred Clop is up to date (\(currentVersion))"
+            return "Clop for Alfred is up to date (\(currentVersion))"
         } catch {
             try? store.persist(state)
             return "Unable to check for updates: \(error.localizedDescription)"
@@ -305,7 +305,7 @@ struct UpdateCoordinator {
     func updateItem(for release: UpdateRelease) -> ScriptFilterItem {
         ScriptFilterItem(
             uid: "update.\(release.version)",
-            title: "Alfred Clop \(release.version) is available",
+            title: "Clop for Alfred \(release.version) is available",
             subtitle: "Press Return to open the GitHub release",
             arg: release.url,
             valid: true,

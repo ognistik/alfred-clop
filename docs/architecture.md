@@ -1,12 +1,12 @@
 # Architecture
 
-This document is the compact contributor reference for Alfred Clop. It replaces
+This document is the compact contributor reference for Clop for Alfred. It replaces
 the older project plan and checkpoint log, which were useful during discovery
 but had become stale and expensive to navigate.
 
 ## Product shape
 
-Alfred Clop is a Swift-based Alfred workflow that wraps Clop’s app-backed CLI.
+Clop for Alfred is a Swift-based Alfred workflow that wraps Clop’s app-backed CLI.
 The workflow collects input from Alfred, normalizes it, shows a context-aware
 menu, and launches Clop with explicit process arguments.
 

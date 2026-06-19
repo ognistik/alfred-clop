@@ -88,7 +88,7 @@ fi
 release_args=(
   release create "$tag"
   "$asset_path"
-  --title "Alfred Clop $version"
+  --title "Clop for Alfred $version"
 )
 
 if [[ -n "$notes_file" ]]; then
@@ -135,7 +135,7 @@ elif [[ -f "$repo_root/CHANGELOG.md" ]]; then
   fi
   release_args+=(--notes-file "$generated_notes_file")
 else
-  release_args+=(--notes "Alfred Clop $version")
+  release_args+=(--notes "Clop for Alfred $version")
 fi
 
 if [[ "$publish" != true ]]; then

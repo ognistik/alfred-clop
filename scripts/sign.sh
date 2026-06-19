@@ -36,4 +36,4 @@ codesign \
 codesign --verify --strict --verbose=2 "$binary_path"
 codesign -dv --verbose=2 "$binary_path" 2>&1 | sed -n '1,40p'
 
-printf 'Signed Alfred Clop binary: %s\n' "$binary_path"
+printf 'Signed Clop for Alfred binary: %s\n' "$binary_path"

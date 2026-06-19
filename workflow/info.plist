@@ -1566,13 +1566,15 @@ fi</string>
 	<key>readme</key>
 	<string># CLOP FOR ALFRED
 
-![](assets/readme/clop.png)
+[![](assets/readme/clop.png)](https://lowtechguys.com/clop/)
 
-[Visit on GitHub](https://github.com/ognistik/alfred-clop) | [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) | [Buy Me a Coffee](https://buymeacoffee.com/afadingthought)
+[Visit Clop's website](https://lowtechguys.com/clop/) | [Clop for Alfred on GitHub](https://github.com/ognistik/alfred-clop) | [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) | [Buy Me a Coffee](https://buymeacoffee.com/afadingthought)
 
-Alfred Clop gives you a friendly, quick, and searchable way to control [Clop's](https://lowtechguys.com/clop/) CLI. It shows only the actions that fit your selected, copied, or passed files and URLs.
+[Clop](https://lowtechguys.com/clop/) is a powerful, flexible macOS app that makes images, videos, PDFs, and clipboard media smaller and easier to share. It can optimize files with minimal visible quality loss, resize and crop media, convert formats, and automate those operations through its command-line tool.
 
-*This is an independent non-official workflow for Clop's developer.*
+Clop for Alfred puts those capabilities into a quick, searchable menu. It shows only the actions that fit your selected, copied, or passed files and URLs—without asking you to remember command-line options.
+
+*This is an independent, unofficial workflow and is not affiliated with Clop's developer.*
 
 ---
 
@@ -1580,7 +1582,7 @@ Alfred Clop gives you a friendly, quick, and searchable way to control [Clop's](
 
 * macOS
 * Alfred with the Powerpack
-* Clop installed
+* [Clop](https://lowtechguys.com/clop/) installed
 
 The workflow finds Clop’s bundled command-line tool automatically. No shell setup is required.
 
@@ -1600,7 +1602,7 @@ Copy a file, folder, path, URL, or image, then type the workflow keyword. The de
 
 Assign the included Hotkeys in Alfred to open the menu or optimize immediately from Finder, a selection, or the clipboard.
 
-![The Alfred Clop action menu](assets/readme/main-menu-dark.png)
+![The Clop for Alfred action menu](assets/readme/main-menu-dark.png)
 
 ---
 
@@ -1618,11 +1620,11 @@ The available actions change with your input. Image-only actions, for example, s
 
 ---
 
-## CONFIGURE ALFRED CLOP
+## CONFIGURE CLOP FOR ALFRED
 
 Type `:` in the action menu to open the in-workflow Configuration menu. Delete the `:` to return to your actions without losing the current input.
 
-![The Alfred Clop Configuration menu](assets/readme/configuration-menu-dark.png)
+![The Clop for Alfred Configuration menu](assets/readme/configuration-menu-dark.png)
 
 From there you can edit the output template, open Workflow Settings, manage presets and pipelines, check for updates, and copy a Diagnostics report.
 
@@ -1636,7 +1638,7 @@ Set any Hotkeys you want directly on the workflow canvas. The workflow works imm
 
 The public External Trigger can open menus or execute actions from scripts, Shortcuts, Keyboard Maestro, and other Alfred workflows. See the [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) for syntax and examples.
 
-For full documentation, troubleshooting, updates, and issue reporting, [visit Alfred Clop on GitHub](https://github.com/ognistik/alfred-clop). To report a problem, type `:` and choose `Diagnostics` to copy a privacy-conscious support report.</string>
+For full documentation, troubleshooting, updates, and issue reporting, [visit Clop for Alfred on GitHub](https://github.com/ognistik/alfred-clop). To report a problem, type `:` and choose `Diagnostics` to copy a privacy-conscious support report.</string>
 	<key>uidata</key>
 	<dict>
 		<key>01F79503-40ED-4F46-A67F-4E5AE07021A4</key>

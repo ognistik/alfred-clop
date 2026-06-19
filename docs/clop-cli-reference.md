@@ -1,11 +1,11 @@
 # Clop CLI reference
 
-This is the verified Clop CLI behavior that Alfred Clop relies on. Keep it
+This is the verified Clop CLI behavior that Clop for Alfred relies on. Keep it
 short and current. It is not a historical research log.
 
 ## CLI discovery
 
-Alfred Clop discovers the CLI in this order:
+Clop for Alfred discovers the CLI in this order:
 
 1. `ALFRED_CLOP_CLI_PATH`, when set.
 2. `/Applications/Clop.app/Contents/SharedSupport/ClopCLI`.
@@ -20,7 +20,7 @@ Do not assume a fixed user install path.
 - Build process arguments as arrays.
 - Do not use shell interpolation or `eval`.
 - Prefer app-backed Clop commands.
-- Use `--json` and `--no-progress` for commands where Alfred Clop needs a
+- Use `--json` and `--no-progress` for commands where Clop for Alfred needs a
   structured result.
 - Use `--skip-errors` for batch-friendly app-backed processing.
 - Do not use `--async` in the workflow execution path; it prevents reliable
@@ -44,7 +44,7 @@ The Clop command spelling is `optimise`, not `optimize`.
 
 ## Shared execution flags
 
-Alfred Clop uses these flags where supported by the target command:
+Clop for Alfred uses these flags where supported by the target command:
 
 | Flag | Meaning |
 | --- | --- |
@@ -118,7 +118,7 @@ Verified options:
 | `--gui`, `--copy`, `--recursive`, `--output` | Workflow-controlled runtime flags. |
 
 Known behavior: `crop --json` can exit with status `0` when every file is
-skipped because the requested dimensions would enlarge the input. Alfred Clop
+skipped because the requested dimensions would enlarge the input. Clop for Alfred
 must inspect the JSON result, not just the process status.
 
 ## Downscale
@@ -137,7 +137,7 @@ Verified options:
 | `--remove-audio` | Remove audio from video output. |
 | `--gui`, `--copy`, `--recursive`, `--output` | Workflow-controlled runtime flags. |
 
-Alfred Clop validates factors before launching Clop. Values must be greater
+Clop for Alfred validates factors before launching Clop. Values must be greater
 than `0` and less than `1`.
 
 ## Convert
@@ -157,10 +157,10 @@ Verified options:
 | `--bitrate VALUE` | Audio bitrate. |
 | `--gui`, `--copy`, `--recursive`, `--output` | Workflow-controlled runtime flags. |
 
-Alfred Clop normalizes `jpg` to `jpeg`.
+Clop for Alfred normalizes `jpg` to `jpeg`.
 
 Legacy local image conversion exists in Clop, but it is not a workflow product
-goal. Alfred Clop should prefer the app-backed `convert` route.
+goal. Clop for Alfred should prefer the app-backed `convert` route.
 
 ## Crop PDF
 
@@ -207,7 +207,7 @@ clop strip-exif [--recursive] [items...]
 ```
 
 `strip-exif` removes metadata from supported image/video inputs. It does not
-expose `--output`, so Alfred Clop must reject one-run output-template overrides
+expose `--output`, so Clop for Alfred must reject one-run output-template overrides
 for this action before launching Clop.
 
 ## Pipeline
@@ -216,7 +216,7 @@ for this action before launching Clop.
 clop pipeline run --json --no-progress --skip-errors [options] PIPELINE [items...]
 ```
 
-Runtime options used by Alfred Clop:
+Runtime options used by Clop for Alfred:
 
 | Flag | Meaning |
 | --- | --- |
@@ -225,7 +225,7 @@ Runtime options used by Alfred Clop:
 | `--json`, `--no-progress`, `--skip-errors` | Structured, quiet workflow execution. |
 
 Inline pipelines run the written steps. If the workflow request says to optimize
-first, Alfred Clop prepends `optimise ->`.
+first, Clop for Alfred prepends `optimise ->`.
 
 Saved pipelines preserve Clop’s own saved settings. The workflow can list, run,
 add, replace, and delete saved pipelines through Clop’s pipeline commands.
@@ -248,11 +248,11 @@ targetSize, stripExif, watermark, removeAudio, changeSpeed, capFps, normalize,
 ```
 
 The `pipeline prompt` command prints a local reference prompt for an AI
-assistant. Alfred Clop exposes this in Configuration as `:pipelines prompt TASK`.
+assistant. Clop for Alfred exposes this in Configuration as `:pipelines prompt TASK`.
 
 ## Output behavior
 
-The CLI has no explicit backup mode. Alfred Clop’s “Preserve originals” behavior
+The CLI has no explicit backup mode. Clop for Alfred’s “Preserve originals” behavior
 means “supply a distinct output path/template where the command supports it.”
 When output is disabled, the workflow omits `--output`.
 
@@ -278,4 +278,3 @@ Clop adds the final extension for app-backed output.
   Clop UI features.
 - The exact Clop JSON result schema should continue to be covered through
   fixture-style tests as command support evolves.
-

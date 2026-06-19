@@ -45,7 +45,7 @@ destination="$workflow_dir/alfred-clop"
 cp "$binary_path" "$destination"
 chmod +x "$destination"
 
-printf 'Built Alfred Clop: %s\n' "$destination"
+printf 'Built Clop for Alfred: %s\n' "$destination"
 file "$destination"
 
 if [[ "$sign_after_build" == true ]]; then

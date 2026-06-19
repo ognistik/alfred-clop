@@ -128,7 +128,7 @@ struct ClopCLIDiscoveryTests {
             pipelineProvider: DiagnosticPipelineStub(count: 2)
         )
 
-        #expect(report.contains("Alfred Clop Diagnostic Report"))
+        #expect(report.contains("Clop for Alfred Diagnostic Report"))
         #expect(report.contains("- Version: 1.2.3"))
         #expect(report.contains("- Path: \(cli.path)"))
         #expect(report.contains("- Discovery source: Override (ALFRED_CLOP_CLI_PATH)"))

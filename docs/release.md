@@ -15,7 +15,7 @@ export NOTARYTOOL_PROFILE="notarytool-keychain-profile"
 ```
 
 `DEVELOPER_ID_PROVISIONING_PROFILE` may also exist in older local signing files,
-but Alfred Clop does not currently use it. A plain command-line executable
+but Clop for Alfred does not currently use it. A plain command-line executable
 distributed outside the Mac App Store normally needs Developer ID signing and
 notarization, not an embedded provisioning profile. Provisioning profiles become
 relevant for app bundles that use special capabilities.
@@ -88,7 +88,7 @@ For each release:
 
 ## GitHub Release
 
-The repository must be public before distributing the workflow. Alfred Clop's
+The repository must be public before distributing the workflow. Clop for Alfred's
 update checker uses GitHub's unauthenticated latest-release endpoint; releases
 in a private repository are visible to the signed-in maintainer but return 404
 for workflow users.

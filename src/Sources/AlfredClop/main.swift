@@ -56,12 +56,12 @@ enum AlfredClopCommand {
             automate(arguments: Array(arguments.dropFirst()))
         case nil:
             JSONOutput.print(errorResponse(
-                title: "Missing Alfred Clop mode",
+                title: "Missing Clop for Alfred mode",
                 subtitle: "Run alfred-clop menu, request, execute, or probe."
             ))
         default:
             JSONOutput.print(errorResponse(
-                title: "Unknown Alfred Clop mode",
+                title: "Unknown Clop for Alfred mode",
                 subtitle: "Unsupported mode: \(arguments[0])"
             ))
         }
@@ -490,7 +490,7 @@ enum AlfredClopCommand {
     private static func notify(_ text: String) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-", "Alfred Clop", text]
+        process.arguments = ["-", "Clop for Alfred", text]
         let input = Pipe()
         process.standardInput = input
         do {

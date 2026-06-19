@@ -66,7 +66,7 @@ enum ClopDiagnosticReport {
             : "CLI unavailable, so commands cannot be verified."
 
         var lines = [
-            "Alfred Clop Diagnostic Report",
+            "Clop for Alfred Diagnostic Report",
             "Generated: \(iso8601Now())",
             "",
             "Workflow",

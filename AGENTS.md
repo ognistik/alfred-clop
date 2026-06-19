@@ -2,7 +2,7 @@
 
 ## Project
 
-Alfred Clop is a native Swift Alfred workflow that presents context-aware Clop
+Clop for Alfred is a native Swift Alfred workflow that presents context-aware Clop
 actions for selected, copied, or passed files and URLs.
 
 Read these files before making architectural changes:
@@ -113,4 +113,3 @@ The active development workflow is loaded in place through this symlink:
   logs, or exported `.alfredworkflow` files.
 - `workflow/alfred-clop` is rebuilt by `scripts/build.sh`; keep it synchronized
   with the checked-in Swift source at project checkpoints.
-

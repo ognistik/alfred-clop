@@ -1,10 +1,12 @@
 <h1 align="center">Clop for Alfred</h1>
 
 <p align="center">
-  <img src="workflow/icon.png" width="140" alt="Clop for Alfred icon">
+  <a href="https://lowtechguys.com/clop/">
+    <img src="workflow/icon.png" width="140" alt="Clop for Alfred icon">
+  </a>
 </p>
 
-<p align="center"><strong>A powerful, flexible, and user friendly Alfred workflow for Clop.</strong></p>
+<p align="center"><strong>Optimize, resize, crop, and convert media from Alfred.</strong></p>
 
 <p align="center">
   <a href="https://buymeacoffee.com/afadingthought">Buy Me a Coffee</a>
@@ -12,7 +14,9 @@
   <a href="https://paypal.me/obergfilms">PayPal</a>
 </p>
 
-Choose selected files, copied paths, Finder selections, URLs, clipboard images, or automation input, and this workflow shows only the actions that make sense for that input. It makes Clop’s power easier to reach without asking you to remember CLI flags.
+[Clop](https://lowtechguys.com/clop/) is a powerful, flexible macOS app that makes images, videos, PDFs, and clipboard media smaller and easier to share. It can optimize files with minimal visible quality loss, resize and crop media, convert formats, and automate those operations through its command-line tool.
+
+Clop for Alfred puts those capabilities into a quick, searchable menu. Choose selected files, copied paths, Finder selections, URLs, clipboard images, or automation input, and the workflow shows only the actions that make sense—without asking you to remember command-line options.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/main-menu-dark.png">
@@ -224,4 +228,4 @@ See [External Trigger reference](docs/external-trigger.md) for the exact syntax 
 
 ## Support the workflow
 
-AClop for Alfred is an independent, unofficial Alfred workflow for running [Clop](https://lowtechguys.com/clop/). If it makes your day a little easier, you can support its development through [Buy Me a Coffee](https://buymeacoffee.com/afadingthought) or [PayPal](https://paypal.me/obergfilms).
+Clop for Alfred is an independent, unofficial Alfred workflow for running [Clop](https://lowtechguys.com/clop/). If it makes your day a little easier, you can support its development through [Buy Me a Coffee](https://buymeacoffee.com/afadingthought) or [PayPal](https://paypal.me/obergfilms).

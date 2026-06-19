@@ -14,7 +14,7 @@ usage() {
   cat <<'EOF'
 Usage: scripts/package.sh [options]
 
-Build and package Alfred Clop as a .alfredworkflow archive.
+Build and package Clop for Alfred as a .alfredworkflow archive.
 
 Options:
   --skip-build     Package the current workflow/ directory without rebuilding.
@@ -107,7 +107,7 @@ rm -f "$output_path"
   /usr/bin/zip -qry --symlinks "$output_path" .
 )
 
-printf 'Packaged Alfred Clop: %s\n' "$output_path"
+printf 'Packaged Clop for Alfred: %s\n' "$output_path"
 unzip -l "$output_path" | sed -n '1,40p'
 
 if [[ "$notarize_archive" == true ]]; then
@@ -119,5 +119,5 @@ if [[ "$notarize_archive" == true ]]; then
   xcrun notarytool submit "$output_path" \
     --keychain-profile "$NOTARYTOOL_PROFILE" \
     --wait
-  printf 'Notarized Alfred Clop archive: %s\n' "$output_path"
+  printf 'Notarized Clop for Alfred archive: %s\n' "$output_path"
 fi

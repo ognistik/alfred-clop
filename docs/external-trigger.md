@@ -1,6 +1,6 @@
 # External Trigger reference
 
-Alfred Clop exposes one public External Trigger:
+Clop for Alfred exposes one public External Trigger:
 
 ```text
 workflow: com.aft.clop
@@ -552,4 +552,3 @@ Common rejected requests:
 | `output template:` with an empty value | missing `output template` |
 | `menu: Optimize` with `output: false` | execute-only parameter |
 | `finder` mixed with explicit paths | mixed input sources |
-
