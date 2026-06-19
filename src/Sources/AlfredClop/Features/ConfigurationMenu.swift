@@ -815,9 +815,8 @@ enum ConfigurationMenu {
             )
         }
 
-        var items: [ScriptFilterItem]
         if trimmed.isEmpty {
-            items = [addPipelineGuideItem()]
+            var items = [addPipelineGuideItem()]
             items.append(pipelinePromptGuideItem())
             items += PipelineCategory.allCases.compactMap { category in
                 let count = pipelines(in: savedPipelines, category: category).count
@@ -836,14 +835,10 @@ enum ConfigurationMenu {
             return pipelineCategoryItem(category, count: count)
         }
         let promptItem = pipelinePromptGuideItem()
-        let pipelineItems = savedPipelines
-            .sorted(by: pipelineDisplayOrder)
-            .map { pipelineItem($0, returnQuery: trimmed) }
-        items = [promptItem] + categoryItems + pipelineItems
-        if !savedPipelines.isEmpty {
-            items.append(removePipelinesItem(count: savedPipelines.count))
-        }
-
+        let sortedPipelines = savedPipelines.sorted(by: pipelineDisplayOrder)
+        let nonPipelineItems = [promptItem] + categoryItems + (
+            !savedPipelines.isEmpty ? [removePipelinesItem(count: savedPipelines.count)] : []
+        )
         let search = FuzzySearch<ScriptFilterItem>(
             query: trimmed,
             targetText: {
@@ -851,13 +846,45 @@ enum ConfigurationMenu {
                     .joined(separator: " ")
             }
         )
-        let matches = search.sorted(items)
-        guard !matches.isEmpty else {
+        let matches = search.sorted(nonPipelineItems).map {
+            (
+                item: nonPipelineItems[$0.targetIndex],
+                score: $0.score,
+                hiddenMatch: false
+            )
+        }
+        let pipelineMatches = sortedPipelines.enumerated().compactMap { index, pipeline in
+            PipelineSearch.match(
+                pipeline,
+                query: trimmed,
+                visibleText: PipelineSearch.visibleText(
+                    for: pipeline,
+                    typeDescription: pipelineTypeDescription(for: pipeline)
+                )
+            ).map { (index: index, result: $0) }
+        }.map {
+            (
+                item: pipelineItem(
+                    sortedPipelines[$0.index],
+                    returnQuery: trimmed,
+                    matchedStep: $0.result.matchedStep
+                ),
+                score: $0.result.score,
+                hiddenMatch: $0.result.matchedStep != nil
+            )
+        }
+        let allMatches = (matches + pipelineMatches).sorted { lhs, rhs in
+            if lhs.hiddenMatch != rhs.hiddenMatch {
+                return !lhs.hiddenMatch
+            }
+            return lhs.score == rhs.score
+                ? lhs.item.title.localizedStandardCompare(rhs.item.title) == .orderedAscending
+                : lhs.score > rhs.score
+        }
+        guard !allMatches.isEmpty else {
             return addPipelinePromptItem(query: trimmed)
         }
-        let resultItems = matches.map {
-            items[$0.targetIndex]
-        }
+        let resultItems = allMatches.map(\.item)
         if resultItems.contains(where: isFocusedPipelineCommand) {
             return ScriptFilterResponse(
                 items: resultItems,
@@ -895,14 +922,24 @@ enum ConfigurationMenu {
             return ScriptFilterResponse(items: items, skipKnowledge: true)
         }
 
-        let search = FuzzySearch<ScriptFilterItem>(
-            query: query,
-            targetText: {
-                [$0.title, $0.match].compactMap(\.self)
-                    .joined(separator: " ")
+        let matches = categoryPipelines.enumerated().compactMap { index, pipeline in
+            PipelineSearch.match(
+                pipeline,
+                query: query,
+                visibleText: PipelineSearch.visibleText(
+                    for: pipeline,
+                    typeDescription: pipelineTypeDescription(for: pipeline)
+                )
+            ).map { (index: index, result: $0) }
+        }.sorted { lhs, rhs in
+            if (lhs.result.matchedStep == nil) != (rhs.result.matchedStep == nil) {
+                return lhs.result.matchedStep == nil
             }
-        )
-        let matches = search.sorted(items)
+            if lhs.result.score == rhs.result.score {
+                return lhs.index < rhs.index
+            }
+            return lhs.result.score > rhs.result.score
+        }
         guard !matches.isEmpty else {
             return error(
                 "No matching \(category.title.lowercased())",
@@ -910,7 +947,12 @@ enum ConfigurationMenu {
             )
         }
         return ScriptFilterResponse(items: matches.map {
-            items[$0.targetIndex]
+            pipelineItem(
+                categoryPipelines[$0.index],
+                returnQuery: "\(category.canonicalQuery) \(query)"
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                matchedStep: $0.result.matchedStep
+            )
         }, skipKnowledge: true)
     }
 
@@ -948,7 +990,8 @@ enum ConfigurationMenu {
 
     private static func pipelineItem(
         _ pipeline: SavedPipeline,
-        returnQuery: String
+        returnQuery: String,
+        matchedStep: String? = nil
     ) -> ScriptFilterItem {
         let confirmState = MenuState.configuration(
             mode: .configurationPipelineDeleteConfirmation,
@@ -962,7 +1005,12 @@ enum ConfigurationMenu {
         return ScriptFilterItem(
             uid: "configuration.pipeline.\(pipeline.id ?? pipeline.name).\(pipeline.fileType?.rawValue ?? "all")",
             title: pipeline.name,
-            subtitle: "\(pipelineTypeDescription(for: pipeline)) · ⌘L Details · ⌘↩ Delete",
+            subtitle: [
+                pipelineTypeDescription(for: pipeline),
+                matchedStep.map { "Step: \($0)" },
+                "⌘L Details",
+                "⌘↩ Delete"
+            ].compactMap(\.self).joined(separator: " · "),
             arg: "",
             valid: false,
             autocomplete: "\(pipelinesPrefix) \(pipeline.name)",

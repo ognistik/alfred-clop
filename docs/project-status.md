@@ -1,6 +1,6 @@
 # Alfred Clop Project Status
 
-Last updated: June 18, 2026
+Last updated: June 19, 2026
 
 This document records the current implementation checkpoint. Keep
 `project-plan.md` as the longer-term product and architecture plan; update this
@@ -159,6 +159,12 @@ to an AI service. Pipeline Large Type references now keep the supported step
 list compact, and inline/saved pipeline guidance catches a few obvious
 parameter mistakes before launch while still leaving full DSL validation to
 Clop.
+
+Saved pipeline search now explains matches found only in hidden pipeline step
+text with a compact `Step: VALUE` subtitle segment. Visible name and media-type
+matches remain unchanged and rank ahead of hidden matches. Hidden step text
+must contain the typed query directly, so weak character-in-order matches no
+longer keep apparently unrelated pipelines visible.
 
 ## Completed
 

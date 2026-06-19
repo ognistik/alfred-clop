@@ -120,6 +120,30 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func hiddenStepMatchesAreExplainedAndWeakMatchesAreSuppressed() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.video]),
+            query: "remove",
+            provider: PipelineProviderStub(pipelines: [
+                SavedPipeline(
+                    name: "2x silent",
+                    fileType: .video,
+                    rawText: "optimiseVideo(removeAudio: true)"
+                ),
+                SavedPipeline(
+                    name: "Weak sequence",
+                    fileType: .video,
+                    rawText: "crop -> encode -> movie"
+                )
+            ])
+        )
+
+        let item = try #require(response.items.first)
+        #expect(response.items.map(\.title) == ["2x silent"])
+        #expect(item.subtitle == "Selected file · Step: removeAudio · ⌃↩ Delete Pipeline · ⌘L Details")
+    }
+
+    @Test
     func inlineSyntaxRunsTypedStepsBeforeSavedMatches() throws {
         let steps = "crop(width: 1600) -> convert(to: webp)"
         let response = PipelineMenu.response(
@@ -833,6 +857,35 @@ struct PipelineMenuTests {
 
         #expect(response.items.map(\.title) == ["No matching image pipelines"])
         #expect(response.items.first?.subtitle == "Try another pipeline name.")
+    }
+
+    @Test
+    func pipelinesConfigurationExplainsHiddenStepMatches() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines remove",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub(pipelines: [
+                SavedPipeline(
+                    name: "2x silent",
+                    fileType: .video,
+                    rawText: "optimiseVideo(removeAudio: true)"
+                ),
+                SavedPipeline(
+                    name: "Weak sequence",
+                    fileType: .video,
+                    rawText: "crop -> encode -> movie"
+                )
+            ])
+        )
+
+        #expect(response.items.map(\.title) == [
+            "Remove all saved pipelines",
+            "2x silent"
+        ])
+        #expect(response.items[1].subtitle == "Video pipeline · Step: removeAudio · ⌘L Details · ⌘↩ Delete")
     }
 
     @Test

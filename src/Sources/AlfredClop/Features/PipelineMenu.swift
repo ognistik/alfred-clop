@@ -195,21 +195,38 @@ enum PipelineMenu {
             )
         }
 
-        let search = FuzzySearch<ScriptFilterItem>(
-            query: query,
-            targetText: {
-                [$0.title, $0.match].compactMap(\.self)
-                    .joined(separator: " ")
+        let matches = visible.enumerated().compactMap { index, pipeline in
+            PipelineSearch.match(
+                pipeline,
+                query: query,
+                visibleText: PipelineSearch.visibleText(
+                    for: pipeline,
+                    typeDescription: acceptedTypeDescription(for: pipeline)
+                )
+            ).map { (index: index, result: $0) }
+        }.sorted { lhs, rhs in
+            if (lhs.result.matchedStep == nil) != (rhs.result.matchedStep == nil) {
+                return lhs.result.matchedStep == nil
             }
-        )
-        let matches = search.sorted(items)
+            if lhs.result.score == rhs.result.score {
+                return lhs.index < rhs.index
+            }
+            return lhs.result.score > rhs.result.score
+        }
         var resultItems = [ScriptFilterItem]()
         if let guidanceItem {
             resultItems.append(guidanceItem)
         } else if let inlineItem {
             resultItems.append(inlineItem)
         }
-        resultItems.append(contentsOf: matches.map { items[$0.targetIndex] })
+        resultItems.append(contentsOf: matches.map {
+            pipelineItem(
+                visible[$0.index],
+                request: request,
+                environment: environment,
+                matchedStep: $0.result.matchedStep
+            )
+        })
         guard !resultItems.isEmpty else {
             return response(
                 items: [guideItem(for: request, category: category, noMatches: true)],
@@ -227,7 +244,8 @@ enum PipelineMenu {
     private static func pipelineItem(
         _ pipeline: SavedPipeline,
         request: ParameterStepRequest,
-        environment: Environment
+        environment: Environment,
+        matchedStep: String? = nil
     ) -> ScriptFilterItem {
         let operation = OperationRequest(
             inputs: request.inputs,
@@ -242,6 +260,7 @@ enum PipelineMenu {
                 shouldShowAcceptedType(in: request)
                     ? acceptedTypeDescription(for: pipeline)
                     : nil,
+                matchedStep.map { "Step: \($0)" },
                 "⌃↩ Delete Pipeline",
                 "⌘L Details"
             ].compactMap(\.self).joined(separator: " · "),
