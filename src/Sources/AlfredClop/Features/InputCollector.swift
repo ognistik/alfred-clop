@@ -298,7 +298,12 @@ struct InputCollector {
                 return try collect(
                     items: [clipboardString],
                     extractText: true,
-                    recursiveFolders: recursiveFolders
+                    recursiveFolders: recursiveFolders,
+                    allowAmbiguousRemoteURLs: isStandaloneURL(
+                        clipboardString.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        )
+                    )
                 )
             } catch InputCollectionError.noInputs {
                 // Unrelated text can coexist with a useful image representation.
@@ -340,13 +345,15 @@ struct InputCollector {
                     selection = try collect(
                         items: [text],
                         extractText: true,
-                        recursiveFolders: recursiveFolders
+                        recursiveFolders: recursiveFolders,
+                        allowAmbiguousRemoteURLs: false
                     )
                 case .files(let paths):
                     selection = try collect(
                         items: paths,
                         extractText: false,
-                        recursiveFolders: recursiveFolders
+                        recursiveFolders: recursiveFolders,
+                        allowAmbiguousRemoteURLs: false
                     )
                 case .image(let image):
                     let fileURL = try clipboardImageMaterializer.materialize(image)
@@ -399,7 +406,8 @@ struct InputCollector {
     func collect(
         items: [String],
         extractText: Bool,
-        recursiveFolders: Bool
+        recursiveFolders: Bool,
+        allowAmbiguousRemoteURLs: Bool = true
     ) throws -> InputSelection {
         let candidates: [String]
         if extractText {
@@ -434,12 +442,15 @@ struct InputCollector {
         for candidate in candidates {
             if let remoteURL = try validatedRemoteURL(candidate) {
                 let value = remoteURL.absoluteString
+                let kind = detector.kind(for: remoteURL)
+                guard allowAmbiguousRemoteURLs || kind != .unknown else {
+                    continue
+                }
                 guard seen.insert(value).inserted else {
                     continue
                 }
                 inputs.append(value)
                 itemKinds.append(.remoteURL)
-                let kind = detector.kind(for: remoteURL)
                 if kind == .unknown {
                     if !ambiguousKinds.contains(.remoteURL) {
                         ambiguousKinds.append(.remoteURL)

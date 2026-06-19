@@ -202,10 +202,64 @@ struct InputCollectorTests {
     }
 
     @Test
+    func standaloneAmbiguousCurrentURLRemainsValid() throws {
+        let history = StubClipboardHistoryReader([
+            .text("https://example.com/older.png")
+        ])
+
+        let selection = try InputCollector(
+            clipboardHistory: history
+        ).collect(
+            clipboard: StubClipboard(text: "  https://example.com/download  "),
+            allowHistoryFallback: true
+        )
+
+        #expect(selection.inputs == ["https://example.com/download"])
+        #expect(selection.ambiguousKinds == [.remoteURL])
+        #expect(selection.recoveredFromClipboardHistory == false)
+        #expect(history.makeReaderCallCount == 0)
+    }
+
+    @Test
+    func currentClipboardProseDropsAmbiguousURLsButKeepsClearMediaURLs() throws {
+        let selection = try InputCollector().collect(
+            clipboard: StubClipboard(
+                text: "Read https://example.com/article then use https://example.com/photo.png"
+            )
+        )
+
+        #expect(selection.inputs == ["https://example.com/photo.png"])
+        #expect(selection.mediaKinds == [.image])
+        #expect(selection.ambiguousKinds.isEmpty)
+    }
+
+    @Test
+    func ambiguousURLInCurrentProseAllowsHistoryRecovery() throws {
+        let history = StubClipboardHistoryReader([
+            .text("https://example.com/older.pdf")
+        ])
+
+        let selection = try InputCollector(
+            clipboardHistory: history
+        ).collect(
+            clipboard: StubClipboard(
+                text: "Read https://example.com/current-article later"
+            ),
+            allowHistoryFallback: true
+        )
+
+        #expect(selection.inputs == ["https://example.com/older.pdf"])
+        #expect(selection.mediaKinds == [.pdf])
+        #expect(selection.recoveredFromClipboardHistory == true)
+    }
+
+    @Test
     func historySkipsInvalidRecordsAndRecoversTextURLs() throws {
         let history = StubClipboardHistoryReader([
             .files(["/missing/recent-image.png"]),
             .text("unrelated clipboard prose"),
+            .text("https://example.com/article"),
+            .text("Read https://example.com/another-article when ready"),
             .text("Use https://example.com/movie.mp4 when ready")
         ])
 
@@ -218,6 +272,27 @@ struct InputCollectorTests {
 
         #expect(selection.inputs == ["https://example.com/movie.mp4"])
         #expect(selection.mediaKinds == [.video])
+        #expect(selection.recoveredFromClipboardHistory == true)
+    }
+
+    @Test
+    func historyProseDropsAmbiguousURLsButKeepsClearMediaURLs() throws {
+        let history = StubClipboardHistoryReader([
+            .text(
+                "Read https://example.com/article then use https://example.com/movie.mp4"
+            )
+        ])
+
+        let selection = try InputCollector(
+            clipboardHistory: history
+        ).collect(
+            clipboard: StubClipboard(text: "current unrelated text"),
+            allowHistoryFallback: true
+        )
+
+        #expect(selection.inputs == ["https://example.com/movie.mp4"])
+        #expect(selection.mediaKinds == [.video])
+        #expect(selection.ambiguousKinds.isEmpty)
         #expect(selection.recoveredFromClipboardHistory == true)
     }
 
