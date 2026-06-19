@@ -1080,7 +1080,7 @@ enum ConfigurationMenu {
             return ScriptFilterResponse(items: [
                 ScriptFilterItem(
                     title: "Describe the pipeline task",
-                    subtitle: "Use prompt resize videos to 1080p mp4 · ⌘L Details",
+                    subtitle: "Type a task, e.g. resize videos to 1080p mp4 · ⌘L Details",
                     arg: "",
                     valid: false,
                     autocomplete: pipelinePromptAutocomplete,

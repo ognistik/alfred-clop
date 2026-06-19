@@ -568,6 +568,7 @@ struct PipelineMenuTests {
         )
 
         #expect(response.items.first?.title == "Describe the pipeline task")
+        #expect(response.items.first?.subtitle == "Type a task, e.g. resize videos to 1080p mp4 · ⌘L Details")
         #expect(response.items.first?.valid == false)
     }
 
