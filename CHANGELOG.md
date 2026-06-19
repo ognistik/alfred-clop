@@ -10,7 +10,6 @@
 
 ### Feedback and documentation
 * Please report bugs through [GitHub Issues](https://github.com/ognistik/alfred-clop/issues). Type `:` and choose `Diagnostics` in the workflow to copy a privacy-conscious support report for your issue.
-* An explanatory video walkthrough is planned for the coming weeks.
 
 ---
 ## [v0.2.0](https://github.com/ognistik/alfred-clop/releases/tag/v0.2.0) - 2026/06/19
