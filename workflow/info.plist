@@ -1564,18 +1564,15 @@ fi</string>
 		</dict>
 	</array>
 	<key>readme</key>
-	<string># ALFRED CLOP
-**An unofficial Alfred workflow for Clop**
+	<string># CLOP FOR ALFRED
 
 ![](assets/readme/clop.png)
 
-[Visit on GitHub](https://github.com/ognistik/alfred-clop) | [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md)
+[Visit on GitHub](https://github.com/ognistik/alfred-clop) | [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) | [Buy Me a Coffee](https://buymeacoffee.com/afadingthought)
 
-[Buy Me a Coffee](https://buymeacoffee.com/afadingthought) | [PayPal](https://paypal.me/obergfilms)
+Alfred Clop gives you a friendly, quick, and searchable way to control [Clop's](https://lowtechguys.com/clop/) CLI. It shows only the actions that fit your selected, copied, or passed files and URLs.
 
-Alfred Clop gives you a friendly, searchable menu for Clop. It shows only the actions that fit your selected, copied, or passed files and URLs.
-
-This is an independent workflow. It is not affiliated with or maintained by the makers of Clop.
+*This is an independent non-official workflow for Clop's developer.*
 
 ---
 
@@ -1583,7 +1580,7 @@ This is an independent workflow. It is not affiliated with or maintained by the 
 
 * macOS
 * Alfred with the Powerpack
-* [Clop](https://lowtechguys.com/clop/) installed
+* Clop installed
 
 The workflow finds Clop’s bundled command-line tool automatically. No shell setup is required.
 
@@ -1639,7 +1636,7 @@ Set any Hotkeys you want directly on the workflow canvas. The workflow works imm
 
 The public External Trigger can open menus or execute actions from scripts, Shortcuts, Keyboard Maestro, and other Alfred workflows. See the [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) for syntax and examples.
 
-For full documentation, troubleshooting, updates, and issue reporting, [visit Alfred Clop on GitHub](https://github.com/ognistik/alfred-clop). If you report a problem, type `:` and choose `Diagnostics` to copy a privacy-conscious support report.</string>
+For full documentation, troubleshooting, updates, and issue reporting, [visit Alfred Clop on GitHub](https://github.com/ognistik/alfred-clop). To report a problem, type `:` and choose `Diagnostics` to copy a privacy-conscious support report.</string>
 	<key>uidata</key>
 	<dict>
 		<key>01F79503-40ED-4F46-A67F-4E5AE07021A4</key>
@@ -2181,10 +2178,6 @@ For full documentation, troubleshooting, updates, and issue reporting, [visit Al
 			<string>cacheRetention</string>
 		</dict>
 	</array>
-	<key>variables</key>
-	<dict/>
-	<key>variablesdontexport</key>
-	<array/>
 	<key>version</key>
 	<string>0.1.0</string>
 	<key>webaddress</key>

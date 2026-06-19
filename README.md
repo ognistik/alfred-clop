@@ -1,10 +1,10 @@
-<h1 align="center">Alfred Clop</h1>
+<h1 align="center">Clop for Alfred</h1>
 
 <p align="center">
-  <img src="workflow/icon.png" width="140" alt="Alfred Clop icon">
+  <img src="workflow/icon.png" width="140" alt="Clop for Alfred icon">
 </p>
 
-<p align="center"><strong>A friendly, searchable Alfred menu for Clop.</strong></p>
+<p align="center"><strong>A powerful, flexible, and user friendly Alfred workflow for Clop.</strong></p>
 
 <p align="center">
   <a href="https://buymeacoffee.com/afadingthought">Buy Me a Coffee</a>
@@ -12,31 +12,28 @@
   <a href="https://paypal.me/obergfilms">PayPal</a>
 </p>
 
-Alfred Clop is an independent, unofficial Alfred workflow for running [Clop](https://lowtechguys.com/clop/). It is not affiliated with or maintained by the makers of Clop.
-
-Choose selected files, copied paths, Finder selections, URLs, clipboard images, or automation input, and Alfred Clop shows only the actions that make sense for that input. It makes Clop’s power easier to reach without asking you to remember CLI flags.
+Choose selected files, copied paths, Finder selections, URLs, clipboard images, or automation input, and this workflow shows only the actions that make sense for that input. It makes Clop’s power easier to reach without asking you to remember CLI flags.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/main-menu-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="workflow/assets/readme/main-menu-light.png">
-  <img src="workflow/assets/readme/main-menu-light.png" alt="Alfred Clop action menu for two selected images">
+  <img src="workflow/assets/readme/main-menu-light.png" alt="Clop for Alfred action menu for two selected images">
 </picture>
 
 ## Requirements
 
 - macOS
 - Alfred with the Powerpack
-- Clop installed
-
-The workflow discovers Clop’s bundled CLI automatically. You do not need to create a shell alias or put `clop` on your `PATH`.
+- [Clop](https://lowtechguys.com/clop/) installed
 
 ## Basic use
 
-There are three everyday ways to open the workflow.
+There are multiple everyday ways to open the workflow.
 
 1. Select files in Finder, Alfred, or another app, then run the `Clop Menu` Universal Action.
 2. Copy a file, folder, URL, path, or image, then type the workflow keyword. The default keyword is `cl`.
 3. Configure one of the workflow Hotkeys in Alfred.
+4. Use [the external trigger](docs/external-trigger.md) for absolute control and flexibility when passing files to the workflow and creating other custom automations.
 
 Once the menu opens, type to search. Press Return to run the selected action or enter the selected parameter menu.
 
@@ -55,12 +52,12 @@ Many parameter menus accept direct typing. For example, in Crop / Resize you can
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/crop-menu-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="workflow/assets/readme/crop-menu-light.png">
-  <img src="workflow/assets/readme/crop-menu-light.png" alt="Typing a 16:9 crop ratio directly into Alfred Clop">
+  <img src="workflow/assets/readme/crop-menu-light.png" alt="Typing a 16:9 crop ratio directly into Clop for Alfred">
 </picture>
 
 ## Supported input
 
-Alfred Clop can work with:
+Clop for Alfred can work with:
 
 - selected files from Alfred Universal Actions;
 - Finder selections;
@@ -98,7 +95,7 @@ Type `:` in the workflow menu to open Configuration. Delete the `:` to return to
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="workflow/assets/readme/configuration-menu-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="workflow/assets/readme/configuration-menu-light.png">
-  <img src="workflow/assets/readme/configuration-menu-light.png" alt="Alfred Clop configuration menu">
+  <img src="workflow/assets/readme/configuration-menu-light.png" alt="Clop for Alfred configuration menu">
 </picture>
 
 This in-workflow Configuration menu is for things you may want to adjust while using Alfred:
@@ -116,9 +113,9 @@ The separate Alfred workflow configuration panel is where you set persistent wor
 1. Open Alfred Preferences.
 2. Go to Workflows.
 3. Select Clop.
-4. Click the workflow configuration button in Alfred’s sidebar.
+4. Right click and select Configure.
 
-You can also type `:` in Alfred Clop and choose `Workflow Settings` to open the same configuration panel. Command-Return on `Workflow Settings` reveals the active settings folder in Finder.
+You can also type `:` in Clop for Alfred and choose `Workflow Settings` to open the same configuration panel. Command-Return on `Workflow Settings` reveals the active settings folder in Finder.
 
 Choose `Diagnostics` to copy a plain-text support report for GitHub issues or debugging. Command-L previews the same report in Large Type. The report includes workflow version and configuration, Clop CLI discovery details, app version when available, preset and pipeline counts, expected command families, and discovery errors; it does not include selected files, clipboard contents, or a full environment dump.
 
@@ -136,7 +133,7 @@ The Alfred workflow configuration exposes these settings:
 | Completion notifications | Whether successful processing and configuration updates can show notifications. |
 | Error notifications | Whether failures and incomplete operations can show notifications. |
 | Notify on Updates | Check GitHub weekly while the workflow is used, notify once for each new stable release, and show it at the top of the menu. |
-| Copy | Whether Alfred Clop asks Clop to copy the result. |
+| Copy | Whether Clop for Alfred asks Clop to copy the result. |
 | Recurse into folders | Whether folder inspection and execution include subfolders. |
 | Clipboard image retention | How long workflow-owned raw clipboard image files are kept. |
 
@@ -144,7 +141,7 @@ Notifications use Alfred’s native notification object and are titled `Clop`.
 
 ## Updates
 
-With `Notify on Updates` enabled, Alfred Clop checks for a newer stable GitHub
+With `Notify on Updates` enabled, Clop for Alfred checks for a newer stable GitHub
 release at most once every seven days when you use the workflow. There is no
 background service. When an update is available, Alfred notifies once and keeps
 an actionable update item at the top of the main menu. Press Return on that item
@@ -155,7 +152,7 @@ failures stay quiet so temporary network problems do not interrupt normal use.
 
 ## Output templates
 
-When `Preserve originals` is enabled, Alfred Clop uses the configured output template. The built-in template is:
+When `Preserve originals` is enabled, or you select this option with a modifier (shift) Clop for Alfred uses the configured output template. The built-in template is:
 
 ```text
 %P/%f-clop
@@ -227,4 +224,4 @@ See [External Trigger reference](docs/external-trigger.md) for the exact syntax 
 
 ## Support the workflow
 
-Alfred Clop is an independent project. If it makes your day a little easier, you can support its development through [Buy Me a Coffee](https://buymeacoffee.com/afadingthought) or [PayPal](https://paypal.me/obergfilms).
+AClop for Alfred is an independent, unofficial Alfred workflow for running [Clop](https://lowtechguys.com/clop/). If it makes your day a little easier, you can support its development through [Buy Me a Coffee](https://buymeacoffee.com/afadingthought) or [PayPal](https://paypal.me/obergfilms).
