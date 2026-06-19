@@ -1,93 +1,178 @@
 # Alfred Clop
 
-An Alfred workflow for discovering and running Clop operations from a fast,
-file-aware Script Filter.
+Alfred Clop is an Alfred workflow for running [Clop](https://lowtechguys.com/clop/) from a friendly, searchable menu.
 
-The workflow is being designed around one native Swift executable. That
-executable will:
-
-- accept files from Alfred, Finder, the clipboard, and custom paths;
-- inspect the selected media types;
-- return context-aware Alfred Script Filter JSON;
-- fuzzy-filter actions and presets;
-- invoke the Clop CLI without shell interpolation;
-- parse results and present useful feedback.
-
-## Status
-
-The Swift executable accepts files from Alfred Universal Actions, Finder, the
-clipboard, Hotkeys, explicit paths and URLs, and the public `clop` External
-Trigger. It normalizes those inputs into one context-aware action menu.
-Optimize, Crop / Resize, Uncrop PDF, and Strip Metadata execute through the
-discovered Clop CLI, and Crop / Resize supports reusable presets.
-
-Type `:` in the action menu to replace processing actions with workflow
-Configuration. `:template ` opens the live output-template editor; deleting
-the namespace returns to the processing actions for the same input. Final
-Configuration changes normally close Alfred, while Command-Return applies the
-change and returns to `:`.
-
-See the [project status](docs/project-status.md) for the current checkpoint and
-next recommended task.
-
-## Documentation
-
-- [Clop CLI reference](docs/clop-cli-reference.md)
-- [External Trigger reference](docs/external-trigger.md)
-- [Workflow implementation plan](docs/project-plan.md)
-- [Current project status](docs/project-status.md)
-
-## Repository layout
-
-The intended layout is:
-
-```text
-.
-|-- docs/                 Research and design decisions
-|-- src/                  Swift package and tests
-|-- workflow/             Alfred workflow source assets and info.plist
-|-- scripts/              Build, package, and release helpers
-`-- dist/                 Generated workflow releases (ignored)
-```
-
-The Swift package lives under `src/`, and the current Alfred workflow source is
-under `workflow/`.
-
-## Development
-
-To run the test suite:
-
-```sh
-./scripts/test.sh
-```
-
-To build the release executable:
-
-```sh
-./scripts/build.sh
-```
-
-The built binary is copied to:
-
-```text
-workflow/alfred-clop
-```
-
-The local Alfred development workflow is symlinked directly to `workflow/`, so
-edits and rebuilt binaries are used in place. Restart Alfred after changing
-workflow objects or connections so it reloads the topology.
+It lets you choose files, copied paths, Finder selections, URLs, clipboard images, or automation input, then shows only the Clop actions that make sense for that input. The workflow is meant to make Clop’s power easier to reach without asking normal users to remember CLI flags.
 
 ## Requirements
 
 - macOS
 - Alfred with the Powerpack
-- Clop installed in `/Applications/Clop.app`
+- Clop installed
 
-The workflow should prefer Clop's bundled CLI at:
+The workflow discovers Clop’s bundled CLI automatically. You do not need to create a shell alias or put `clop` on your `PATH`.
+
+## Basic use
+
+There are three everyday ways to open the workflow.
+
+1. Select files in Finder, Alfred, or another app, then run the `Clop Menu` Universal Action.
+2. Copy a file, folder, URL, path, or image, then type the workflow keyword. The default keyword is `cl`.
+3. Configure one of the workflow Hotkeys in Alfred.
+
+Once the menu opens, type to search. Press Return to run the selected action or enter the selected parameter menu.
+
+## Navigating the menus
+
+The workflow is built around searchable Alfred menus.
+
+- Type a few letters to filter actions, settings, presets, formats, devices, or sizes.
+- Press Tab when Alfred shows an autocomplete suggestion.
+- Press Return to choose the highlighted item.
+- Use Command-Return, Shift-Return, or Command-L when Alfred shows those shortcuts in the subtitle.
+- Delete the current query to go back to the broader menu.
+
+Many parameter menus accept direct typing. For example, in Crop / Resize you can type a size like `16:9`, `1200x630`, or `w128`; in Downscale you can type `50%`; in Convert menus you can search for formats.
+
+## Supported input
+
+Alfred Clop can work with:
+
+- selected files from Alfred Universal Actions;
+- Finder selections;
+- copied files and folders;
+- copied local paths;
+- copied HTTP or HTTPS URLs;
+- raw clipboard images;
+- explicit files or URLs passed to the External Trigger.
+
+Folders are inspected for supported files. Subfolders are only included when the `Recurse into folders` setting is enabled.
+
+## Main actions
+
+The exact list depends on the selected media. For example, image actions are hidden for audio-only input.
+
+| Action | Use it for |
+| --- | --- |
+| Optimize | Compress images, videos, audio, PDFs, folders, and supported URLs. |
+| Crop / Resize | Resize images and videos, crop to dimensions or aspect ratios, and optionally use Smart Crop. |
+| Downscale | Scale images, videos, and audio by a percentage or factor. |
+| Convert Image | Convert images to another image format. |
+| Convert Video | Convert videos to another video format. |
+| Convert Audio | Convert audio to another audio format. |
+| Crop PDF | Crop PDFs for ratios, devices, or paper sizes. |
+| Uncrop PDF | Restore cropped PDF content where Clop supports it. |
+| Strip Metadata | Remove metadata from supported files. |
+| Pipeline | Run saved Clop pipelines. |
+
+Some actions run immediately. Others open a parameter menu so you can choose sizes, factors, formats, PDF targets, or saved presets.
+
+## Configuration
+
+Type `:` in the workflow menu to open Configuration. Delete the `:` to return to the normal action menu for the same input.
+
+This in-workflow Configuration menu is for things you may want to adjust while using Alfred:
+
+- Output Template
+- Workflow Settings
+- Manage action presets
+- Manage pipelines
+- Clear cached clipboard images, when the workflow has cached raw clipboard images
+
+The separate Alfred workflow configuration panel is where you set persistent workflow preferences such as notifications, Hotkeys, the settings folder, and clipboard behavior. To open it manually:
+
+1. Open Alfred Preferences.
+2. Go to Workflows.
+3. Select Clop.
+4. Click the workflow configuration button in Alfred’s sidebar.
+
+You can also type `:` in Alfred Clop and choose `Workflow Settings` to open the same configuration panel. Command-Return on `Workflow Settings` reveals the active settings folder in Finder.
+
+The Alfred workflow configuration exposes these settings:
+
+| Setting | What it controls |
+| --- | --- |
+| Workflow’s Keyword | The keyword used to open the workflow from Alfred. |
+| Settings folder | Optional folder for `settings.json`; useful for separate configurations. |
+| Read Clipboard | Whether the keyword reads the current clipboard. Explicit clipboard Hotkeys and External Trigger requests still work. |
+| Clipboard History Fallback | When enabled, interactive menus can recover the newest valid input from Alfred Clipboard History if the current clipboard is not useful. |
+| Preserve originals | Use the configured output template instead of replacing/rewriting in place where Clop supports output paths. |
+| Default optimization | Standard or Aggressive. Command-Return can invert this for one run. |
+| Floating Result | Whether Clop’s own result UI appears during processing. |
+| Completion notifications | Whether successful processing and configuration updates can show notifications. |
+| Error notifications | Whether failures and incomplete operations can show notifications. |
+| Copy | Whether Alfred Clop asks Clop to copy the result. |
+| Recurse into folders | Whether folder inspection and execution include subfolders. |
+| Clipboard image retention | How long workflow-owned raw clipboard image files are kept. |
+
+Notifications use Alfred’s native notification object and are titled `Clop`.
+
+## Output templates
+
+When `Preserve originals` is enabled, Alfred Clop uses the configured output template. The built-in template is:
 
 ```text
-/Applications/Clop.app/Contents/SharedSupport/ClopCLI
+%P/%f-clop
 ```
 
-It may fall back to `clop` on `PATH`, but it should not require users to create
-the `~/.local/bin/clop` symlink themselves.
+Supported tokens:
+
+| Token | Meaning |
+| --- | --- |
+| `%P` | Source folder |
+| `%f` | Filename without extension |
+| `%y` | Year |
+| `%m` | Month number |
+| `%n` | Month name |
+| `%d` | Day |
+| `%w` | Weekday |
+| `%H` | Hour |
+| `%M` | Minute |
+| `%S` | Second |
+| `%p` | AM or PM |
+| `%r` | Random characters |
+| `%i` | Incrementing number |
+
+Clop adds the output extension automatically.
+
+Examples:
+
+```text
+%P/%f-clop
+~/Desktop/Clop/%f
+%P/Processed/%y-%m-%d-%f
+```
+
+## Presets and pipelines
+
+Parameter menus can save reusable presets. Use the Configuration menu to review or remove saved presets.
+
+Pipelines are saved Clop pipeline recipes. Use `:pipelines` in Configuration to browse, add, replace, or remove them. The workflow also includes an “AI pipeline prompt” helper that copies a local reference prompt for an AI assistant; it does not send anything to AI itself.
+
+## External Trigger automation
+
+Advanced users can drive the workflow from Alfred’s External Trigger:
+
+```text
+workflow: com.aft.clop
+trigger: clop
+```
+
+The trigger supports menu opening, direct execution, explicit files and URLs, Finder input, clipboard input, and typed JSON requests.
+
+See [External Trigger reference](docs/external-trigger.md) for the exact syntax and examples.
+
+## Troubleshooting
+
+- If no actions appear, check that the selected or copied input is a supported file, folder, URL, or image.
+- If folder contents are missing, enable `Recurse into folders` if you need subfolders.
+- If the keyword should not read the clipboard, turn off `Read Clipboard`.
+- If the keyword has no current clipboard input but you want Alfred Clipboard History recovery, enable `Clipboard History Fallback`.
+- If Clop cannot be found, make sure the Clop app is installed and has not been moved to an unusual location.
+- If workflow objects were changed while developing locally, restart Alfred so it reloads the workflow canvas.
+
+## Developer documentation
+
+- [Architecture](docs/architecture.md)
+- [External Trigger reference](docs/external-trigger.md)
+- [Clop CLI reference](docs/clop-cli-reference.md)

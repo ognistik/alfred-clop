@@ -3,20 +3,21 @@
 ## Project
 
 Alfred Clop is a native Swift Alfred workflow that presents context-aware Clop
-actions for files supplied from several input sources.
+actions for selected, copied, or passed files and URLs.
 
 Read these files before making architectural changes:
 
-1. `docs/project-status.md` for the current checkpoint and next task.
-2. `docs/project-plan.md` for product scope and architecture.
-3. `docs/clop-cli-reference.md` for verified Clop CLI behavior.
+1. `docs/architecture.md` for product scope, workflow topology, invariants, and
+   non-goals.
+2. `docs/clop-cli-reference.md` for verified Clop CLI behavior.
+3. `docs/external-trigger.md` before changing public automation syntax.
 
 ## Repository layout
 
 - `src/`: Swift Package, executable, and tests
 - `workflow/`: Alfred workflow source and built executable
 - `scripts/`: build and test entry points
-- `docs/`: plan, status, and CLI research
+- `docs/`: user-facing and contributor documentation
 
 ## Commands
 
@@ -39,6 +40,8 @@ plutil -lint workflow/info.plist
 ```
 
 Run all three before completing a task that changes Swift code or the workflow.
+Documentation-only changes do not require the Swift test suite unless they also
+change generated artifacts or examples that tests depend on.
 
 ## Architecture rules
 
@@ -52,20 +55,24 @@ Run all three before completing a task that changes Swift code or the workflow.
 - Build process arguments as arrays. Never use shell interpolation or `eval`.
 - Use `ClopCLIDiscovery`; do not assume a fixed installation path.
 - Keep parameter-requiring actions separate from immediate actions.
+- Route workflow notifications through Alfred’s native notification object.
 
 ## Workflow input routes
 
 - Universal Action -> selected paths -> shared Script Filter
-- `clop` keyword -> current clipboard -> shared Script Filter
-- `paths` External Trigger -> passed paths -> shared Script Filter
+- Keyword -> current clipboard -> shared Script Filter
+- Hotkeys -> selected, Finder, or clipboard input -> shared Script Filter or
+  direct optimize execution
+- Public External Trigger `clop` -> menu or execute route
+- Internal External Trigger `mainMenu` -> shared Script Filter reruns
 
 Fresh Universal Action and External Trigger routes clear stale
 `alfred_clop_input_json` before entering the Script Filter.
 
 Immediate actions leave the shared Script Filter through a Run Script action.
-Keep successful execution quiet because Clop's own UI presents progress and
-results. Use visible notifications only for execution errors. Parameter actions
-may use a Script Filter when their searchable parameter menus are implemented.
+Successful execution is normally quiet while Clop’s own UI presents progress and
+results. Visible workflow notifications are reserved for configured success
+messages, configuration feedback, errors, and incomplete operations.
 
 ## Local Alfred development
 
@@ -88,14 +95,17 @@ The active development workflow is loaded in place through this symlink:
   clipboard or launch the real Clop CLI.
 - Use temporary files and directories for input fixtures.
 - Cover filenames containing spaces and multiple-file payloads.
-- Preserve the Universal Action, clipboard, and External Trigger flows.
+- Preserve the Universal Action, clipboard, Hotkey, and External Trigger flows.
 
 ## Scope discipline
 
-- Follow the next bounded task in `docs/project-status.md`.
-- Do not implement unrelated parameter menus or Clop operations early.
-- Update `docs/project-status.md` after completing a meaningful checkpoint.
-- Update `docs/project-plan.md` only when product scope or architecture changes.
+- Keep documentation concise and current; avoid restoring historical plan/status
+  logs.
+- Do not implement unrelated parameter menus, Clop operations, update
+  mechanisms, or diagnostics while working on a narrower task.
+- If product scope changes, update `docs/architecture.md`.
+- If public automation syntax changes, update `docs/external-trigger.md`.
+- If verified Clop CLI behavior changes, update `docs/clop-cli-reference.md`.
 
 ## Generated and local files
 
@@ -103,3 +113,4 @@ The active development workflow is loaded in place through this symlink:
   logs, or exported `.alfredworkflow` files.
 - `workflow/alfred-clop` is rebuilt by `scripts/build.sh`; keep it synchronized
   with the checked-in Swift source at project checkpoints.
+

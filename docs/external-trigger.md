@@ -1,20 +1,51 @@
-# External Trigger
+# External Trigger reference
 
-Alfred Clop exposes one External Trigger:
+Alfred Clop exposes one public External Trigger:
 
 ```text
 workflow: com.aft.clop
 trigger: clop
 ```
 
-The trigger accepts a line-based shorthand intended for people and a typed
-JSON request intended for advanced integrations. Both formats decode into the
-same internal `ClopRequest` model and use the same input validation, action
-capabilities, workflow settings, and execution path.
+The trigger accepts two request formats:
 
-## Input
+- a line-based shorthand for scripts, AppleScript, Shortcuts, Keyboard Maestro,
+  and humans;
+- typed JSON matching the workflow’s `ClopRequest` model.
 
-Bare input opens the main action menu:
+Both formats use the same validation and execution path as the interactive
+workflow.
+
+## Request structure
+
+Most shorthand requests have two blocks:
+
+```text
+directive
+optional parameter: value
+optional parameter: value
+
+input
+input
+input
+```
+
+The blank line between directives/parameters and input is required whenever a
+directive is present.
+
+Bare input has no directive and opens the main action menu.
+
+## Input sources
+
+Use exactly one input source per request.
+
+| Input | Meaning |
+| --- | --- |
+| `finder` | Read Finder’s current selection. |
+| `clipboard` | Read the current clipboard. |
+| explicit lines | Treat each non-empty line as one exact path, folder, or HTTP/HTTPS URL. |
+
+Examples:
 
 ```text
 finder
@@ -25,23 +56,35 @@ clipboard
 ```
 
 ```text
-/path/one image.jpg
-/path/two image.jpg
+/Users/me/Desktop/first image.jpg
+/Users/me/Desktop/second image.jpg
 https://example.com/video.mp4
 ```
 
-Use exactly one input source:
+Do not combine `finder` or `clipboard` with explicit paths or URLs.
 
-- `finder` reads Finder's current selection;
-- `clipboard` reads the current clipboard;
-- otherwise, each non-empty line is one exact local path, folder, or HTTP/HTTPS
-  URL.
+Explicit lines preserve significant spaces. This allows paths such as:
 
-Do not combine `finder` or `clipboard` with explicit items.
+```text
+/Users/me/Desktop/ leading-space.jpg
+/Users/me/Desktop/trailing-space.jpg 
+```
 
-## Action Menus
+## Open the main menu
 
-An action shortcut followed by a blank line opens that action's parameter menu:
+Pass only input:
+
+```text
+clipboard
+```
+
+```text
+/Users/me/Desktop/photo.png
+```
+
+## Open an action menu
+
+Use an action shortcut followed by a blank line and input:
 
 ```text
 crop:
@@ -51,33 +94,30 @@ finder
 
 Supported shortcuts:
 
-```text
-optimize:
-crop:
-downscale:
-convert image:
-convert video:
-convert audio:
-crop pdf:
-uncrop pdf:
-strip metadata:
-```
+| Shortcut | Opens |
+| --- | --- |
+| `optimize:` | Optimize |
+| `crop:` | Crop / Resize |
+| `downscale:` | Downscale |
+| `convert image:` | Convert Image |
+| `convert video:` | Convert Video |
+| `convert audio:` | Convert Audio |
+| `crop pdf:` | Crop PDF |
+| `uncrop pdf:` | Uncrop PDF |
+| `strip metadata:` | Strip Metadata |
 
-The explicit form uses the visible workflow action name:
+You can also use the explicit `menu:` form with the visible workflow action
+name. Matching is case-insensitive.
 
 ```text
 menu: Crop / Resize
 
-/path/one.jpg
-/path/two.jpg
+clipboard
 ```
 
-Action and parameter names are case-insensitive. The blank line between
-directives and input is required.
+## Open Configuration
 
-## Configuration
-
-Open Configuration directly while preserving an input source:
+Use:
 
 ```text
 menu: Configuration
@@ -85,70 +125,128 @@ menu: Configuration
 clipboard
 ```
 
-```text
-menu: Configuration
+Configuration opens in Alfred with the same `:` namespace used by the
+interactive workflow.
 
-finder
-```
+## Execute an action
 
-The menu opens with `:` in Alfred. Removing the colon returns to the processing
-actions for the same collected input. Type or autocomplete `:template ` to
-edit the output template.
-
-The Workflow Settings result opens Alfred's workflow configuration with
-Return and reveals the active settings folder with Command-Return. It also
-represents the real `settings.json` file, so Alfred Quick Look and file actions
-remain available.
-
-## Execution
-
-Use `execute:` with a visible workflow action name:
+Use `execute:` with the visible action name:
 
 ```text
 execute: Optimize
 
-/path/one.jpg
-/path/two.jpg
+/Users/me/Desktop/photo.png
 ```
 
-Optional booleans default to `false` when omitted:
+Direct execution runs headlessly through Alfred. Notifications follow the
+workflow’s completion/error notification settings.
+
+Boolean values accept:
+
+```text
+true
+false
+yes
+no
+on
+off
+```
+
+## Output overrides
+
+Execution requests can override the configured output behavior for one run.
+
+| Parameter | Values | Meaning |
+| --- | --- | --- |
+| `output` | `template` | Use the configured output template. |
+| `output` | `false`, `off`, `no` | Disable template output for this run. |
+| `output template` | template string | Use a custom output template for this run. |
+
+Examples:
 
 ```text
 execute: Optimize
-aggressive: true
+output: template
+
+/Users/me/Desktop/photo.png
+```
+
+```text
+execute: Convert
+format: mp3
+output template: %P/%f-podcast
+
+/Users/me/Desktop/audio.wav
+```
+
+`output` and `output template` are execute-only parameters. They are rejected
+for `menu:` requests.
+
+## Optimize
+
+Basic optimize:
+
+```text
+execute: Optimize
+
+/Users/me/Desktop/photo.png
+```
+
+Aggressive optimize:
+
+```text
+execute: Optimize
+aggressive: yes
 
 clipboard
 ```
 
-Accepted boolean values are `true`, `false`, `yes`, `no`, `on`, and `off`.
-
-Media-specific Optimize controls are also supported. They use explicit fields
-or the same compact controls grammar as the Alfred menu:
+Media-specific Optimize controls are also supported.
 
 ```text
 execute: Optimize
 media: video
 controls: 70, sw, m
-playback speed: 1.5
+playback speed: 2
 
-/path/movie.mp4
+/Users/me/Desktop/movie.mp4
 ```
 
-Supported media controls:
+Supported media values:
 
-- image: `compression: 70`, `compression: ad`, or `controls: 70`
-- video: `compression: 70`, `compression: au`, `encoder: sw`,
-  `remove audio: true`, `playback speed: 2`, or `controls: 70 sw m 2x`
-- PDF: `dpi: 150`, `dpi: ad`, or `controls: dpi 150`
-- audio: `compression: 70`, `bitrate: 128`, or `controls: b128`
+```text
+image
+video
+audio
+pdf
+```
+
+Supported controls:
+
+| Media | Parameters |
+| --- | --- |
+| image | `compression: 70`, `compression: ad`, or `controls: 70` |
+| video | `compression: 70`, `compression: au`, `encoder: sw`, `remove audio: true`, `playback speed: 2`, or `controls: 70 sw m 2x` |
+| audio | `compression: 70`, `bitrate: 128`, or `controls: b128` |
+| pdf | `dpi: 150`, `dpi: ad`, or `controls: dpi 150` |
 
 The compact Optimize grammar accepts spaces or commas between tokens. Video
-shorthand uses `5-100/au` for compression, `hw/sw/ll/ad` for encoder, `m` for
-mute, and `2x` for speed. Full words such as `auto`, `software`, `lossless`,
-`adaptive`, and `mute` remain accepted. External Trigger execution never uses
-workflow action presets by name.
+shorthand supports:
 
-Crop / Resize requires `size`. It accepts the same values as the workflow menu:
+- `5` through `100`, or `au`, for compression;
+- `hw`, `sw`, `ll`, or `ad` for encoder;
+- `m` for mute/remove audio;
+- `2x` style values for playback speed.
+
+Full words such as `auto`, `software`, `lossless`, `adaptive`, and `mute` are
+also accepted where they apply.
+
+Preset names are not accepted in External Trigger execution. Use explicit
+parameters instead.
+
+## Crop / Resize
+
+Crop / Resize requires `size`.
 
 ```text
 execute: Crop / Resize
@@ -158,209 +256,246 @@ controls: sc
 finder
 ```
 
-`sc` / `smart-crop` enables Clop's Smart Crop feature for centering the crop
-around detected image features. It is only valid with exact dimensions or aspect
-ratios. Omit it to leave Smart Crop off. Supported size examples include
-`1200x630`, `16:9`, `1920`, `w128`, `h720`, `128x0`, and `0x720`.
+Supported size examples:
 
-Crop / Resize also accepts the workflow menu's compact controls grammar:
+```text
+1200x630
+16:9
+1920
+w128
+h720
+128x0
+0x720
+```
+
+`32:18` normalizes to `16:9`. `w128` normalizes to `128x0`; `h720` normalizes
+to `0x720`.
+
+Supported controls:
+
+| Control | Meaning |
+| --- | --- |
+| `sc`, `smart-crop` | Enable Smart Crop. Valid only with exact dimensions or aspect ratios. |
+| `ad`, `adaptive` | Enable adaptive optimization after crop. |
+| `no-ad`, `no-adaptive` | Explicitly disable adaptive optimization. |
+| `m`, `mute` | Remove audio from video output. |
+
+Example:
 
 ```text
 execute: Crop / Resize
 size: 16:9
-controls: sc no-ad m
+controls: sc, no-ad, m
 
-/path/movie.mp4
+/Users/me/Desktop/movie.mp4
 ```
 
-Supported controls are `sc` / `smart-crop`, `ad` / `adaptive`, `no-ad` /
-`no-adaptive`, and `m` / `mute`. In the interactive workflow, `no-ad` is
-treated as an advanced explicit override because Clop's crop defaults already
-keep adaptive optimization off unless requested. Explicit booleans are also
-available for adaptive optimization and audio:
+Explicit booleans are also available:
 
 ```text
 execute: Crop / Resize
 size: w128
 adaptive: true
-remove audio: true
+remove audio: yes
 
-/path/movie.mp4
+/Users/me/Desktop/movie.mp4
 ```
 
-Use either adaptive or no-adaptive, not both. `mute: true` and
-`remove audio: true` are equivalent.
+`mute: true` and `remove audio: true` are equivalent. Use either adaptive or
+no-adaptive, not both.
 
-Downscale requires `factor`. It accepts the same values as the workflow menu:
+## Downscale
+
+Downscale requires `factor`.
 
 ```text
 execute: Downscale
-factor: 50
+factor: 50%
 
-/path/photo.jpg
-/path/audio.m4a
+/Users/me/Desktop/photo.jpg
 ```
 
-Supported factor examples include `50`, `50%`, `0.5`, `75%`, and `0.75`.
-Whole numbers from `2` through `99` are interpreted as percentages. Values
-must be greater than `0` and less than `100%`; bare `1`, `100%`, and larger
-values are rejected.
+Accepted factor examples:
 
-Convert execution requires `format`. The generic `Convert` action infers
-image, video, or audio from the format; media-specific action names can also
-be used:
+```text
+50
+50%
+0.5
+75%
+0.75
+```
+
+Whole numbers from `2` through `99` are interpreted as percentages. Values must
+be greater than `0` and less than `100%`; `1`, `100%`, and larger values are
+rejected.
+
+Optional controls:
+
+```text
+execute: Downscale
+factor: 50%
+controls: adaptive mute
+
+/Users/me/Desktop/movie.mp4
+```
+
+Supported controls are `adaptive`, `no-adaptive`, `mute`, and their compact
+forms where accepted by the interactive menu.
+
+## Convert
+
+Convert requires `format`.
+
+Media-specific actions:
+
+```text
+execute: Convert Image
+format: jpg
+compression: 75
+
+/Users/me/Desktop/image.png
+```
 
 ```text
 execute: Convert Audio
 format: mp3
 bitrate: 128
 
-/path/recording.wav
+/Users/me/Desktop/audio.wav
 ```
 
-Image and MP4 conversion accept `compression`; MP4 also accepts `auto`. Audio
-accepts `compression` or `bitrate`.
+Generic `Convert` infers media from the format:
 
-Crop PDF requires exactly one target: `ratio`, `device`, or `paper size`.
-`ratio` accepts ratio or resolution values such as `16:9` and `1200x630`.
-`device` and `paper size` accept names from Clop's current `crop-pdf`
-device and paper lists.
+```text
+execute: Convert
+format: webm
+
+/Users/me/Desktop/video.mov
+```
+
+Common optional settings:
+
+| Parameter | Applies to |
+| --- | --- |
+| `compression` | image, video, audio where Clop supports compression |
+| `bitrate` | audio |
+
+`jpg` normalizes to `jpeg`.
+
+## Crop PDF
+
+Crop PDF requires exactly one target kind:
+
+- `ratio`
+- `device`
+- `paper size`
+
+Examples:
 
 ```text
 execute: Crop PDF
-ratio: 16:9
-page layout: landscape
-extend: true
+ratio: 32:18
+controls: landscape extend
 
-/path/slides.pdf
+/Users/me/Desktop/book.pdf
 ```
 
 ```text
 execute: Crop PDF
 device: iPad mini 6 & 7
-controls: portrait extend
+page layout: portrait
 
-/path/book.pdf
+/Users/me/Desktop/book.pdf
 ```
 
 ```text
 execute: Crop PDF
 paper size: A4
+extend: true
 
-/path/document.pdf
+/Users/me/Desktop/book.pdf
 ```
 
-Supported Crop PDF controls are `a` / `auto`, `p` / `portrait`,
-`l` / `landscape`, and `e` / `extend`. Omit `extend` to use Clop's normal
-crop behavior.
+Supported controls:
+
+| Parameter/control | Meaning |
+| --- | --- |
+| `page layout: portrait` | Use portrait layout. |
+| `page layout: landscape` | Use landscape layout. |
+| `controls: portrait` | Compact portrait layout. |
+| `controls: landscape` | Compact landscape layout. |
+| `extend: true` | Extend pages to the target. |
+| `controls: extend` | Compact extend flag. |
+
+Ratios normalize, so `32:18` becomes `16:9`.
+
+## Uncrop PDF and Strip Metadata
+
+These actions do not require extra parameters.
+
+```text
+execute: Uncrop PDF
+
+/Users/me/Desktop/book.pdf
+```
+
+```text
+execute: Strip Metadata
+
+/Users/me/Desktop/photo.jpg
+```
+
+## Pipeline
 
 Pipeline execution accepts one `pipeline` value. It can be a saved Clop
-pipeline name or inline Clop pipeline steps:
+pipeline name or inline Clop pipeline steps.
+
+Saved pipeline:
 
 ```text
 execute: Pipeline
 pipeline: To WebP
+hide: true
 
-/path/photo.png
+/Users/me/Desktop/photo.png
 ```
+
+Inline pipeline:
 
 ```text
 execute: Pipeline
-pipeline: crop(width: 1600) -> convert(to: webp)
-skip: true
+pipeline: crop(width: 1600) -> optimize -> convert(to: webp)
+opt: true
 hide: true
 
-/path/photo.png
+/Users/me/Desktop/photo.png
 ```
 
-For inline steps, omitting `skip` makes Alfred Clop optimize first and then run
-the written steps. `skip: true` runs only the written steps. `hide: true`
-hides Clop's floating result UI by suppressing the runtime UI flag. `skip` is
-not accepted for saved pipeline names because saved pipelines already carry
-their own Clop optimization setting. The older `name` field remains accepted
-as a compatibility alias, but new requests should use `pipeline`. Values that
-clearly look like inline pipeline steps receive the same lightweight guidance
-as the Pipeline menu for obvious mistakes such as unknown step names or
-unbalanced parentheses; Clop still validates the full step grammar.
+Supported parameters:
 
-### Current Grammar
+| Parameter | Meaning |
+| --- | --- |
+| `pipeline` | Saved pipeline name or inline pipeline steps. |
+| `name` | Compatibility alias for `pipeline`. Prefer `pipeline` in new requests. |
+| `opt` | Optimize before inline pipeline steps. Only valid for inline steps. |
+| `skip` | Compatibility alias for skipping the automatic optimize step where supported. |
+| `hide` | Hide Clop result UI for this pipeline run. |
 
-This table is the complete shorthand execution grammar currently implemented:
-
-| Action | Parameters | Omitted behavior |
-| --- | --- | --- |
-| `Optimize` | `aggressive` (optional boolean), optional media-specific controls | Standard optimization |
-| `Crop / Resize` | `size` (required), optional compact controls such as `sc`, `ad`, `no-ad`, and `m`; optional adaptive/mute booleans | Smart Crop disabled, Clop defaults for adaptive optimization and audio |
-| `Downscale` | `factor` (required) | Uses workflow execution settings |
-| `Convert`, `Convert Image`, `Convert Video`, `Convert Audio` | `format` (required), optional compression/bitrate where supported | Uses Clop defaults for that target |
-| `Crop PDF` | exactly one of `ratio`, `device`, or `paper size`; optional `page layout`, `extend`, or compact `controls` | Auto layout, crop content |
-| `Pipeline` | `pipeline` (required), optional `skip` for inline steps, optional `hide` | Saved pipeline settings, or optimize first for inline steps |
-| `Uncrop PDF` | None | Uses workflow execution settings |
-| `Strip Metadata` | None | Uses workflow execution settings |
-
-### Defaults And Workflow Settings
-
-Omitting an optional shorthand boolean means `false`. Required values cannot
-be omitted unless that action later gains a documented workflow default.
-
-Execution also inherits the workflow's existing global settings without
-requiring shorthand fields:
-
-- `copyResult`
-- `recursiveFolders`
-- completion and error notification preferences
-
-Those settings are resolved by the same typed execution path used by workflow
-menus and JSON requests. They are not duplicated as shorthand parameters.
-
-Future optional parameters should follow the same rule: omission uses the
-documented workflow or Clop default. Every new field must be added to this
-reference when its corresponding operation is implemented.
-
-## AppleScript
-
-Open Crop / Resize for Finder's selection:
-
-```applescript
-tell application id "com.runningwithcrayons.Alfred"
-  run trigger "clop" in workflow "com.aft.clop" with argument "crop:" & linefeed & linefeed & "finder"
-end tell
-```
-
-Open the main menu for multiple files:
-
-```applescript
-set request to "/path/one image.jpg" & linefeed & "/path/two image.jpg"
-
-tell application id "com.runningwithcrayons.Alfred"
-  run trigger "clop" in workflow "com.aft.clop" with argument request
-end tell
-```
-
-Execute a crop for multiple files:
-
-```applescript
-set request to "execute: Crop / Resize" & linefeed & ¬
-  "size: 16:9" & linefeed & linefeed & ¬
-  "/path/one image.jpg" & linefeed & ¬
-  "/path/two image.jpg"
-
-tell application id "com.runningwithcrayons.Alfred"
-  run trigger "clop" in workflow "com.aft.clop" with argument request
-end tell
-```
+Known newer Clop step names such as `normalize` are treated as inline pipeline
+steps.
 
 ## Typed JSON
 
-Typed JSON remains supported for integrations that need an explicit,
-versionable contract. It is an advanced form of the same request, not a
-separate execution implementation:
+Typed JSON remains supported for integrations that prefer the internal request
+model.
+
+Example:
 
 ```json
 {
   "version": 1,
   "input": {
-    "source": "finderSelection"
+    "type": "clipboard"
   },
   "route": {
     "type": "menu",
@@ -369,16 +504,52 @@ separate execution implementation:
 }
 ```
 
-Configuration uses an explicit menu destination:
+The current contract omits `version` when encoding new requests, but missing
+version still decodes as the current contract. Invalid future versions are
+reported visibly.
 
-```json
-{
-  "input": {
-    "source": "clipboard"
-  },
-  "route": {
-    "type": "menu",
-    "destination": "configuration"
-  }
-}
+## AppleScript examples
+
+Open the menu for Finder selection:
+
+```applescript
+tell application id "com.runningwithcrayons.Alfred" to run trigger "clop" in workflow "com.aft.clop" with argument "finder"
 ```
+
+Execute Optimize on the clipboard:
+
+```applescript
+set request to "execute: Optimize" & linefeed & ¬
+  "aggressive: yes" & linefeed & linefeed & ¬
+  "clipboard"
+
+tell application id "com.runningwithcrayons.Alfred" to run trigger "clop" in workflow "com.aft.clop" with argument request
+```
+
+Execute Crop / Resize on explicit files:
+
+```applescript
+set request to "execute: Crop / Resize" & linefeed & ¬
+  "size: 16:9" & linefeed & ¬
+  "controls: sc" & linefeed & linefeed & ¬
+  "/Users/me/Desktop/first image.jpg" & linefeed & ¬
+  "/Users/me/Desktop/second image.jpg"
+
+tell application id "com.runningwithcrayons.Alfred" to run trigger "clop" in workflow "com.aft.clop" with argument request
+```
+
+## Validation errors
+
+Common rejected requests:
+
+| Request problem | Result |
+| --- | --- |
+| Missing blank line after an action directive | `missingSeparator` |
+| `execute: Crop / Resize` without `size` | missing `size` |
+| `execute: Downscale` without `factor` | missing `factor` |
+| `execute: Convert Image` without `format` | missing `format` |
+| `aggressive: maybe` | invalid boolean parameter |
+| `output template:` with an empty value | missing `output template` |
+| `menu: Optimize` with `output: false` | execute-only parameter |
+| `finder` mixed with explicit paths | mixed input sources |
+
