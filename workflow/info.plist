@@ -110,6 +110,16 @@
 				<key>vitoclose</key>
 				<false/>
 			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
 		</array>
 		<key>22222222-2222-4222-8222-222222222222</key>
 		<array>
@@ -176,11 +186,37 @@
 				<false/>
 			</dict>
 		</array>
+		<key>77777777-7777-4777-8777-777777777777</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 		<key>7F6EAFB5-64D9-47AC-879C-8F85DA25C72F</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
 				<string>91B8DA36-20F9-40E0-A192-1DBD7779B33E</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>88888888-8888-4888-8888-888888888888</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -202,11 +238,112 @@
 				<false/>
 			</dict>
 		</array>
+		<key>99999999-9999-4999-8999-999999999999</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>B1111111-1111-4111-8111-111111111111</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>B2222222-2222-4222-8222-222222222222</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 		<key>B30C287D-7137-4B63-8FA2-95B849C440FA</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
 				<string>D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>B3333333-3333-4333-8333-333333333333</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>B4444444-4444-4444-8444-444444444444</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>B7AA13C4-9848-496F-9D8F-B81C7F792B9B</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -245,18 +382,6 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</string>
-				<key>modifiers</key>
-				<integer>0</integer>
-				<key>modifiersubtext</key>
-				<string></string>
-				<key>sourceoutputuid</key>
-				<string>71717171-7171-4171-8171-717171717171</string>
-				<key>vitoclose</key>
-				<false/>
-			</dict>
-			<dict>
-				<key>destinationuid</key>
 				<string>D922B7A2-2433-441D-B70D-4556591E487D</string>
 				<key>modifiers</key>
 				<integer>0</integer>
@@ -264,6 +389,18 @@
 				<string></string>
 				<key>sourceoutputuid</key>
 				<string>F32D25CA-0BC0-4196-B7EB-CBAA6EECF33A</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>B7AA13C4-9848-496F-9D8F-B81C7F792B9B</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>71717171-7171-4171-8171-717171717171</string>
 				<key>vitoclose</key>
 				<false/>
 			</dict>
@@ -321,11 +458,26 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</string>
+				<string>B7AA13C4-9848-496F-9D8F-B81C7F792B9B</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
 				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>0FC6A55B-C1F9-4990-8113-952767ACD315</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>EFEFEFEF-0000-4000-8000-EFEFEFEFEFEF</string>
 				<key>vitoclose</key>
 				<false/>
 			</dict>
@@ -341,6 +493,16 @@
 				<string></string>
 				<key>vitoclose</key>
 				<true/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
 			</dict>
 		</array>
 	</dict>
@@ -391,6 +553,27 @@
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>lastpathcomponent</key>
+				<false/>
+				<key>onlyshowifquerypopulated</key>
+				<false/>
+				<key>removeextension</key>
+				<false/>
+				<key>text</key>
+				<string>{var:alfred_clop_notification}</string>
+				<key>title</key>
+				<string>Clop</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.notification</string>
+			<key>uid</key>
+			<string>0FC6A55B-C1F9-4990-8113-952767ACD315</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>concurrently</key>
 				<false/>
 				<key>escaping</key>
@@ -401,13 +584,10 @@ route="$(./alfred-clop route --public-request "$request")"
 if [[ "$route" == "execute" ]]; then
   feedback="$(./alfred-clop request --public-request "$request" --quiet)"
   if [[ -n "$feedback" ]]; then
-    title="Alfred Clop"
-    message="$feedback"
-    /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
+    escaped="${feedback//\\/\\\\}"
+    escaped="${escaped//\"/\\\"}"
+    escaped="${escaped//$'\n'/\\n}"
+    printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
   fi
 elif [[ "$route" == "menu" ]]; then
   ./alfred-clop handoff --public-request "$request"
@@ -442,6 +622,36 @@ fi</string>
 			<integer>1</integer>
 		</dict>
 		<dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.junction</string>
+			<key>uid</key>
+			<string>B7AA13C4-9848-496F-9D8F-B81C7F792B9B</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argument</key>
+				<string>:</string>
+				<key>passthroughargument</key>
+				<false/>
+				<key>variables</key>
+				<dict>
+					<key>alfred_clop_menu_state</key>
+					<string></string>
+					<key>alfred_clop_public_route</key>
+					<string></string>
+				</dict>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.argument</string>
+			<key>uid</key>
+			<string>C0C0C0C0-C0C0-40C0-80C0-C0C0C0C0C0C0</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
 			<key>config</key>
 			<dict>
 				<key>conditions</key>
@@ -470,6 +680,38 @@ fi</string>
 			<string>alfred.workflow.utility.conditional</string>
 			<key>uid</key>
 			<string>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>conditions</key>
+				<array>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:alfred_clop_notification}</string>
+						<key>matchcasesensitive</key>
+						<false/>
+						<key>matchmode</key>
+						<integer>4</integer>
+						<key>matchstring</key>
+						<string>.+</string>
+						<key>outputlabel</key>
+						<string>Notify</string>
+						<key>uid</key>
+						<string>EFEFEFEF-0000-4000-8000-EFEFEFEFEFEF</string>
+					</dict>
+				</array>
+				<key>elselabel</key>
+				<string>Stop</string>
+				<key>hideelse</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.conditional</string>
+			<key>uid</key>
+			<string>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
@@ -550,60 +792,6 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>68</integer>
-				<key>script</key>
-				<string>tell application id "com.runningwithcrayons.Alfred" to reveal workflow (system attribute "alfred_workflow_bundleid") with configuration</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>6</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>action</key>
-				<integer>0</integer>
-				<key>argument</key>
-				<integer>0</integer>
-				<key>focusedappvariable</key>
-				<false/>
-				<key>focusedappvariablename</key>
-				<string></string>
-				<key>hotkey</key>
-				<integer>0</integer>
-				<key>hotmod</key>
-				<integer>0</integer>
-				<key>hotstring</key>
-				<string></string>
-				<key>leftcursor</key>
-				<false/>
-				<key>modsmode</key>
-				<integer>0</integer>
-				<key>relatedAppsMode</key>
-				<integer>0</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.trigger.hotkey</string>
-			<key>uid</key>
-			<string>11111111-1111-4111-8111-111111111111</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
 				<key>alfredfiltersresults</key>
 				<false/>
 				<key>alfredfiltersresultsmatchmode</key>
@@ -675,20 +863,72 @@ fi</string>
 				<key>concurrently</key>
 				<false/>
 				<key>escaping</key>
+				<integer>68</integer>
+				<key>script</key>
+				<string>tell application id "com.runningwithcrayons.Alfred" to reveal workflow (system attribute "alfred_workflow_bundleid") with configuration</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>6</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>action</key>
+				<integer>0</integer>
+				<key>argument</key>
+				<integer>0</integer>
+				<key>focusedappvariable</key>
+				<false/>
+				<key>focusedappvariablename</key>
+				<string></string>
+				<key>hotkey</key>
+				<integer>0</integer>
+				<key>hotmod</key>
+				<integer>0</integer>
+				<key>hotstring</key>
+				<string></string>
+				<key>leftcursor</key>
+				<false/>
+				<key>modsmode</key>
+				<integer>0</integer>
+				<key>relatedAppsMode</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.trigger.hotkey</string>
+			<key>uid</key>
+			<string>11111111-1111-4111-8111-111111111111</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
 				<string>return_query="$(./alfred-clop configure --menu-state "${1:-}" --return-query)"
 feedback="$(./alfred-clop configure --menu-state "${1:-}")"
-if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
-fi
-printf '%s' "${return_query:-:}"</string>
+arg="${return_query:-:}"
+escaped_arg="${arg//\\/\\\\}"
+escaped_arg="${escaped_arg//\"/\\\"}"
+escaped_arg="${escaped_arg//$'\n'/\\n}"
+escaped_feedback="${feedback//\\/\\\\}"
+escaped_feedback="${escaped_feedback//\"/\\\"}"
+escaped_feedback="${escaped_feedback//$'\n'/\\n}"
+printf '{"alfredworkflow":{"arg":"%s","variables":{"alfred_clop_notification":"%s"}}}' "$escaped_arg" "$escaped_feedback"</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
@@ -738,43 +978,58 @@ printf '%s' "${return_query:-:}"</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>argument</key>
-				<string>:</string>
-				<key>passthroughargument</key>
+				<key>concurrently</key>
 				<false/>
-				<key>variables</key>
-				<dict>
-					<key>alfred_clop_menu_state</key>
-					<string></string>
-					<key>alfred_clop_public_route</key>
-					<string></string>
-				</dict>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>if [[ "${alfred_clop_request_kind:-}" == "revealSettingsFolder" ]]; then
+  /bin/mkdir -p -- "${1:-}"
+  /usr/bin/open "${1:-}"
+  exit
+elif [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
+  feedback="$(./alfred-clop configure --menu-state "${1:-}")"
+elif [[ "${alfred_clop_request_kind:-}" == "pipelinePromptCopy" ]]; then
+  prompt="$(./alfred-clop pipeline-prompt --task "${1:-}")"
+  if [[ "$prompt" == Unable\ to\ generate\ AI\ pipeline\ prompt:* ]]; then
+    feedback="$prompt"
+  else
+    printf '%s' "$prompt" | /usr/bin/pbcopy
+    feedback="Copied AI pipeline prompt"
+  fi
+else
+  feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
+fi
+if [[ -n "$feedback" ]]; then
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
+fi</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.utility.argument</string>
+			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
-			<string>C0C0C0C0-C0C0-40C0-80C0-C0C0C0C0C0C0</string>
+			<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
 			<key>version</key>
-			<integer>1</integer>
+			<integer>2</integer>
 		</dict>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>acceptsfiles</key>
-				<true/>
-				<key>acceptsmulti</key>
-				<integer>1</integer>
-				<key>acceptstext</key>
-				<true/>
-				<key>acceptsurls</key>
-				<true/>
-				<key>name</key>
-				<string>Clop Menu</string>
+				<key>unstackview</key>
+				<false/>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.trigger.universalaction</string>
+			<string>alfred.workflow.utility.hidealfred</string>
 			<key>uid</key>
-			<string>7F6EAFB5-64D9-47AC-879C-8F85DA25C72F</string>
+			<string>D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
@@ -812,6 +1067,27 @@ printf '%s' "${return_query:-:}"</string>
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>acceptsfiles</key>
+				<true/>
+				<key>acceptsmulti</key>
+				<integer>1</integer>
+				<key>acceptstext</key>
+				<true/>
+				<key>acceptsurls</key>
+				<true/>
+				<key>name</key>
+				<string>Clop Menu</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.trigger.universalaction</string>
+			<key>uid</key>
+			<string>7F6EAFB5-64D9-47AC-879C-8F85DA25C72F</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>argument</key>
 				<string></string>
 				<key>passthroughargument</key>
@@ -838,99 +1114,6 @@ printf '%s' "${return_query:-:}"</string>
 			<string>91B8DA36-20F9-40E0-A192-1DBD7779B33E</string>
 			<key>version</key>
 			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>102</integer>
-				<key>script</key>
-				<string>if [[ "${alfred_clop_request_kind:-}" == "revealSettingsFolder" ]]; then
-  /bin/mkdir -p -- "${1:-}"
-  /usr/bin/open "${1:-}"
-  exit
-elif [[ "${alfred_clop_request_kind:-}" == "configurationMutation" ]]; then
-  feedback="$(./alfred-clop configure --menu-state "${1:-}")"
-elif [[ "${alfred_clop_request_kind:-}" == "pipelinePromptCopy" ]]; then
-  prompt="$(./alfred-clop pipeline-prompt --task "${1:-}")"
-  if [[ "$prompt" == Unable\ to\ generate\ AI\ pipeline\ prompt:* ]]; then
-    feedback="$prompt"
-  else
-    printf '%s' "$prompt" | /usr/bin/pbcopy
-    feedback="Copied AI pipeline prompt"
-  fi
-else
-  feedback="$(./alfred-clop execute --request-json "${1:-}" --quiet)"
-fi
-if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
-fi</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>11</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>B30C287D-7137-4B63-8FA2-95B849C440FA</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>unstackview</key>
-				<false/>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.utility.hidealfred</string>
-			<key>uid</key>
-			<string>D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0</string>
-			<key>version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>102</integer>
-				<key>script</key>
-				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}")"
-if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
-fi</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>11</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>B1111111-1111-4111-8111-111111111111</string>
-			<key>version</key>
-			<integer>2</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -973,13 +1156,10 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard --standard)"
 if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -998,23 +1178,60 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>acceptsfiles</key>
-				<true/>
-				<key>acceptsmulti</key>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}")"
+if [[ -n "$feedback" ]]; then
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
+fi</string>
+				<key>scriptargtype</key>
 				<integer>1</integer>
-				<key>acceptstext</key>
-				<true/>
-				<key>acceptsurls</key>
-				<true/>
-				<key>name</key>
-				<string>Clop Optimize</string>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.trigger.universalaction</string>
+			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
-			<string>03E954FC-A80B-44A5-8A25-1E3A1A676063</string>
+			<string>B1111111-1111-4111-8111-111111111111</string>
 			<key>version</key>
-			<integer>1</integer>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --invert-aggressive)"
+if [[ -n "$feedback" ]]; then
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
+fi</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>B2222222-2222-4222-8222-222222222222</string>
+			<key>version</key>
+			<integer>2</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -1057,13 +1274,10 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source clipboard --aggressive)"
 if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -1082,34 +1296,23 @@ fi</string>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>102</integer>
-				<key>script</key>
-				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --invert-aggressive)"
-if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
-fi</string>
-				<key>scriptargtype</key>
+				<key>acceptsfiles</key>
+				<true/>
+				<key>acceptsmulti</key>
 				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>11</integer>
+				<key>acceptstext</key>
+				<true/>
+				<key>acceptsurls</key>
+				<true/>
+				<key>name</key>
+				<string>Clop Optimize</string>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.action.script</string>
+			<string>alfred.workflow.trigger.universalaction</string>
 			<key>uid</key>
-			<string>B2222222-2222-4222-8222-222222222222</string>
+			<string>03E954FC-A80B-44A5-8A25-1E3A1A676063</string>
 			<key>version</key>
-			<integer>2</integer>
+			<integer>1</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -1121,13 +1324,10 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --standard)"
 if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -1140,6 +1340,35 @@ fi</string>
 			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
 			<string>99999999-9999-4999-8999-999999999999</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --invert-preserve)"
+if [[ -n "$feedback" ]]; then
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
+fi</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>11</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>B3333333-3333-4333-8333-333333333333</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -1182,15 +1411,12 @@ fi</string>
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --invert-preserve)"
+				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --aggressive)"
 if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -1202,7 +1428,7 @@ fi</string>
 			<key>type</key>
 			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
-			<string>B3333333-3333-4333-8333-333333333333</string>
+			<string>AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -1216,13 +1442,10 @@ fi</string>
 				<key>script</key>
 				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --invert-aggressive --invert-preserve)"
 if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
+  escaped="${feedback//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  printf '{"alfredworkflow":{"variables":{"alfred_clop_notification":"%s"}}}' "$escaped"
 fi</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
@@ -1269,38 +1492,6 @@ fi</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>102</integer>
-				<key>script</key>
-				<string>feedback="$(./alfred-clop automate --input-source explicit --input-value "${1:-}" --aggressive)"
-if [[ -n "$feedback" ]]; then
-  title="Alfred Clop"
-  message="$feedback"
-  /usr/bin/osascript - "$title" "$message" &lt;&lt;'APPLESCRIPT'
-on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run
-APPLESCRIPT
-fi</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>11</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
 	</array>
 	<key>readme</key>
 	<string></string>
@@ -1309,236 +1500,257 @@ fi</string>
 		<key>01F79503-40ED-4F46-A67F-4E5AE07021A4</key>
 		<dict>
 			<key>xpos</key>
-			<integer>225</integer>
+			<real>225</real>
 			<key>ypos</key>
-			<integer>80</integer>
+			<real>80</real>
 		</dict>
 		<key>03E954FC-A80B-44A5-8A25-1E3A1A676063</key>
 		<dict>
 			<key>xpos</key>
-			<integer>780</integer>
+			<real>880</real>
 			<key>ypos</key>
-			<integer>645</integer>
+			<real>645</real>
 		</dict>
 		<key>086222E0-0634-41BB-8795-059C6B8AF42C</key>
 		<dict>
 			<key>xpos</key>
-			<integer>715</integer>
+			<real>715</real>
 			<key>ypos</key>
-			<integer>205</integer>
+			<real>205</real>
+		</dict>
+		<key>0FC6A55B-C1F9-4990-8113-952767ACD315</key>
+		<dict>
+			<key>xpos</key>
+			<real>1720</real>
+			<key>ypos</key>
+			<real>80</real>
 		</dict>
 		<key>11111111-1111-4111-8111-111111111111</key>
 		<dict>
 			<key>note</key>
 			<string>Menu with Clipboard</string>
 			<key>xpos</key>
-			<integer>225</integer>
+			<real>225</real>
 			<key>ypos</key>
-			<integer>205</integer>
+			<real>205</real>
 		</dict>
 		<key>1D00E9FC-D864-41B6-B316-BDAEF753DCE4</key>
 		<dict>
 			<key>xpos</key>
-			<integer>430</integer>
+			<real>430</real>
 			<key>ypos</key>
-			<integer>80</integer>
+			<real>80</real>
 		</dict>
 		<key>22222222-2222-4222-8222-222222222222</key>
 		<dict>
 			<key>note</key>
 			<string>Menu with Selection</string>
 			<key>xpos</key>
-			<integer>225</integer>
+			<real>225</real>
 			<key>ypos</key>
-			<integer>350</integer>
+			<real>350</real>
 		</dict>
 		<key>33333333-3333-4333-8333-333333333333</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Clipboard</string>
 			<key>xpos</key>
-			<integer>225</integer>
+			<real>225</real>
 			<key>ypos</key>
-			<integer>500</integer>
+			<real>500</real>
 		</dict>
 		<key>44444444-4444-4444-8444-444444444444</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Clipboard Aggressively</string>
 			<key>xpos</key>
-			<integer>225</integer>
+			<real>225</real>
 			<key>ypos</key>
-			<integer>645</integer>
+			<real>645</real>
 		</dict>
 		<key>55555555-5555-4555-8555-555555555555</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Selection</string>
 			<key>xpos</key>
-			<integer>225</integer>
+			<real>225</real>
 			<key>ypos</key>
-			<integer>805</integer>
+			<real>805</real>
 		</dict>
 		<key>66666666-6666-4666-8666-666666666666</key>
 		<dict>
 			<key>note</key>
 			<string>Optimize Selection Aggressively</string>
 			<key>xpos</key>
-			<integer>225</integer>
+			<real>225</real>
 			<key>ypos</key>
-			<integer>950</integer>
+			<real>950</real>
 		</dict>
 		<key>77777777-7777-4777-8777-777777777777</key>
 		<dict>
 			<key>xpos</key>
-			<integer>615</integer>
+			<real>615</real>
 			<key>ypos</key>
-			<integer>500</integer>
+			<real>500</real>
 		</dict>
 		<key>7F6EAFB5-64D9-47AC-879C-8F85DA25C72F</key>
 		<dict>
 			<key>xpos</key>
-			<integer>430</integer>
+			<real>430</real>
 			<key>ypos</key>
-			<integer>350</integer>
+			<real>350</real>
 		</dict>
 		<key>88888888-8888-4888-8888-888888888888</key>
 		<dict>
 			<key>xpos</key>
-			<integer>615</integer>
+			<real>615</real>
 			<key>ypos</key>
-			<integer>645</integer>
+			<real>645</real>
 		</dict>
 		<key>91B8DA36-20F9-40E0-A192-1DBD7779B33E</key>
 		<dict>
 			<key>xpos</key>
-			<integer>615</integer>
+			<real>615</real>
 			<key>ypos</key>
-			<integer>380</integer>
+			<real>380</real>
 		</dict>
 		<key>99999999-9999-4999-8999-999999999999</key>
 		<dict>
 			<key>xpos</key>
-			<integer>615</integer>
+			<real>615</real>
 			<key>ypos</key>
-			<integer>805</integer>
+			<real>805</real>
 		</dict>
 		<key>A0A0A0A0-A0A0-40A0-80A0-A0A0A0A0A0A0</key>
 		<dict>
 			<key>note</key>
 			<string>Return to Configuration</string>
 			<key>xpos</key>
-			<integer>1510</integer>
+			<real>1880</real>
 			<key>ypos</key>
-			<integer>65</integer>
+			<real>65</real>
 		</dict>
 		<key>AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA</key>
 		<dict>
 			<key>xpos</key>
-			<integer>615</integer>
+			<real>615</real>
 			<key>ypos</key>
-			<integer>950</integer>
+			<real>950</real>
 		</dict>
 		<key>B1111111-1111-4111-8111-111111111111</key>
 		<dict>
 			<key>xpos</key>
-			<integer>970</integer>
+			<real>1065</real>
 			<key>ypos</key>
-			<integer>500</integer>
+			<real>505</real>
 		</dict>
 		<key>B2222222-2222-4222-8222-222222222222</key>
 		<dict>
 			<key>xpos</key>
-			<integer>970</integer>
+			<real>1070</real>
 			<key>ypos</key>
-			<integer>645</integer>
+			<real>645</real>
 		</dict>
 		<key>B30C287D-7137-4B63-8FA2-95B849C440FA</key>
 		<dict>
 			<key>xpos</key>
-			<integer>1205</integer>
+			<real>1235</real>
 			<key>ypos</key>
-			<integer>405</integer>
+			<real>265</real>
 		</dict>
 		<key>B3333333-3333-4333-8333-333333333333</key>
 		<dict>
 			<key>xpos</key>
-			<integer>970</integer>
+			<real>1070</real>
 			<key>ypos</key>
-			<integer>805</integer>
+			<real>805</real>
 		</dict>
 		<key>B4444444-4444-4444-8444-444444444444</key>
 		<dict>
 			<key>xpos</key>
-			<integer>970</integer>
+			<real>1070</real>
 			<key>ypos</key>
-			<integer>950</integer>
+			<real>950</real>
+		</dict>
+		<key>B7AA13C4-9848-496F-9D8F-B81C7F792B9B</key>
+		<dict>
+			<key>xpos</key>
+			<real>1225</real>
+			<key>ypos</key>
+			<real>95</real>
 		</dict>
 		<key>BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB</key>
 		<dict>
 			<key>note</key>
 			<string>Explicit Clipboard Input</string>
 			<key>xpos</key>
-			<integer>465</integer>
+			<real>465</real>
 			<key>ypos</key>
-			<integer>235</integer>
+			<real>235</real>
 		</dict>
 		<key>C0C0C0C0-C0C0-40C0-80C0-C0C0C0C0C0C0</key>
 		<dict>
 			<key>note</key>
 			<string>Restore Configuration Query</string>
 			<key>xpos</key>
-			<integer>1380</integer>
+			<real>1355</real>
 			<key>ypos</key>
-			<integer>265</integer>
+			<real>95</real>
 		</dict>
 		<key>C10F19A2-39AB-4FC0-9387-33A1FB76AFA4</key>
 		<dict>
 			<key>note</key>
 			<string>Workflow Settings</string>
 			<key>xpos</key>
-			<integer>1510</integer>
+			<real>1540</real>
 			<key>ypos</key>
-			<integer>205</integer>
+			<real>205</real>
 		</dict>
 		<key>C81E575B-0A6B-45AE-B968-6A2313FB84A7</key>
 		<dict>
 			<key>xpos</key>
-			<integer>970</integer>
+			<real>870</real>
 			<key>ypos</key>
-			<integer>180</integer>
+			<real>180</real>
 		</dict>
 		<key>CDCDCDCD-CDCD-4DCD-8DCD-CDCDCDCDCDCD</key>
 		<dict>
 			<key>xpos</key>
-			<integer>715</integer>
+			<real>715</real>
 			<key>ypos</key>
-			<integer>100</integer>
+			<real>100</real>
 		</dict>
 		<key>D0D0D0D0-D0D0-40D0-80D0-D0D0D0D0D0D0</key>
 		<dict>
 			<key>note</key>
 			<string>Hide After Terminal Command Action</string>
 			<key>xpos</key>
-			<integer>1380</integer>
+			<real>1885</real>
 			<key>ypos</key>
-			<integer>435</integer>
+			<real>295</real>
 		</dict>
 		<key>D922B7A2-2433-441D-B70D-4556591E487D</key>
 		<dict>
 			<key>xpos</key>
-			<integer>1215</integer>
+			<real>1165</real>
 			<key>ypos</key>
-			<integer>95</integer>
+			<real>95</real>
+		</dict>
+		<key>EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF</key>
+		<dict>
+			<key>xpos</key>
+			<real>1610</real>
+			<key>ypos</key>
+			<real>110</real>
 		</dict>
 		<key>F0F0F0F0-F0F0-40F0-80F0-F0F0F0F0F0F0</key>
 		<dict>
 			<key>note</key>
 			<string>Apply Configuration and Return</string>
 			<key>xpos</key>
-			<integer>1205</integer>
+			<real>1060</real>
 			<key>ypos</key>
-			<integer>235</integer>
+			<real>235</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
@@ -1603,6 +1815,25 @@ fi</string>
 			<string>checkbox</string>
 			<key>variable</key>
 			<string>readClipboardForKeyword</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<false/>
+				<key>required</key>
+				<false/>
+				<key>text</key>
+				<string>Recover the newest valid clipboard input</string>
+			</dict>
+			<key>description</key>
+			<string>When an Alfred menu has no supported current clipboard input, search local Alfred Clipboard History. Never applies to headless execution.</string>
+			<key>label</key>
+			<string>Clipboard History Fallback</string>
+			<key>type</key>
+			<string>checkbox</string>
+			<key>variable</key>
+			<string>recoverClipboardHistory</string>
 		</dict>
 		<dict>
 			<key>config</key>

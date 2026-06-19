@@ -88,25 +88,60 @@ struct WorkflowRoutingTests {
     func quietNotificationScriptsUseResolvedCLIFeedback() throws {
         let plist = try workflowPlist()
         let objects = try #require(plist["objects"] as? [[String: Any]])
-        let notificationScripts = objects.compactMap { object -> String? in
+        let scripts = objects.compactMap { object -> String? in
             guard object["type"] as? String == "alfred.workflow.action.script",
                   let config = object["config"] as? [String: Any],
-                  let script = config["script"] as? String,
-                  script.contains("display notification") else {
+                  let script = config["script"] as? String else {
                 return nil
             }
             return script
+        }
+        let notificationScripts = scripts.filter {
+            $0.contains("alfred_clop_notification")
+        }
+        let notificationOutput = try #require(objects.first {
+            $0["uid"] as? String == "0FC6A55B-C1F9-4990-8113-952767ACD315"
+        })
+        let notificationConfig = try #require(
+            notificationOutput["config"] as? [String: Any]
+        )
+        let notificationGate = try #require(objects.first {
+            $0["uid"] as? String == "EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF"
+        })
+        let gateConfig = try #require(
+            notificationGate["config"] as? [String: Any]
+        )
+        let gateConditions = try #require(
+            gateConfig["conditions"] as? [[String: Any]]
+        )
+        let connections = try #require(
+            plist["connections"] as? [String: [[String: Any]]]
+        )
+        let notificationRoutes = connections.values.flatMap { $0 }.filter {
+            $0["destinationuid"] as? String
+                == "EFEFEFEF-EFEF-4EFE-8FEF-EFEFEFEFEFEF"
         }
 
         let feedbackScripts = notificationScripts.filter {
             $0.contains("if [[ -n \"$feedback\" ]]")
         }
+        #expect(scripts.allSatisfy {
+            !$0.contains("display notification") && !$0.contains("osascript")
+        })
         #expect(notificationScripts.count == 11)
-        #expect(feedbackScripts.count == 11)
+        #expect(feedbackScripts.count == 10)
         #expect(feedbackScripts.allSatisfy {
             $0.contains("if [[ -n \"$feedback\" ]]")
                 && !$0.contains("${dnd")
         })
+        #expect(notificationConfig["title"] as? String == "Clop")
+        #expect(
+            notificationConfig["text"] as? String
+                == "{var:alfred_clop_notification}"
+        )
+        #expect(gateConditions.first?["matchmode"] as? Int == 4)
+        #expect(gateConditions.first?["matchstring"] as? String == ".+")
+        #expect(notificationRoutes.count == 11)
         #expect(notificationScripts.contains {
             $0.contains("alfred-clop configure")
                 && $0.contains("configurationMutation")
