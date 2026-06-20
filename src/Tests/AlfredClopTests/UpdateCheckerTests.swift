@@ -173,7 +173,7 @@ struct UpdateCheckerTests {
 
         #expect(response.items.count == 1)
         #expect(item.title == "Check for Updates")
-        #expect(item.subtitle.contains("Automatic checks are disabled"))
+        #expect(item.subtitle == "Automatic checks disabled · ↩ Check now")
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.updateCheck.rawValue

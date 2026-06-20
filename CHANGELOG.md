@@ -2,6 +2,12 @@
 
 ## UNRELEASED
 
+### Changed
+* Tightened the manual update-check hint and made its Return shortcut consistent with other Configuration affordances.
+
+### Fixed
+* Kept Configuration open after applying output-template and deletion changes with Return, while documenting Command-Return as the apply-and-close shortcut in the output-template editor.
+
 ---
 ## [v1.0.1](https://github.com/ognistik/alfred-clop/releases/tag/v1.0.1) - 2026/06/20
 ### Added

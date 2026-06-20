@@ -746,11 +746,11 @@ enum ConfigurationMenu {
         environment: Environment
     ) -> ScriptFilterItem {
         let automaticStatus = environment.notifyOnUpdates
-            ? "Automatic checks are enabled"
-            : "Automatic checks are disabled"
+            ? "Automatic checks enabled"
+            : "Automatic checks disabled"
         return ScriptFilterItem(
             title: "Check for Updates",
-            subtitle: "\(automaticStatus) · Press Return to check now",
+            subtitle: "\(automaticStatus) · ↩ Check now",
             arg: "",
             valid: true,
             autocomplete: ":updates",
@@ -1136,7 +1136,7 @@ enum ConfigurationMenu {
                     arg: removeJSON,
                     valid: true,
                     icon: WorkflowIcon.destructive,
-                    variables: returnMutationVariables(removeJSON),
+                    variables: inMenuMutationVariables(removeJSON),
                     mods: closeModifier(removeJSON),
                     text: ScriptFilterText(largetype: pipelineDetails(pipeline))
                 ),
@@ -1220,7 +1220,7 @@ enum ConfigurationMenu {
                         arg: replaceJSON,
                         subtitle: "Replace Pipeline",
                         valid: true,
-                        variables: returnMutationVariables(replaceJSON)
+                        variables: inMenuMutationVariables(replaceJSON)
                     )),
                     text: ScriptFilterText(largetype: pipelineAddDetails(request))
                 )
@@ -1233,12 +1233,12 @@ enum ConfigurationMenu {
                 subtitle: subtitle,
                 arg: addJSON,
                 valid: true,
-                variables: returnMutationVariables(addJSON),
+                variables: inMenuMutationVariables(addJSON),
                 mods: ScriptFilterMods(command: ScriptFilterModifier(
                     arg: replaceJSON,
                     subtitle: "Replace if Pipeline Exists",
                     valid: true,
-                    variables: returnMutationVariables(replaceJSON)
+                    variables: inMenuMutationVariables(replaceJSON)
                 )),
                 text: ScriptFilterText(largetype: pipelineAddDetails(request))
             )
@@ -1450,10 +1450,10 @@ enum ConfigurationMenu {
         ))
         return templateReferenceItem(
             title: title,
-            subtitle: "\(templateExample(template)) · ⌘L Reference",
+            subtitle: "\(templateExample(template)) · ⌘L Reference · ⌘↩ Apply and close",
             arg: stateJSON,
             valid: true,
-            variables: returnMutationVariables(stateJSON),
+            variables: inMenuMutationVariables(stateJSON),
             mods: closeModifier(stateJSON),
             icon: nil
         )
@@ -1735,7 +1735,7 @@ enum ConfigurationMenu {
                     arg: removeJSON,
                     valid: true,
                     icon: WorkflowIcon.destructive,
-                    variables: returnMutationVariables(removeJSON),
+                    variables: inMenuMutationVariables(removeJSON),
                     mods: closeModifier(removeJSON)
                 ),
                 ScriptFilterItem(
@@ -2099,7 +2099,7 @@ enum ConfigurationMenu {
                 subtitle: "\(subtitle) · ⌘↩ Apply and close",
                 arg: stateJSON,
                 valid: true,
-                variables: returnMutationVariables(stateJSON),
+                variables: inMenuMutationVariables(stateJSON),
                 mods: closeModifier(stateJSON)
             )
         ])
@@ -2240,10 +2240,10 @@ enum ConfigurationMenu {
         ]
     }
 
-    private static func returnMutationVariables(_ stateJSON: String) -> [String: String] {
+    private static func inMenuMutationVariables(_ stateJSON: String) -> [String: String] {
         [
             ActionMenu.requestKindVariable:
-                WorkflowRequestKind.configurationMutationReturn.rawValue,
+                WorkflowRequestKind.parameterStep.rawValue,
             ActionMenu.menuStateVariable: stateJSON
         ]
     }

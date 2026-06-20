@@ -249,7 +249,7 @@ struct SettingsFoundationTests {
         )
         #expect(
             confirmation.items.first?.variables?[ActionMenu.requestKindVariable]
-                == WorkflowRequestKind.configurationMutationReturn.rawValue
+                == WorkflowRequestKind.parameterStep.rawValue
         )
         #expect(
             confirmation.items.first?.mods?.command?
@@ -588,14 +588,16 @@ struct SettingsFoundationTests {
         ])
         #expect(
             editor.items.allSatisfy {
-                $0.mods?.command?.variables?[ActionMenu.requestKindVariable]
-                    == WorkflowRequestKind.configurationMutation.rawValue
+                $0.subtitle.contains("⌘↩ Apply and close")
+                    && $0.mods?.command?
+                        .variables?[ActionMenu.requestKindVariable]
+                        == WorkflowRequestKind.configurationMutation.rawValue
             }
         )
         #expect(
             editor.items.allSatisfy {
                 $0.variables?[ActionMenu.requestKindVariable]
-                    == WorkflowRequestKind.configurationMutationReturn.rawValue
+                    == WorkflowRequestKind.parameterStep.rawValue
             }
         )
     }
@@ -789,7 +791,7 @@ struct SettingsFoundationTests {
         #expect(confirmation.items.first?.icon == WorkflowIcon.destructive)
         #expect(
             confirmation.items.first?.variables?[ActionMenu.requestKindVariable]
-                == WorkflowRequestKind.configurationMutationReturn.rawValue
+                == WorkflowRequestKind.parameterStep.rawValue
         )
         #expect(
             confirmation.items.first?.mods?.command?
