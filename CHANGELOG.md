@@ -4,6 +4,7 @@
 
 ### Changed
 * Made automatic Clipboard History recovery skip ambiguous web links, while preserving clearly supported media URLs and permissive handling for a standalone URL on the current clipboard.
+* Gave the main-menu update notice a distinctive high-contrast icon so available workflow releases are easier to spot.
 
 ---
 ## [v1.0.0](https://github.com/ognistik/alfred-clop/releases/tag/v1.0.0) - 2026/06/19

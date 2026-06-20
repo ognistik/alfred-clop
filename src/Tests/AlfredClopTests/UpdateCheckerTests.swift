@@ -115,6 +115,7 @@ struct UpdateCheckerTests {
         #expect(item.arg == release.url)
         #expect(item.quickLookURL == release.url)
         #expect(item.action?.url == .single(release.url))
+        #expect(item.icon == WorkflowIcon.updateAvailable)
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
                 == WorkflowRequestKind.openUpdateRelease.rawValue

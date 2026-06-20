@@ -311,6 +311,7 @@ struct UpdateCoordinator {
             valid: true,
             autocomplete: "update",
             match: "update upgrade new version release github",
+            icon: WorkflowIcon.updateAvailable,
             variables: [
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.openUpdateRelease.rawValue

@@ -248,6 +248,7 @@ release endpoint, excluding drafts and prereleases. A newer release:
 
 - notifies once for that version through Alfred's native notification object;
 - remains visible as the first root-menu item until the workflow is updated;
+- uses a distinct badged workflow icon so the update affordance stands out;
 - opens the matching GitHub release when selected.
 
 Automatic failures are quiet and throttled for seven days so an unavailable
