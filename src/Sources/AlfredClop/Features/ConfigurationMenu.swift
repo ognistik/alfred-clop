@@ -637,12 +637,23 @@ enum ConfigurationMenu {
             ))
             items.append(ScriptFilterItem(
                 title: "Clear cached clipboard images",
-                subtitle: "\(summary.fileCount) files · \(formattedBytes(summary.byteCount))",
+                subtitle: "\(summary.fileCount) files · \(formattedBytes(summary.byteCount)) · ⌘↩ Reveal Cache Folder",
                 arg: stateJSON,
                 valid: true,
                 autocomplete: ":clear cache",
                 match: "clear cached clipboard images cache cleanup",
-                variables: transitionVariables(stateJSON)
+                variables: transitionVariables(stateJSON),
+                mods: cache.preferredDirectory.map { directory in
+                    ScriptFilterMods(command: ScriptFilterModifier(
+                        arg: directory.path,
+                        subtitle: "Reveal Cache Folder",
+                        valid: true,
+                        variables: [
+                            ActionMenu.requestKindVariable:
+                                WorkflowRequestKind.revealFolder.rawValue
+                        ]
+                    ))
+                }
             ))
         }
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -696,7 +707,7 @@ enum ConfigurationMenu {
                 valid: true,
                 variables: [
                     ActionMenu.requestKindVariable:
-                        WorkflowRequestKind.revealSettingsFolder.rawValue
+                        WorkflowRequestKind.revealFolder.rawValue
                 ]
             )),
             quickLookURL: filePath,

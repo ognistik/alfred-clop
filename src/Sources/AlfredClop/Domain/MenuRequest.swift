@@ -87,7 +87,7 @@ enum WorkflowRequestKind: String, Codable {
     case diagnosticReportCopy
     case pipelinePromptCopy
     case openUpdateRelease
-    case revealSettingsFolder
+    case revealFolder
     case updateCheck
     case workflowSettings
 }

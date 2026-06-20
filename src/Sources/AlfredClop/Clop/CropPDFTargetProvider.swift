@@ -12,7 +12,7 @@ protocol CropPDFTargetProviding {
 }
 
 struct CropPDFTargetProvider: CropPDFTargetProviding {
-    private static let cacheSchemaVersion = 2
+    private static let cacheSchemaVersion = 3
 
     private enum ListKind: String, Codable {
         case devices
@@ -39,8 +39,17 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
 
     private struct CacheDocument: Codable {
         var schemaVersion: Int
-        var cliPath: String
+        var cliFingerprint: CLIFingerprint
         var values: [CachedTargetValue]
+    }
+
+    private struct CLIFingerprint: Codable, Equatable {
+        var path: String
+        var fileIdentifier: UInt64?
+        var fileSize: UInt64?
+        var modificationDate: TimeInterval?
+        var appVersion: String?
+        var appBuild: String?
     }
 
     private struct CachedTargetValue: Codable {
@@ -93,7 +102,8 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
         guard let path = diagnostics.path, diagnostics.found else {
             throw CropPDFTargetProviderError.missingCLI(diagnostics.errors)
         }
-        if let cached = cachedValues(kind: kind, cliPath: path) {
+        let fingerprint = cliFingerprint(path: path)
+        if let cached = cachedValues(kind: kind, fingerprint: fingerprint) {
             return cached
         }
         let command = ClopCommand(
@@ -119,13 +129,13 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
         guard !parsed.isEmpty else {
             throw CropPDFTargetProviderError.invalidOutput
         }
-        cache(parsed, kind: kind, cliPath: path)
+        cache(parsed, kind: kind, fingerprint: fingerprint)
         return parsed
     }
 
     private func cachedValues(
         kind: ListKind,
-        cliPath: String
+        fingerprint: CLIFingerprint
     ) -> [CropPDFTargetValue]? {
         guard let url = cacheURL(kind: kind),
               let data = try? Data(contentsOf: url),
@@ -134,7 +144,7 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
                   from: data
               ),
               document.schemaVersion == Self.cacheSchemaVersion,
-              document.cliPath == cliPath else {
+              document.cliFingerprint == fingerprint else {
             return nil
         }
         return document.values.map(\.target)
@@ -143,12 +153,12 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
     private func cache(
         _ values: [CropPDFTargetValue],
         kind: ListKind,
-        cliPath: String
+        fingerprint: CLIFingerprint
     ) {
         guard let url = cacheURL(kind: kind),
               let data = try? JSONEncoder().encode(CacheDocument(
                   schemaVersion: Self.cacheSchemaVersion,
-                  cliPath: cliPath,
+                  cliFingerprint: fingerprint,
                   values: values.map(CachedTargetValue.init)
               )) else {
             return
@@ -158,6 +168,47 @@ struct CropPDFTargetProvider: CropPDFTargetProviding {
             withIntermediateDirectories: true
         )
         try? data.write(to: url, options: .atomic)
+    }
+
+    private func cliFingerprint(path: String) -> CLIFingerprint {
+        let attributes = try? fileManager.attributesOfItem(atPath: path)
+        let versions = appVersions(containing: path)
+        return CLIFingerprint(
+            path: path,
+            fileIdentifier: (attributes?[.systemFileNumber] as? NSNumber)?.uint64Value,
+            fileSize: (attributes?[.size] as? NSNumber)?.uint64Value,
+            modificationDate: (attributes?[.modificationDate] as? Date)?
+                .timeIntervalSince1970,
+            appVersion: versions?.version,
+            appBuild: versions?.build
+        )
+    }
+
+    private func appVersions(
+        containing executablePath: String
+    ) -> (version: String?, build: String?)? {
+        var url = URL(fileURLWithPath: executablePath)
+        while url.path != "/" {
+            if url.pathExtension == "app" {
+                let infoURL = url
+                    .appendingPathComponent("Contents", isDirectory: true)
+                    .appendingPathComponent("Info.plist")
+                guard let data = fileManager.contents(atPath: infoURL.path),
+                      let plist = try? PropertyListSerialization.propertyList(
+                          from: data,
+                          options: [],
+                          format: nil
+                      ) as? [String: Any] else {
+                    return (nil, nil)
+                }
+                return (
+                    plist["CFBundleShortVersionString"] as? String,
+                    plist["CFBundleVersion"] as? String
+                )
+            }
+            url.deleteLastPathComponent()
+        }
+        return nil
     }
 
     private func cacheURL(kind: ListKind) -> URL? {

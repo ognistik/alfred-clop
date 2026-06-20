@@ -28,13 +28,23 @@ struct ClipboardImageCache {
                 .appendingPathComponent("alfred-clop", isDirectory: true)
                 .appendingPathComponent("clipboard-images", isDirectory: true)
         )
-        self.directories = Array(Set(directories.map(\.standardizedFileURL)))
+        self.directories = directories
+            .map(\.standardizedFileURL)
+            .reduce(into: []) { result, directory in
+                if !result.contains(directory) {
+                    result.append(directory)
+                }
+            }
         self.fileManager = fileManager
     }
 
     init(directories: [URL], fileManager: FileManager = .default) {
         self.directories = directories
         self.fileManager = fileManager
+    }
+
+    var preferredDirectory: URL? {
+        directories.first
     }
 
     func summary() -> ClipboardImageCacheSummary {

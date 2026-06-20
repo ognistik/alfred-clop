@@ -330,6 +330,70 @@ struct CropPDFParameterMenuTests {
         )))
     }
 
+    @Test
+    func targetCacheRefreshesWhenClopChangesAtSamePath() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let contents = directory
+            .appendingPathComponent("Clop.app", isDirectory: true)
+            .appendingPathComponent("Contents", isDirectory: true)
+        let support = contents.appendingPathComponent(
+            "SharedSupport",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: support,
+            withIntermediateDirectories: true
+        )
+        let info = contents.appendingPathComponent("Info.plist")
+        func writeInfo(version: String, build: String) throws {
+            let data = try PropertyListSerialization.data(
+                fromPropertyList: [
+                    "CFBundleShortVersionString": version,
+                    "CFBundleVersion": build
+                ],
+                format: .xml,
+                options: 0
+            )
+            try data.write(to: info)
+        }
+        try writeInfo(version: "1.0", build: "100")
+        let cli = support.appendingPathComponent("ClopCLI")
+        try Data("first".utf8).write(to: cli)
+        let runner = SequencedCropPDFTargetRunner(outputs: [
+            "Devices:\n  First Device\n",
+            "Devices:\n  Updated Device\n",
+            "Devices:\n  Replaced CLI Device\n"
+        ])
+        let provider = CropPDFTargetProvider(
+            discovery: StubDiscovery(diagnostics: ClopDiagnostics(
+                found: true,
+                path: cli.path,
+                source: "test",
+                errors: []
+            )),
+            runner: runner,
+            environment: Environment(values: [
+                "alfred_workflow_cache": directory
+                    .appendingPathComponent("cache", isDirectory: true).path
+            ])
+        )
+
+        #expect(try provider.devices().map(\.value) == ["First Device"])
+        #expect(try provider.devices().map(\.value) == ["First Device"])
+        #expect(runner.callCount == 1)
+
+        try writeInfo(version: "1.1", build: "110")
+
+        #expect(try provider.devices().map(\.value) == ["Updated Device"])
+        #expect(runner.callCount == 2)
+
+        try Data("updated executable contents".utf8).write(to: cli)
+
+        #expect(try provider.devices().map(\.value) == ["Replaced CLI Device"])
+        #expect(runner.callCount == 3)
+    }
+
     private func cropPDFResponse(
         query: String,
         presets: [ActionPreset] = [],
@@ -430,5 +494,25 @@ private struct StubCropPDFTargetProvider: CropPDFTargetProviding {
                 aliases: ["Tabloid & Ledger & ANSI B/D (11:17)"]
             )
         ]
+    }
+}
+
+private final class SequencedCropPDFTargetRunner: ClopProcessRunning,
+    @unchecked Sendable {
+    private var outputs: [String]
+    private(set) var callCount = 0
+
+    init(outputs: [String]) {
+        self.outputs = outputs
+    }
+
+    func run(_ command: ClopCommand) throws -> ClopProcessResult {
+        let index = min(callCount, outputs.count - 1)
+        callCount += 1
+        return ClopProcessResult(
+            terminationStatus: 0,
+            standardOutput: Data(outputs[index].utf8),
+            standardError: Data()
+        )
     }
 }

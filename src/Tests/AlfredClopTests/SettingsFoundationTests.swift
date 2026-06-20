@@ -471,7 +471,7 @@ struct SettingsFoundationTests {
         #expect(
             settings.mods?.command?
                 .variables?[ActionMenu.requestKindVariable]
-                == WorkflowRequestKind.revealSettingsFolder.rawValue
+                == WorkflowRequestKind.revealFolder.rawValue
         )
         #expect(settings.mods?.command?.arg == directory.path)
     }
@@ -918,10 +918,28 @@ struct SettingsFoundationTests {
         try Data(repeating: 3, count: 40).write(to: unrelated)
         let cache = ClipboardImageCache(directories: [directory])
 
+        let menu = ConfigurationMenu.namespaceResponse(
+            query: ":",
+            environment: Environment(values: [
+                PresetStore.workflowDataEnvironmentKey: directory.path
+            ]),
+            cache: cache
+        )
+        let cleanup = try #require(menu.items.first {
+            $0.title == "Clear cached clipboard images"
+        })
+
         #expect(cache.summary() == ClipboardImageCacheSummary(
             fileCount: 2,
             byteCount: 30
         ))
+        #expect(cleanup.subtitle.contains("⌘↩ Reveal Cache Folder"))
+        #expect(cleanup.mods?.command?.arg == directory.path)
+        #expect(
+            cleanup.mods?.command?
+                .variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.revealFolder.rawValue
+        )
         #expect(cache.removeAll().fileCount == 2)
         #expect(FileManager.default.fileExists(atPath: unrelated.path))
     }
