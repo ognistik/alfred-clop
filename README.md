@@ -35,7 +35,7 @@ There are multiple everyday ways to open the workflow.
 1. Select files in Finder, Alfred, or another app, then run the `Clop Menu` Universal Action.
 2. Copy a file, folder, URL, path, or image, then type the workflow keyword. The default keyword is `cl`.
 3. Configure one of the workflow Hotkeys in Alfred.
-4. Use [the external trigger](docs/external-trigger.md) for absolute control and flexibility when passing files to the workflow and creating other custom automations.
+4. Use [the external trigger](docs/external-trigger.md) for absolute control and flexibility when passing files to the workflow and creating custom automations.
 
 Once the menu opens, type to search. Press Return to run the selected action or enter the selected parameter menu.
 
@@ -88,7 +88,7 @@ The exact list depends on the selected media. For example, image actions are hid
 | Strip Metadata | Remove metadata from supported files. |
 | Pipeline | Run saved Clop pipelines. |
 
-Some actions run immediately. Others open a parameter menu so you can choose sizes, factors, formats, PDF targets, or saved presets.
+In the main menu, the "Optimize" option can directly perform a quick optimization with modifiers (⌥ Standard, ⌘ Aggressive). Every action will open a parameter menu so you can choose sizes, factors, formats, PDF targets, or saved presets.
 
 ## Configuration
 
