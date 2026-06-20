@@ -1636,7 +1636,7 @@ Set any Hotkeys you want directly on the workflow canvas. The workflow works imm
 
 ## AUTOMATION &amp; HELP
 
-The public External Trigger can open menus or execute actions from scripts, Shortcuts, Keyboard Maestro, and other Alfred workflows. See the [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) for syntax and examples.
+The External Trigger can open menus or execute actions from scripts, Shortcuts, Keyboard Maestro, and other Alfred workflows. See the [External Trigger Guide](https://github.com/ognistik/alfred-clop/blob/main/docs/external-trigger.md) for syntax and examples.
 
 For full documentation, troubleshooting, updates, and issue reporting, [visit Clop for Alfred on GitHub](https://github.com/ognistik/alfred-clop). To report a problem, type `:` and choose `Diagnostics` to copy a privacy-conscious support report.</string>
 	<key>uidata</key>
@@ -2081,7 +2081,7 @@ For full documentation, troubleshooting, updates, and issue reporting, [visit Cl
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Success messages and config updates.</string>
+				<string>Success messages and config updates</string>
 			</dict>
 			<key>description</key>
 			<string>Successful processing stays quiet when Clop's result UI is shown.</string>
@@ -2119,7 +2119,7 @@ For full documentation, troubleshooting, updates, and issue reporting, [visit Cl
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Failed or incomplete operations.</string>
+				<string>Failed or incomplete operations</string>
 			</dict>
 			<key>description</key>
 			<string>Interactive Alfred errors remain visible.</string>
@@ -2157,7 +2157,7 @@ For full documentation, troubleshooting, updates, and issue reporting, [visit Cl
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Process files in subfolders.</string>
+				<string>Process files in subfolders</string>
 			</dict>
 			<key>description</key>
 			<string>Controls both menu inspection and Clop execution.</string>
