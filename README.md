@@ -224,7 +224,6 @@ See [External Trigger reference](docs/external-trigger.md) for the exact syntax 
 - [Architecture](docs/architecture.md)
 - [External Trigger reference](docs/external-trigger.md)
 - [Clop CLI reference](docs/clop-cli-reference.md)
-- [Release process](docs/release.md)
 
 ## Support the workflow
 
