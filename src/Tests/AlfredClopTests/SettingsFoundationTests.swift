@@ -348,15 +348,11 @@ struct SettingsFoundationTests {
             environment: environment
         )
         #expect(friendly.items.map(\.title) == [
-            "Add “-optimized”",
-            "Add “optimized-”"
+            "Photo.png → Original folder/Photo-optimized.png",
+            "Photo.png → Original folder/optimized-Photo.png"
         ])
-        #expect(friendly.items[0].subtitle.contains("Photo-optimized.png"))
-        #expect(friendly.items[1].subtitle.contains("optimized-Photo.png"))
-        #expect(friendly.items[0].subtitle.contains("Original folder/"))
-        #expect(!friendly.items[0].subtitle.contains("~/Pictures"))
         #expect(friendly.items.allSatisfy {
-            $0.subtitle.contains("⌘L")
+            $0.subtitle == "↩ Apply · ⌘↩ Apply and close · ⌘L Reference"
                 && $0.text?.largetype == reference
         })
 
@@ -367,7 +363,7 @@ struct SettingsFoundationTests {
         )
         #expect(advanced.items.count == 1)
         #expect(advanced.items[0].valid)
-        #expect(advanced.items[0].subtitle.contains("%P/Processed"))
+        #expect(advanced.items[0].title.contains("Original folder/Processed"))
     }
 
     @Test
@@ -382,12 +378,9 @@ struct SettingsFoundationTests {
         )
 
         for (input, message) in [
-            ("%P", "filename"),
-            ("%P/", "ends with a folder"),
             ("%f-clop", "predictable"),
             ("%P/%f.%e", "automatically"),
             ("%P/%f-clop.png", "automatically"),
-            ("~someone/%f", "not supported")
         ] {
             let response = ConfigurationMenu.response(
                 stateJSON: stateJSON,
@@ -403,6 +396,28 @@ struct SettingsFoundationTests {
                     .contains("%P  Source folder") == true
             )
         }
+
+        for (input, subtitle) in [
+            ("%P", "Try %P/%f-clop · ⌘L Reference"),
+            ("%P/", "Try %P/%f-clop · ⌘L Reference"),
+            ("~", "Try ~/%f-clop · ⌘L Reference")
+        ] {
+            let response = ConfigurationMenu.response(
+                stateJSON: stateJSON,
+                query: input,
+                environment: environment
+            )
+            #expect(response.items.first?.title == "Add a filename after the folder")
+            #expect(response.items.first?.subtitle == subtitle)
+        }
+
+        let unsupportedTilde = ConfigurationMenu.response(
+            stateJSON: stateJSON,
+            query: "~desk",
+            environment: environment
+        )
+        #expect(unsupportedTilde.items.first?.title == "Use ~/ for your home folder")
+        #expect(unsupportedTilde.items.first?.subtitle == "Example: ~/Desktop/%f · ⌘L Reference")
 
         let advancedTokens = ConfigurationMenu.response(
             stateJSON: stateJSON,
@@ -583,8 +598,8 @@ struct SettingsFoundationTests {
             environment: environment
         )
         #expect(editor.items.map(\.title) == [
-            "Add “-optimized”",
-            "Add “optimized-”"
+            "Photo.png → Original folder/Photo-optimized.png",
+            "Photo.png → Original folder/optimized-Photo.png"
         ])
         #expect(
             editor.items.allSatisfy {

@@ -1413,11 +1413,11 @@ enum ConfigurationMenu {
         }
         return ScriptFilterResponse(items: [
             saveTemplateItem(
-                title: "Add “-\(name)”",
+                title: templateResultTitle(suffix),
                 template: suffix
             ),
             saveTemplateItem(
-                title: "Add “\(name)-”",
+                title: templateResultTitle(prefix),
                 template: prefix
             )
         ])
@@ -1427,6 +1427,18 @@ enum ConfigurationMenu {
         _ template: String
     ) -> ScriptFilterResponse {
         if let validation = OutputTemplateValidator.validate(template) {
+            if validation == .missingFilename {
+                return templateError(
+                    "Add a filename after the folder",
+                    "Try \(filenameExample(for: template))"
+                )
+            }
+            if validation == .unsupportedTilde {
+                return templateError(
+                    "Use ~/ for your home folder",
+                    "Example: ~/Desktop/%f"
+                )
+            }
             return templateError(
                 "Invalid output template",
                 validation.localizedDescription
@@ -1434,7 +1446,7 @@ enum ConfigurationMenu {
         }
         return ScriptFilterResponse(items: [
             saveTemplateItem(
-                title: "Use template \(template)",
+                title: templateResultTitle(template),
                 template: template
             )
         ])
@@ -1450,7 +1462,7 @@ enum ConfigurationMenu {
         ))
         return templateReferenceItem(
             title: title,
-            subtitle: "\(templateExample(template)) · ⌘L Reference · ⌘↩ Apply and close",
+            subtitle: "↩ Apply · ⌘↩ Apply and close · ⌘L Reference",
             arg: stateJSON,
             valid: true,
             variables: inMenuMutationVariables(stateJSON),
@@ -2004,6 +2016,10 @@ enum ConfigurationMenu {
     }
 
     private static func templateExample(_ template: String) -> String {
+        "\(template) · \(templateResultTitle(template))"
+    }
+
+    private static func templateResultTitle(_ template: String) -> String {
         let preview = OutputTemplateValidator.preview(
             template: template,
             source: URL(fileURLWithPath: "/Original folder/Photo.png"),
@@ -2018,7 +2034,14 @@ enum ConfigurationMenu {
                 with: "~"
             )
         }
-        return "\(template) · Photo.png → \(friendly)"
+        return "Photo.png → \(friendly)"
+    }
+
+    private static func filenameExample(for template: String) -> String {
+        if template.hasSuffix("/") {
+            return "\(template)%f-clop"
+        }
+        return "\(template)/%f-clop"
     }
 
     private static let tokenReference = """

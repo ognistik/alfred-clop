@@ -4,6 +4,7 @@
 
 ### Changed
 * Tightened the manual update-check hint and made its Return shortcut consistent with other Configuration affordances.
+* Shortened output-template guidance by moving errors and output previews into titles and reserving subtitles for concise examples and keyboard actions.
 
 ### Fixed
 * Kept Configuration open after applying output-template and deletion changes with Return, while documenting Command-Return as the apply-and-close shortcut in the output-template editor.
