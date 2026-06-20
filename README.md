@@ -46,7 +46,9 @@ The workflow is built around searchable Alfred menus.
 - Type a few letters to filter actions, settings, presets, formats, devices, or sizes.
 - Press Tab when Alfred shows an autocomplete suggestion.
 - Press Return to choose the highlighted item.
-- Use Command-Return, Shift-Return, or Command-L when Alfred shows those shortcuts in the subtitle.
+- Press Shift to Quick Look the first input.
+- Press Command-L for Large Type details. Processing menus include input paths and pixel dimensions for local images and videos.
+- Use Command-Return or Shift-Return when Alfred shows those shortcuts in the subtitle.
 - Delete the current query to go back to the broader menu.
 
 Many parameter menus accept direct typing. For example, in Crop / Resize you can type a size like `16:9`, `1200x630`, or `w128`; in Downscale you can type `50%`; in Convert menus you can search for formats.
