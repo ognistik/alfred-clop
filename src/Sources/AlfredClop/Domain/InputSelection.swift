@@ -13,6 +13,7 @@ struct InputSelection: Codable, Equatable {
     var inputs: [String]
     var mediaKinds: [MediaKind]
     var itemKinds: [InputItemKind]
+    var pixelDimensions: [PixelDimensions?]?
     var ambiguousKinds: [AmbiguousInputKind]
     var processableItemCount: Int?
     var recoveredFromClipboardHistory: Bool
@@ -21,6 +22,7 @@ struct InputSelection: Codable, Equatable {
         inputs: [String],
         mediaKinds: [MediaKind],
         itemKinds: [InputItemKind] = [],
+        pixelDimensions: [PixelDimensions?]? = nil,
         ambiguousKinds: [AmbiguousInputKind] = [],
         processableItemCount: Int? = nil,
         recoveredFromClipboardHistory: Bool = false
@@ -30,6 +32,7 @@ struct InputSelection: Codable, Equatable {
         self.itemKinds = itemKinds.isEmpty
             ? Array(repeating: .localFile, count: inputs.count)
             : itemKinds
+        self.pixelDimensions = pixelDimensions
         self.ambiguousKinds = ambiguousKinds
         self.processableItemCount = processableItemCount
         self.recoveredFromClipboardHistory = recoveredFromClipboardHistory

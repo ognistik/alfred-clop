@@ -392,7 +392,8 @@ enum PipelineMenu {
         let stateJSON = encoded(state)
         let affordance = ScriptFilterAffordance.processingInputs(
             request.inputs,
-            itemKinds: request.itemKinds
+            itemKinds: request.itemKinds,
+            pixelDimensions: request.pixelDimensions
         )
         return ScriptFilterResponse(
             items: items.map(affordance.apply),
@@ -683,7 +684,10 @@ enum PipelineMenu {
             "Steps",
             pipeline.rawText
         ]
-        if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
+        if let inputs = ScriptFilterAffordance.inputLargeType(
+            request.inputs,
+            pixelDimensions: request.pixelDimensions
+        ) {
             lines += ["", "Inputs", inputs]
         }
         return lines.joined(separator: "\n")
@@ -712,7 +716,10 @@ enum PipelineMenu {
             "opt: optimize before the written steps",
             "hide: hide Clop's floating result UI"
         ]
-        if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
+        if let inputs = ScriptFilterAffordance.inputLargeType(
+            request.inputs,
+            pixelDimensions: request.pixelDimensions
+        ) {
             lines += ["", "Inputs", inputs]
         }
         lines += ["", inlinePipelineReference(for: request)]
@@ -727,7 +734,10 @@ enum PipelineMenu {
             "",
             PipelineSyntax.syntaxReference()
         ]
-        if let inputs = ScriptFilterAffordance.inputLargeType(request.inputs) {
+        if let inputs = ScriptFilterAffordance.inputLargeType(
+            request.inputs,
+            pixelDimensions: request.pixelDimensions
+        ) {
             lines += ["", "Inputs", inputs]
         }
         return lines.joined(separator: "\n")
@@ -908,6 +918,7 @@ enum PipelineMenu {
                 paths: request.inputs,
                 mediaKinds: request.mediaKinds,
                 itemKinds: request.itemKinds,
+                pixelDimensions: request.pixelDimensions,
                 ambiguousKinds: request.ambiguousKinds,
                 processableItemCount: request.processableItemCount
             ),

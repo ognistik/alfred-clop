@@ -4,6 +4,58 @@ import Testing
 
 struct ScriptFilterResponseTests {
     @Test
+    func inputLargeTypeShowsDimensionsAlongsideAbbreviatedHomePath() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let value = ScriptFilterAffordance.inputLargeType(
+            ["\(home)/Desktop/photo with spaces.jpg"],
+            pixelDimensions: [PixelDimensions(width: 4032, height: 3024)]
+        )
+
+        #expect(value == "~/Desktop/photo with spaces.jpg (4032 × 3024 px)")
+    }
+
+    @Test
+    func inputLargeTypeShowsSharedFolderOnceForBatch() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let value = ScriptFilterAffordance.inputLargeType(
+            [
+                "\(home)/Desktop/DayOne/first image.jpg",
+                "\(home)/Desktop/DayOne/second image.jpg"
+            ],
+            pixelDimensions: [
+                PixelDimensions(width: 3000, height: 2000),
+                PixelDimensions(width: 1920, height: 1080)
+            ]
+        )
+
+        #expect(value == """
+        2 inputs
+        Folder: ~/Desktop/DayOne
+
+        first image.jpg (3000 × 2000 px)
+        second image.jpg (1920 × 1080 px)
+        """)
+    }
+
+    @Test
+    func inputLargeTypePreservesPathOnlyFallbackInMixedBatch() {
+        let value = ScriptFilterAffordance.inputLargeType(
+            ["/tmp/photo.jpg", "https://example.com/movie.mp4"],
+            pixelDimensions: [
+                PixelDimensions(width: 1200, height: 800),
+                nil
+            ]
+        )
+
+        #expect(value == """
+        2 inputs
+
+        /tmp/photo.jpg (1200 × 800 px)
+        https://example.com/movie.mp4
+        """)
+    }
+
+    @Test
     func responseEncodesRequiredAlfredFields() throws {
         let response = ScriptFilterResponse(items: [
             ScriptFilterItem(

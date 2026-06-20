@@ -585,14 +585,15 @@ enum ActionMenu {
 
         let affordance = ScriptFilterAffordance.processingInputs(
             selection.inputs,
-            itemKinds: selection.itemKinds
+            itemKinds: selection.itemKinds,
+            pixelDimensions: selection.pixelDimensions
         )
 
         return ScriptFilterResponse(
             items: filteredActions.map { definition in
                 let argument = encodedArgument(
                     for: definition,
-                    inputs: selection.inputs,
+                    selection: selection,
                     context: context,
                     environment: environment
                 )
@@ -691,7 +692,7 @@ enum ActionMenu {
 
     private static func encodedArgument(
         for definition: ActionDefinition,
-        inputs: [String],
+        selection: InputSelection,
         context: ActionInputContext,
         environment: Environment
     ) -> String {
@@ -700,8 +701,13 @@ enum ActionMenu {
                 return try JSONOutput.string(
                     for: ParameterStepRequest(
                         action: definition.action,
-                        inputs: inputs,
-                        inputContext: context
+                        inputs: selection.inputs,
+                        inputContext: context,
+                        mediaKinds: selection.mediaKinds,
+                        itemKinds: selection.itemKinds,
+                        pixelDimensions: selection.pixelDimensions,
+                        ambiguousKinds: selection.ambiguousKinds,
+                        processableItemCount: selection.processableItemCount
                     ),
                     prettyPrinted: false
                 )
@@ -726,7 +732,7 @@ enum ActionMenu {
             }
             return try JSONOutput.string(
                 for: OperationRequest(
-                    inputs: inputs,
+                    inputs: selection.inputs,
                     action: action,
                     execution: execution
                 ),
@@ -874,6 +880,7 @@ enum ActionMenu {
             inputContext: context,
             mediaKinds: selection.mediaKinds,
             itemKinds: selection.itemKinds,
+            pixelDimensions: selection.pixelDimensions,
             ambiguousKinds: selection.ambiguousKinds,
             processableItemCount: selection.processableItemCount
         )
@@ -907,6 +914,7 @@ enum ActionMenu {
                     paths: selection.inputs,
                     mediaKinds: selection.mediaKinds,
                     itemKinds: selection.itemKinds,
+                    pixelDimensions: selection.pixelDimensions,
                     ambiguousKinds: selection.ambiguousKinds,
                     processableItemCount: selection.processableItemCount
                 ),
@@ -933,6 +941,7 @@ enum ActionMenu {
                 paths: selection.inputs,
                 mediaKinds: selection.mediaKinds,
                 itemKinds: selection.itemKinds,
+                pixelDimensions: selection.pixelDimensions,
                 ambiguousKinds: selection.ambiguousKinds,
                 processableItemCount: selection.processableItemCount
             ),

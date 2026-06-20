@@ -65,3 +65,11 @@ final class StubClipboardHistoryReader: ClipboardHistoryReading {
         return StubClipboardHistoryCandidateReader(candidates: candidates)
     }
 }
+
+struct StubMediaDimensionsInspector: MediaDimensionsInspecting {
+    var values: [String: PixelDimensions]
+
+    func dimensions(for url: URL, kind: MediaKind) -> PixelDimensions? {
+        values[url.standardizedFileURL.path]
+    }
+}

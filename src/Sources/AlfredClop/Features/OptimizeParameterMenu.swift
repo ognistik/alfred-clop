@@ -122,7 +122,8 @@ enum OptimizeParameterMenu {
 
         let affordance = ScriptFilterAffordance.processingInputs(
             request.inputs,
-            itemKinds: request.itemKinds
+            itemKinds: request.itemKinds,
+            pixelDimensions: request.pixelDimensions
         )
 
         var items = [ScriptFilterItem]()
@@ -1050,7 +1051,10 @@ enum OptimizeParameterMenu {
         for media: OptimizeMediaKind,
         request: ParameterStepRequest
     ) -> String {
-        let inputReference = ScriptFilterAffordance.inputLargeType(request.inputs)
+        let inputReference = ScriptFilterAffordance.inputLargeType(
+            request.inputs,
+            pixelDimensions: request.pixelDimensions
+        )
             .map { "\n\nInputs\n\($0)" }
             ?? ""
         return "\(OptimizeControlParser.largeTypeReference(for: media))\(inputReference)"
@@ -1116,7 +1120,8 @@ enum OptimizeParameterMenu {
         let stateJSON = encoded(state)
         let affordance = ScriptFilterAffordance.processingInputs(
             request.inputs,
-            itemKinds: request.itemKinds
+            itemKinds: request.itemKinds,
+            pixelDimensions: request.pixelDimensions
         )
         return ScriptFilterResponse(
             items: items.map(affordance.apply),
@@ -1151,6 +1156,7 @@ enum OptimizeParameterMenu {
                 paths: request.inputs,
                 mediaKinds: request.mediaKinds,
                 itemKinds: request.itemKinds,
+                pixelDimensions: request.pixelDimensions,
                 ambiguousKinds: request.ambiguousKinds,
                 processableItemCount: request.processableItemCount
             ),

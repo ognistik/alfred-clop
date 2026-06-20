@@ -491,7 +491,8 @@ enum CropParameterMenu {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let affordance = ScriptFilterAffordance.processingInputs(
             request.inputs,
-            itemKinds: request.itemKinds
+            itemKinds: request.itemKinds,
+            pixelDimensions: request.pixelDimensions
         )
         if let controlsQuery = controlsQueryValue(from: trimmedQuery) {
             return controlsResponse(
@@ -1302,7 +1303,8 @@ enum CropParameterMenu {
     ) -> String {
         ScriptFilterAffordance.referenceLargeType(
             CropControlParser.largeTypeReference,
-            inputs: request.inputs
+            inputs: request.inputs,
+            pixelDimensions: request.pixelDimensions
         )
     }
 
@@ -1405,6 +1407,7 @@ enum CropParameterMenu {
                     paths: request.inputs,
                     mediaKinds: request.mediaKinds,
                     itemKinds: request.itemKinds,
+                    pixelDimensions: request.pixelDimensions,
                     ambiguousKinds: request.ambiguousKinds,
                     processableItemCount: request.processableItemCount
                 ),

@@ -746,7 +746,8 @@ enum ConversionParameterMenu {
         let reference = "\(heading)\n\n\(body)"
         return ScriptFilterAffordance.referenceLargeType(
             reference,
-            inputs: request?.inputs ?? []
+            inputs: request?.inputs ?? [],
+            pixelDimensions: request?.pixelDimensions
         )
     }
 
@@ -902,7 +903,8 @@ enum ConversionParameterMenu {
         let stateJSON = encoded(state)
         let affordance = ScriptFilterAffordance.processingInputs(
             request.inputs,
-            itemKinds: request.itemKinds
+            itemKinds: request.itemKinds,
+            pixelDimensions: request.pixelDimensions
         )
         return ScriptFilterResponse(
             items: items.map(affordance.apply),
@@ -948,9 +950,10 @@ enum ConversionParameterMenu {
             ActionMenu.inputJSONVariable: (try? JSONOutput.string(
                 for: MenuInput(
                     paths: request.inputs,
-                    mediaKinds: request.mediaKinds,
-                    itemKinds: request.itemKinds,
-                    ambiguousKinds: request.ambiguousKinds,
+                mediaKinds: request.mediaKinds,
+                itemKinds: request.itemKinds,
+                pixelDimensions: request.pixelDimensions,
+                ambiguousKinds: request.ambiguousKinds,
                     processableItemCount: request.processableItemCount
                 ),
                 prettyPrinted: false

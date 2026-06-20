@@ -96,6 +96,7 @@ struct MenuInput: Codable, Equatable {
     var paths: [String]
     var mediaKinds: [MediaKind]?
     var itemKinds: [InputItemKind]?
+    var pixelDimensions: [PixelDimensions?]?
     var ambiguousKinds: [AmbiguousInputKind]?
     var processableItemCount: Int?
 
@@ -103,12 +104,14 @@ struct MenuInput: Codable, Equatable {
         paths: [String],
         mediaKinds: [MediaKind]? = nil,
         itemKinds: [InputItemKind]? = nil,
+        pixelDimensions: [PixelDimensions?]? = nil,
         ambiguousKinds: [AmbiguousInputKind]? = nil,
         processableItemCount: Int? = nil
     ) {
         self.paths = paths
         self.mediaKinds = mediaKinds
         self.itemKinds = itemKinds
+        self.pixelDimensions = pixelDimensions
         self.ambiguousKinds = ambiguousKinds
         self.processableItemCount = processableItemCount
     }
@@ -323,6 +326,7 @@ struct ParameterStepRequest: Codable, Equatable {
     var inputContext: ActionInputContext
     var mediaKinds: [MediaKind]?
     var itemKinds: [InputItemKind]?
+    var pixelDimensions: [PixelDimensions?]?
     var ambiguousKinds: [AmbiguousInputKind]?
     var processableItemCount: Int?
 
@@ -332,6 +336,7 @@ struct ParameterStepRequest: Codable, Equatable {
         inputContext: ActionInputContext = .selected,
         mediaKinds: [MediaKind]? = nil,
         itemKinds: [InputItemKind]? = nil,
+        pixelDimensions: [PixelDimensions?]? = nil,
         ambiguousKinds: [AmbiguousInputKind]? = nil,
         processableItemCount: Int? = nil
     ) {
@@ -341,6 +346,7 @@ struct ParameterStepRequest: Codable, Equatable {
         self.inputContext = inputContext
         self.mediaKinds = mediaKinds
         self.itemKinds = itemKinds
+        self.pixelDimensions = pixelDimensions
         self.ambiguousKinds = ambiguousKinds
         self.processableItemCount = processableItemCount
     }

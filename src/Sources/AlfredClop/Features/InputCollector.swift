@@ -213,6 +213,8 @@ struct InputCollector {
     var fileManager: FileManager = .default
     var detector = MediaKindDetector()
     var folderInspector: any FolderInspecting = FoundationFolderInspector()
+    var dimensionsInspector: any MediaDimensionsInspecting =
+        NativeMediaDimensionsInspector()
     var clipboardImageMaterializer: any ClipboardImageMaterializing =
         FoundationClipboardImageMaterializer()
     var clipboardHistory: any ClipboardHistoryReading =
@@ -388,6 +390,7 @@ struct InputCollector {
                 inputs: input.paths,
                 mediaKinds: mediaKinds,
                 itemKinds: itemKinds,
+                pixelDimensions: input.pixelDimensions,
                 ambiguousKinds: ambiguousKinds,
                 processableItemCount: input.processableItemCount
             )
@@ -435,6 +438,7 @@ struct InputCollector {
         var inputs = [String]()
         var mediaKinds = [MediaKind]()
         var itemKinds = [InputItemKind]()
+        var pixelDimensions = [PixelDimensions?]()
         var ambiguousKinds = [AmbiguousInputKind]()
         var processableItemCount = 0
         var hasAmbiguousCount = false
@@ -451,6 +455,7 @@ struct InputCollector {
                 }
                 inputs.append(value)
                 itemKinds.append(.remoteURL)
+                pixelDimensions.append(nil)
                 if kind == .unknown {
                     if !ambiguousKinds.contains(.remoteURL) {
                         ambiguousKinds.append(.remoteURL)
@@ -499,6 +504,7 @@ struct InputCollector {
                 }
                 inputs.append(path)
                 itemKinds.append(.folder)
+                pixelDimensions.append(nil)
                 for mediaKind in inspection.mediaKinds where !mediaKinds.contains(mediaKind) {
                     mediaKinds.append(mediaKind)
                 }
@@ -513,6 +519,9 @@ struct InputCollector {
             } else {
                 inputs.append(path)
                 itemKinds.append(.localFile)
+                pixelDimensions.append(
+                    dimensionsInspector.dimensions(for: url, kind: kind)
+                )
                 mediaKinds.append(kind)
                 processableItemCount += 1
             }
@@ -526,6 +535,7 @@ struct InputCollector {
             inputs: inputs,
             mediaKinds: mediaKinds,
             itemKinds: itemKinds,
+            pixelDimensions: pixelDimensions,
             ambiguousKinds: ambiguousKinds,
             processableItemCount: hasAmbiguousCount ? nil : processableItemCount
         )

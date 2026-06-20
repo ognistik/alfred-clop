@@ -155,7 +155,8 @@ struct CropParameterMenuTests {
         #expect(!item.subtitle.contains(explanation))
         #expect(!item.subtitle.contains("Examples:"))
         #expect(item.text?.largetype?.contains("Crop / Resize controls") == true)
-        #expect(item.text?.largetype?.contains("/tmp/first image.png") == true)
+        #expect(item.text?.largetype?.contains("Folder: /tmp") == true)
+        #expect(item.text?.largetype?.contains("first image.png") == true)
         #expect(request.inputs == ["/tmp/first image.png", "/tmp/second.pdf"])
         #expect(item.subtitle.hasPrefix("Passed 2 files ·"))
         #expect(

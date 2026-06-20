@@ -5,6 +5,36 @@ import Testing
 
 struct InputCollectorTests {
     @Test
+    func localImageAndVideoDimensionsAreCollectedAlongsideInputs() throws {
+        let image = try temporaryFile(named: "image with spaces.png")
+        let video = image.deletingLastPathComponent().appendingPathComponent("movie.mp4")
+        let pdf = image.deletingLastPathComponent().appendingPathComponent("document.pdf")
+        try Data().write(to: video)
+        try Data().write(to: pdf)
+        defer { try? FileManager.default.removeItem(at: image.deletingLastPathComponent()) }
+        let imageDimensions = PixelDimensions(width: 2400, height: 1600)
+        let videoDimensions = PixelDimensions(width: 1080, height: 1920)
+        let collector = InputCollector(
+            dimensionsInspector: StubMediaDimensionsInspector(values: [
+                image.standardizedFileURL.path: imageDimensions,
+                video.standardizedFileURL.path: videoDimensions
+            ])
+        )
+
+        let selection = try collector.collect(
+            items: [image.path, video.path, pdf.path],
+            extractText: false,
+            recursiveFolders: false
+        )
+
+        #expect(selection.pixelDimensions == [
+            imageDimensions,
+            videoDimensions,
+            nil
+        ])
+    }
+
+    @Test
     func clipboardNativeFileURLsUseExistingInputPipeline() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }

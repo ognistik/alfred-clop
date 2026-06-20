@@ -248,6 +248,7 @@ enum ClopRequestDispatcher {
             inputContext: context,
             mediaKinds: selection.mediaKinds,
             itemKinds: selection.itemKinds,
+            pixelDimensions: selection.pixelDimensions,
             ambiguousKinds: selection.ambiguousKinds
         )
         switch action {

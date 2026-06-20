@@ -558,8 +558,16 @@ struct ActionMenuTests {
         context: ActionInputContext
     ) throws {
         let inputs = ["/tmp/first image.png", "/tmp/second image.jpg"]
+        let pixelDimensions: [PixelDimensions?] = [
+            PixelDimensions(width: 4032, height: 3024),
+            PixelDimensions(width: 1200, height: 800)
+        ]
         let response = ActionMenu.response(
-            for: InputSelection(inputs: inputs, mediaKinds: [.image]),
+            for: InputSelection(
+                inputs: inputs,
+                mediaKinds: [.image],
+                pixelDimensions: pixelDimensions
+            ),
             query: "crop",
             context: context
         )
@@ -579,10 +587,12 @@ struct ActionMenuTests {
 
         #expect(request.action == .crop)
         #expect(request.inputs == inputs)
+        #expect(request.pixelDimensions == pixelDimensions)
         #expect(request.inputContext == context)
         #expect(state.mode == .crop)
         #expect(state.parameterRequest?.action == request.action)
         #expect(state.parameterRequest?.inputs == request.inputs)
+        #expect(state.parameterRequest?.pixelDimensions == pixelDimensions)
         #expect(state.parameterRequest?.inputContext == request.inputContext)
         #expect(
             item.variables?[ActionMenu.requestKindVariable]
@@ -601,6 +611,7 @@ struct ActionMenuTests {
             from: Data(inputJSON.utf8)
         )
         #expect(menuInput.paths == inputs)
+        #expect(menuInput.pixelDimensions == pixelDimensions)
     }
 
     @Test

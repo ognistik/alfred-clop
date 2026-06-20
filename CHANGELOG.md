@@ -2,6 +2,9 @@
 
 ## UNRELEASED
 
+### Added
+* Added image and video pixel dimensions to Large Type input details, with abbreviated home paths and a single shared-folder heading for same-folder batches.
+
 ### Changed
 * Made automatic Clipboard History recovery skip ambiguous web links, while preserving clearly supported media URLs and permissive handling for a standalone URL on the current clipboard.
 * Gave the main-menu update notice a distinctive high-contrast icon so available workflow releases are easier to spot.
