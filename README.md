@@ -154,7 +154,7 @@ failures stay quiet so temporary network problems do not interrupt normal use.
 
 ## Output templates
 
-When `Preserve originals` is enabled, or you select this option with a modifier (shift) Clop for Alfred uses the configured output template. The built-in template is:
+When `Preserve originals` is enabled (or you select this option while holding shift) Clop for Alfred uses the configured output template. The built-in template is:
 
 ```text
 %P/%f-clop

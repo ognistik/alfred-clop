@@ -105,6 +105,15 @@ Supported shortcuts:
 | `crop pdf:` | Crop PDF |
 | `uncrop pdf:` | Uncrop PDF |
 | `strip metadata:` | Strip Metadata |
+| `pipeline:` or `pipelines:` | Pipeline |
+
+For example, open the Pipelines menu directly for Finder's current selection:
+
+```text
+pipelines:
+
+finder
+```
 
 You can also use the explicit `menu:` form with the visible workflow action
 name. Matching is case-insensitive.
@@ -158,8 +167,9 @@ Execution requests can override the configured output behavior for one run.
 
 | Parameter | Values | Meaning |
 | --- | --- | --- |
+| `output` | `default` | Keep the workflow's normal output behavior for this action. |
 | `output` | `template` | Use the configured output template. |
-| `output` | `false`, `off`, `no` | Disable template output for this run. |
+| `output` | `false`, `off`, `no`, `in-place`, `in place` | Process in place for this run. |
 | `output template` | template string | Use a custom output template for this run. |
 
 Examples:
@@ -180,7 +190,8 @@ output template: %P/%f-podcast
 ```
 
 `output` and `output template` are execute-only parameters. They are rejected
-for `menu:` requests.
+for `menu:` requests. Strip Metadata does not support a template or in-place
+override; use its normal output behavior.
 
 ## Optimize
 
@@ -375,10 +386,11 @@ format: webm
 
 Common optional settings:
 
-| Parameter | Applies to |
-| --- | --- |
-| `compression` | image, video, audio where Clop supports compression |
-| `bitrate` | audio |
+| Media | Formats | Optional setting |
+| --- | --- | --- |
+| image | `webp`, `avif`, `heic`, `jxl`, `jpeg`, `png` | `compression: 5` through `compression: 100` |
+| video | `mp4`, `gif`, `webm`, `hevc`, `x265`, `av1` | `compression: 5` through `compression: 100`, or `compression: auto`, for `mp4` only |
+| audio | `mp3`, `aac`, `m4a`, `opus`, `ogg`, `flac`, `wav`, `aiff` | positive integer `bitrate` |
 
 `jpg` normalizes to `jpeg`.
 
@@ -429,6 +441,9 @@ Supported controls:
 
 Ratios normalize, so `32:18` becomes `16:9`.
 
+Compatibility aliases are also accepted: `aspect ratio` or `resolution` for
+`ratio`, `paper` for `paper size`, and `layout` for `page layout`.
+
 ## Uncrop PDF and Strip Metadata
 
 These actions do not require extra parameters.
@@ -478,7 +493,7 @@ Supported parameters:
 | `pipeline` | Saved pipeline name or inline pipeline steps. |
 | `name` | Compatibility alias for `pipeline`. Prefer `pipeline` in new requests. |
 | `opt` | Optimize before inline pipeline steps. Only valid for inline steps. |
-| `skip` | Compatibility alias for skipping the automatic optimize step where supported. |
+| `optimize` | Readable alias for `opt`. Use one or the other, not both. |
 | `hide` | Hide Clop result UI for this pipeline run. |
 
 Known newer Clop step names such as `normalize` are treated as inline pipeline
