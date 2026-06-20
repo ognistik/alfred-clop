@@ -2,6 +2,8 @@
 
 ## UNRELEASED
 
+---
+## [v1.0.1](https://github.com/ognistik/alfred-clop/releases/tag/v1.0.1) - 2026/06/20
 ### Added
 * Added image and video pixel dimensions to Large Type input details, with abbreviated home paths and a single shared-folder heading for same-folder batches.
 
