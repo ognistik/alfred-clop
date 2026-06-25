@@ -192,8 +192,8 @@ struct PipelineMenuTests {
     @Test
     func newerBareKnownPipelineStepsCanRunInline() throws {
         let response = PipelineMenu.response(
-            stateJSON: stateJSON(mediaKinds: [.audio]),
-            query: "normalize",
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "fork",
             provider: PipelineProviderStub()
         )
 
@@ -205,7 +205,7 @@ struct PipelineMenuTests {
             from: Data((item.arg ?? "").utf8)
         )
         #expect(operation.action == .pipeline(PipelineRunRequest(
-            pipeline: "normalize",
+            pipeline: "fork",
             isInline: true
         )))
     }
@@ -367,7 +367,7 @@ struct PipelineMenuTests {
             "--json",
             "--no-progress",
             "--skip-errors",
-            "--gui",
+            "--show-result",
             "convert(to: webp)",
             "/tmp/image.png"
         ])
@@ -388,6 +388,7 @@ struct PipelineMenuTests {
             "--json",
             "--no-progress",
             "--skip-errors",
+            "--hide-result",
             "optimise -> convert(to: webp)",
             "/tmp/image.png"
         ])
@@ -401,6 +402,19 @@ struct PipelineMenuTests {
             execution: execution
         ))
         #expect(normalized.arguments.contains("optimise -> convert(to: webp)"))
+
+        var hiddenByDefaultExecution = execution
+        hiddenByDefaultExecution.showClopUI = false
+        let hiddenByGlobalSetting = try builder.command(for: OperationRequest(
+            inputs: ["/tmp/image.png"],
+            action: .pipeline(PipelineRunRequest(
+                pipeline: "convert(to: webp)",
+                isInline: true
+            )),
+            execution: hiddenByDefaultExecution
+        ))
+        #expect(hiddenByGlobalSetting.arguments.contains("--hide-result"))
+        #expect(!hiddenByGlobalSetting.arguments.contains("--show-result"))
     }
 
     @Test
@@ -496,7 +510,7 @@ struct PipelineMenuTests {
             "--json",
             "--no-progress",
             "--skip-errors",
-            "--gui",
+            "--show-result",
             "--recursive",
             "To WebP",
             "/tmp/image.png"

@@ -486,9 +486,9 @@ struct PublicRequestParserTests {
         """)
         let newerStep = try PublicRequestParser.parse("""
         execute: Pipeline
-        pipeline: normalize
+        pipeline: fork
 
-        /tmp/audio.wav
+        /tmp/image.png
         """)
 
         #expect(saved.route == .execute(action: .pipeline(PipelineRunRequest(
@@ -505,7 +505,7 @@ struct PublicRequestParserTests {
             PipelineRunRequest(pipeline: "To WebP")
         )))
         #expect(newerStep.route == .execute(action: .pipeline(
-            PipelineRunRequest(pipeline: "normalize", isInline: true)
+            PipelineRunRequest(pipeline: "fork", isInline: true)
         )))
     }
 

@@ -167,6 +167,12 @@ enum PipelineSyntax {
             example: "copyLinkForSending(expiration: 1h)"
         ),
         Step(
+            name: "fork",
+            category: .actions,
+            summary: "surface a second result card",
+            example: "fork(location: sameFolder)"
+        ),
+        Step(
             name: "shelveWith",
             category: .actions,
             summary: "shelve with Yoink, Dockside, or Dropover",
@@ -333,13 +339,18 @@ enum PipelineSyntax {
             savedCreation ? "Name => steps ; options" : "step(key: value) -> step ; options",
             "",
             "Options",
-            "opt: optimize before the written steps",
-            "hide: hide Clop's floating result UI"
+            "opt: optimize before the written steps"
         ]
         if savedCreation {
-            lines.insert("img / vid / aud / pdf / all: file type", at: lines.endIndex)
+            lines += [
+                "hide: save this Clop pipeline as hidden-result; this overrides the workflow Floating Result setting",
+                "img / vid / aud / pdf / all: file type"
+            ]
             lines += ["", "Without opt, Clop saves the written steps only."]
         } else {
+            lines += [
+                "hide: hide Clop's floating result UI for this run"
+            ]
             lines += ["", "Without opt, Clop for Alfred runs only the written steps."]
         }
 
@@ -347,7 +358,8 @@ enum PipelineSyntax {
             "",
             "Execution notes",
             "Workflow settings wrap the run; pipeline steps and saved settings can still do their own UI/output work.",
-            "hide affects Clop result UI for this pipeline.",
+            "Without hide, the workflow Floating Result setting decides whether the Clop result UI appears.",
+            "Saved pipelines created with hide keep that Clop setting and run quietly when selected later.",
             "copyToClipboard is a step, separate from workflow Copy Result.",
             "",
             "Supported steps",

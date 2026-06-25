@@ -2383,9 +2383,10 @@ private enum PipelineAddParser {
         }
 
         if !split.options.isEmpty {
-            let allowed = PipelineSyntax.optionNames.union([
-                "img", "image", "vid", "video", "aud", "audio", "pdf", "all"
-            ])
+            let allowed: Set<String> = [
+                "img", "image", "vid", "video", "aud", "audio", "pdf", "all",
+                "opt", "hide"
+            ]
             if let invalid = split.options
                 .split(whereSeparator: \.isWhitespace)
                 .map(String.init)

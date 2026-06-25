@@ -220,7 +220,8 @@ Runtime options used by Clop for Alfred:
 
 | Flag | Meaning |
 | --- | --- |
-| `--gui` | Show Clop result UI unless the workflow or pipeline says to hide it. |
+| `--show-result` | Show Clop result UI for this pipeline run. |
+| `--hide-result` | Hide Clop result UI for this pipeline run. |
 | `--recursive` | Include files in subfolders. |
 | `--json`, `--no-progress`, `--skip-errors` | Structured, quiet workflow execution. |
 
@@ -237,7 +238,7 @@ clop pipeline list --json
 clop pipeline show --json NAME
 clop pipeline add [--file-type image|video|pdf|audio] [--skip-optimisation] [--hide-result] [--force] NAME STEPS
 clop pipeline delete NAME
-clop pipeline prompt [--copy] [TASK...]
+clop pipeline prompt [--copy] [--compact] [TASK...]
 ```
 
 Known pipeline step names tracked by the workflow include:
@@ -245,6 +246,7 @@ Known pipeline step names tracked by the workflow include:
 ```text
 optimise, downscale, lowerBitrate, convert, crop, extractPagesAsImages,
 targetSize, stripExif, watermark, removeAudio, changeSpeed, capFps, normalize,
+fork,
 ```
 
 The `pipeline prompt` command prints a local reference prompt for an AI

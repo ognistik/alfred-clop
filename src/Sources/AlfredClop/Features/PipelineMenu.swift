@@ -714,7 +714,7 @@ enum PipelineMenu {
             "",
             "Options",
             "opt: optimize before the written steps",
-            "hide: hide Clop's floating result UI"
+            "hide: hide Clop's floating result UI for this run"
         ]
         if let inputs = ScriptFilterAffordance.inputLargeType(
             request.inputs,
@@ -862,7 +862,7 @@ enum PipelineMenu {
             "",
             "Options",
             "opt: optimize before the written steps",
-            "hide: hide Clop's floating result UI"
+            "hide: save this Clop pipeline as hidden-result; this overrides the workflow Floating Result setting"
         ].joined(separator: "\n")
     }
 

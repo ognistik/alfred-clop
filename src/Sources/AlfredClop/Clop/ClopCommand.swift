@@ -605,7 +605,9 @@ struct ClopCommandBuilder {
             "--skip-errors"
         ]
         if request.execution.showClopUI, !pipeline.hideResult {
-            arguments.append("--gui")
+            arguments.append("--show-result")
+        } else {
+            arguments.append("--hide-result")
         }
         if request.execution.recursiveFolders {
             arguments.append("--recursive")

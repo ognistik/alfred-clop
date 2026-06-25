@@ -496,8 +496,12 @@ Supported parameters:
 | `optimize` | Readable alias for `opt`. Use one or the other, not both. |
 | `hide` | Hide Clop result UI for this pipeline run. |
 
-Known newer Clop step names such as `normalize` are treated as inline pipeline
-steps.
+When `hide` is not provided, the workflow's Floating Result setting is used.
+Saved pipelines created with hide keep that Clop setting and run quietly when
+selected later.
+
+Known newer Clop step names such as `normalize` and `fork` are treated as inline
+pipeline steps.
 
 ## Typed JSON
 
