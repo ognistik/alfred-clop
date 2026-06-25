@@ -2,6 +2,8 @@
 
 ## UNRELEASED
 
+---
+## [v1.1.0](https://github.com/ognistik/alfred-clop/releases/tag/v1.1.0) - 2026/06/25
 ### Changed
 * Tightened the manual update-check hint and made its Return shortcut consistent with other Configuration affordances.
 * Shortened output-template guidance by moving errors and output previews into titles and reserving subtitles for concise examples and keyboard actions.
