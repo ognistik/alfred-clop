@@ -27,6 +27,11 @@ enum PipelineSyntax {
         var detail: String
     }
 
+    struct StepPrefixCompletion: Equatable {
+        var step: Step
+        var autocomplete: String
+    }
+
     static let steps: [Step] = [
         Step(
             name: "optimise",
@@ -200,6 +205,44 @@ enum PipelineSyntax {
 
     static var knownStepNames: Set<String> {
         Set(stepLookup.keys)
+    }
+
+    static func stepPrefixMatches(for value: String, minimumLength: Int = 4) -> [Step] {
+        let normalized = normalizedStepName(value)
+        guard normalized.count >= minimumLength else {
+            return []
+        }
+        return steps.filter {
+            $0.name.lowercased().hasPrefix(normalized)
+        }
+    }
+
+    static func stepPrefixCompletion(
+        for value: String,
+        minimumLength: Int = 4
+    ) -> StepPrefixCompletion? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let split = splitOptions(from: trimmed) else {
+            return nil
+        }
+        var expressions = stepExpressions(in: split.steps)
+        guard let trailing = expressions.last,
+              trailing == stepName(from: trailing) else {
+            return nil
+        }
+        guard !isKnownStep(trailing) else {
+            return nil
+        }
+        let matches = stepPrefixMatches(for: trailing, minimumLength: minimumLength)
+        guard matches.count == 1, let step = matches.first else {
+            return nil
+        }
+        expressions[expressions.count - 1] = step.name
+        var autocomplete = expressions.joined(separator: " -> ")
+        if !split.options.isEmpty {
+            autocomplete += " ; \(split.options)"
+        }
+        return StepPrefixCompletion(step: step, autocomplete: autocomplete)
     }
 
     static func isKnownStep(_ name: String) -> Bool {

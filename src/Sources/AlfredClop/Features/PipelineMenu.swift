@@ -157,9 +157,17 @@ enum PipelineMenu {
             request: request,
             environment: environment
         )
+        let stepCompletionItem = stepCompletionItem(query: query, request: request)
 
         guard !visible.isEmpty else {
             let items = [guideItem(for: request, category: category, emptySavedList: pipelines.isEmpty)]
+            if let stepCompletionItem {
+                return response(
+                    items: [stepCompletionItem],
+                    request: request,
+                    state: state
+                )
+            }
             if let guidanceItem {
                 return response(
                     items: [guidanceItem],
@@ -214,7 +222,9 @@ enum PipelineMenu {
             return lhs.result.score > rhs.result.score
         }
         var resultItems = [ScriptFilterItem]()
-        if let guidanceItem {
+        if matches.isEmpty, let stepCompletionItem {
+            resultItems.append(stepCompletionItem)
+        } else if let guidanceItem {
             resultItems.append(guidanceItem)
         } else if let inlineItem {
             resultItems.append(inlineItem)
@@ -227,6 +237,9 @@ enum PipelineMenu {
                 matchedStep: $0.result.matchedStep
             )
         })
+        if resultItems.isEmpty, let stepCompletionItem {
+            resultItems.append(stepCompletionItem)
+        }
         guard !resultItems.isEmpty else {
             return response(
                 items: [guideItem(for: request, category: category, noMatches: true)],
@@ -238,6 +251,26 @@ enum PipelineMenu {
             items: resultItems,
             request: request,
             state: state
+        )
+    }
+
+    private static func stepCompletionItem(
+        query: String,
+        request: ParameterStepRequest
+    ) -> ScriptFilterItem? {
+        guard let completion = PipelineSyntax.stepPrefixCompletion(for: query) else {
+            return nil
+        }
+        return ScriptFilterItem(
+            uid: "pipeline.step.complete.\(completion.autocomplete)",
+            title: "Complete step: \(completion.step.name)",
+            subtitle: "\(completion.step.summary) · ⇥ \(completion.step.name) · ⌘L Syntax",
+            arg: "",
+            valid: false,
+            autocomplete: completion.autocomplete,
+            match: "\(query) \(completion.step.name) \(completion.step.summary) pipeline step",
+            icon: WorkflowIcon.guide,
+            text: ScriptFilterText(largetype: inlinePipelineReference(for: request))
         )
     }
 

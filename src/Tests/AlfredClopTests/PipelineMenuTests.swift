@@ -290,6 +290,80 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func strongStepPrefixSuggestsCompletionWhenSavedPipelinesDoNotMatch() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "copyLinkForSe",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(response.items.map(\.title) == ["Complete step: copyLinkForSending"])
+        #expect(item.valid == false)
+        #expect(item.autocomplete == "copyLinkForSending")
+        #expect(item.subtitle == "copy a secure sharing link · ⇥ copyLinkForSending · ⌘L Syntax")
+    }
+
+    @Test
+    func chainedStepPrefixSuggestsCompletionWithWholePipelineAutocomplete() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "copyLinkForSending -> conv",
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(response.items.map(\.title) == ["Complete step: convert"])
+        #expect(item.valid == false)
+        #expect(item.autocomplete == "copyLinkForSending -> convert")
+        #expect(item.subtitle == "change format · ⇥ convert · ⌘L Syntax")
+    }
+
+    @Test
+    func typoSuggestionDoesNotBecomeAutocomplete() throws {
+        let query = "copyLinkForSending -> convertt(to: webp)"
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: query,
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.title == "Unknown pipeline step convertt")
+        #expect(item.subtitle.contains("Did you mean convert?"))
+        #expect(item.autocomplete == query)
+    }
+
+    @Test
+    func stepPrefixHintDoesNotAppearWhenSavedPipelineMatches() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "copyLinkForSe",
+            provider: PipelineProviderStub(pipelines: [
+                SavedPipeline(
+                    name: "Share",
+                    rawText: "copyLinkForSending(expiration: 1h)"
+                )
+            ])
+        )
+
+        let item = try #require(response.items.first)
+        #expect(response.items.map(\.title) == ["Share"])
+        #expect(item.subtitle.contains("Step: copyLinkForSending"))
+    }
+
+    @Test
+    func broadStepPrefixFallsBackToNoMatches() {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "runS",
+            provider: PipelineProviderStub()
+        )
+
+        #expect(response.items.map(\.title) == ["No matching pipelines"])
+    }
+
+    @Test
     func noSavedPipelinesStillAllowsInlineSyntax() throws {
         let response = PipelineMenu.response(
             stateJSON: stateJSON(mediaKinds: [.image]),

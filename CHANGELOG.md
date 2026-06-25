@@ -6,6 +6,7 @@
 * Tightened the manual update-check hint and made its Return shortcut consistent with other Configuration affordances.
 * Shortened output-template guidance by moving errors and output previews into titles and reserving subtitles for concise examples and keyboard actions.
 * Updated Pipeline support for Clop 3.2 by recognizing the new `fork` step, using Clop's pipeline result-visibility flags, and clarifying how inline `hide`, saved pipeline `hide`, and the workflow Floating Result setting interact.
+* Added autocomplete hints for strong inline Pipeline step prefixes, including chained steps, while keeping saved pipeline matches and typo guidance distinct.
 
 ### Fixed
 * Kept Configuration open after applying output-template and deletion changes with Return, while documenting Command-Return as the apply-and-close shortcut in the output-template editor.
