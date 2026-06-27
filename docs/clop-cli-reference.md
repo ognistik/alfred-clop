@@ -226,10 +226,16 @@ Runtime options used by Clop for Alfred:
 | `--json`, `--no-progress`, `--skip-errors` | Structured, quiet workflow execution. |
 
 Inline pipelines run the written steps. If the workflow request says to optimize
-first, Clop for Alfred prepends `optimise ->`.
+first, Clop for Alfred prepends `optimise ->`. If the workflow request uses an
+output template, Clop for Alfred prepends a `copy(to: "...")` step before any
+optimize-first step so the pipeline works on a templated copy.
 
-Saved pipelines preserve Clop’s own saved settings. The workflow can list, run,
-add, replace, and delete saved pipelines through Clop’s pipeline commands.
+Saved pipelines preserve Clop’s own saved settings when run normally. When an
+output template is applied to a saved pipeline, the workflow reads the saved raw
+steps and runs them as an inline expression so it can prepend the same
+`copy(to: "...")` working-copy step while preserving the saved optimize-first
+and hide-result settings. The workflow can list, run, add, replace, and delete
+saved pipelines through Clop’s pipeline commands.
 
 Useful Clop pipeline commands:
 
@@ -254,9 +260,12 @@ assistant. Clop for Alfred exposes this in Configuration as `:pipelines prompt T
 
 ## Output behavior
 
-The CLI has no explicit backup mode. Clop for Alfred’s “Preserve originals” behavior
-means “supply a distinct output path/template where the command supports it.”
-When output is disabled, the workflow omits `--output`.
+The CLI has no explicit backup mode. For regular actions, Clop for Alfred’s
+“Preserve originals” behavior means “supply a distinct output path/template
+where the command supports it.” For pipelines, the workflow preserves originals
+by starting the pipeline with a `copy(to: "...")` step and letting later pipeline
+steps operate on that copy. When output is disabled, the workflow omits
+`--output` or the pipeline `copy(to:)` step.
 
 Workflow output templates use these tokens:
 

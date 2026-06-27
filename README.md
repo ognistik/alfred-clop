@@ -162,6 +162,11 @@ When `Preserve originals` is enabled (or you select this option while holding sh
 %P/%f-clop
 ```
 
+For regular actions, Clop receives the template as its output setting. For
+pipelines, Clop for Alfred first creates a working copy from the template and
+then runs the pipeline on that copy. Both paths have the same purpose: the
+original file is left untouched unless you choose the in-place behavior.
+
 Supported tokens:
 
 | Token | Meaning |
@@ -194,7 +199,7 @@ Examples:
 
 Parameter menus can save reusable presets. Use the Configuration menu to review or remove saved presets.
 
-Pipelines are saved Clop pipeline recipes. Use `:pipelines` in Configuration to browse, add, replace, or remove them. The workflow also includes an “AI pipeline prompt” helper that copies a local reference prompt for an AI assistant; it does not send anything to AI itself.
+Pipelines are saved Clop pipeline recipes. Use `:pipelines` in Configuration to browse, add, replace, or remove them. Shift-Return in the Pipeline menu applies the output template by running the pipeline on a templated working copy. The workflow also includes an “AI pipeline prompt” helper that copies a local reference prompt for an AI assistant; it does not send anything to AI itself.
 
 ## External Trigger automation
 

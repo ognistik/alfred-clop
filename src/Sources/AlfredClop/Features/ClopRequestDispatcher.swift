@@ -36,6 +36,7 @@ enum ClopRequestDispatcher {
         environment: Environment = Environment(),
         builder: ClopCommandBuilder = ClopCommandBuilder(),
         runner: any ClopProcessRunning = FoundationClopProcessRunner(),
+        pipelineProvider: any ClopPipelineProviding = ClopPipelineProvider(),
         preserveOriginalOverride: Bool? = nil
     ) -> ScriptFilterResponse {
         let request: ClopRequest
@@ -129,6 +130,7 @@ enum ClopRequestDispatcher {
                 )
             }
             var execution: ExecutionOptions
+            var resolvedAction = action
             do {
                 execution = try environment.resolvedExecutionOptions(
                     preserveOriginal: preserveOriginalOverride
@@ -139,9 +141,19 @@ enum ClopRequestDispatcher {
                     action: action,
                     environment: environment
                 )
+                resolvedAction = try resolvingPipelineOutputAction(
+                    action,
+                    execution: execution,
+                    provider: pipelineProvider
+                )
             } catch let error as ExecutionOverrideError {
                 return feedback(
                     title: "Output override not supported",
+                    subtitle: error.localizedDescription
+                )
+            } catch let error as PipelineOutputResolutionError {
+                return feedback(
+                    title: "Unable to prepare Pipeline",
                     subtitle: error.localizedDescription
                 )
             } catch {
@@ -151,7 +163,7 @@ enum ClopRequestDispatcher {
                 )
             }
             let operationInputs = inputs(
-                for: action,
+                for: resolvedAction,
                 selection: selection
             )
             guard !operationInputs.isEmpty else {
@@ -168,7 +180,7 @@ enum ClopRequestDispatcher {
             }
             let operation = OperationRequest(
                 inputs: operationInputs,
-                action: action,
+                action: resolvedAction,
                 execution: execution
             )
             guard let operationJSON = try? JSONOutput.string(
@@ -196,6 +208,7 @@ enum ClopRequestDispatcher {
         environment: Environment = Environment(),
         builder: ClopCommandBuilder = ClopCommandBuilder(),
         runner: any ClopProcessRunning = FoundationClopProcessRunner(),
+        pipelineProvider: any ClopPipelineProviding = ClopPipelineProvider(),
         preserveOriginalOverride: Bool? = nil
     ) -> String? {
         let response = response(
@@ -206,6 +219,7 @@ enum ClopRequestDispatcher {
             environment: environment,
             builder: builder,
             runner: runner,
+            pipelineProvider: pipelineProvider,
             preserveOriginalOverride: preserveOriginalOverride
         )
         guard let item = response.items.first else {
@@ -462,6 +476,37 @@ enum ClopRequestDispatcher {
         return resolved
     }
 
+    private static func resolvingPipelineOutputAction(
+        _ action: ActionRequest,
+        execution: ExecutionOptions,
+        provider: any ClopPipelineProviding
+    ) throws -> ActionRequest {
+        guard case let .pipeline(request) = action,
+              execution.output.template != nil,
+              !request.isInline else {
+            return action
+        }
+        let pipelines: [SavedPipeline]
+        do {
+            pipelines = try provider.listPipelines()
+        } catch {
+            throw PipelineOutputResolutionError.unableToReadSavedPipelines(
+                error.localizedDescription
+            )
+        }
+        guard let saved = pipelines.first(where: {
+            $0.name.caseInsensitiveCompare(request.pipeline) == .orderedSame
+        }) else {
+            throw PipelineOutputResolutionError.savedPipelineNotFound(request.pipeline)
+        }
+        return .pipeline(PipelineRunRequest(
+            pipeline: saved.rawText,
+            isInline: true,
+            optimizeFirst: !saved.skipOptimisation,
+            hideResult: saved.hideResult || request.hideResult
+        ))
+    }
+
     private static func configuredOutputTemplate(
         environment: Environment
     ) throws -> String {
@@ -507,6 +552,20 @@ private enum ExecutionOverrideError: LocalizedError {
         switch self {
         case .unsupportedOutputOverride:
             return "Strip Metadata does not support output templates."
+        }
+    }
+}
+
+private enum PipelineOutputResolutionError: LocalizedError {
+    case unableToReadSavedPipelines(String)
+    case savedPipelineNotFound(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .unableToReadSavedPipelines(let message):
+            return message
+        case .savedPipelineNotFound(let name):
+            return "Saved pipeline \(name) was not found."
         }
     }
 }

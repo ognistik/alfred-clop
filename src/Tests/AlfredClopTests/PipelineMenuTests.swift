@@ -32,6 +32,66 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func savedPipelineShiftRunsSavedStepsAgainstOutputTemplateCopy() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path,
+            "preserveOriginal": "false"
+        ])
+        try PresetStore(environment: environment).persist(SettingsDocument(
+            outputTemplate: "%P/%f-pipeline"
+        ))
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "",
+            environment: environment,
+            provider: PipelineProviderStub(pipelines: [
+                SavedPipeline(
+                    name: "Upload and Delete",
+                    fileType: .image,
+                    rawText: "uploadWith(app: dropshare) -> delete",
+                    skipOptimisation: false,
+                    hideResult: true
+                )
+            ])
+        )
+
+        let item = try #require(response.items.first {
+            $0.title == "Upload and Delete"
+        })
+        #expect(item.mods?.shift?.subtitle == "Selected file · Output Template")
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((try #require(item.mods?.shift?.arg)).utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: "uploadWith(app: dropshare) -> delete",
+            isInline: true,
+            optimizeFirst: true,
+            hideResult: true
+        )))
+        #expect(operation.execution.output == .sameFolder(template: "%P/%f-pipeline"))
+    }
+
+    @Test
+    func savedPipelineShiftCanInvertConfiguredPreserveOriginals() throws {
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "",
+            environment: Environment(values: ["preserveOriginal": "true"]),
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first { $0.title == "To WebP" })
+        #expect(item.mods?.shift?.subtitle == "Selected file · Replace Originals")
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((try #require(item.mods?.shift?.arg)).utf8)
+        )
+        #expect(operation.execution.output == .inPlace)
+    }
+
+    @Test
     func mixedInputShowsMediaFilterRows() {
         let response = PipelineMenu.response(
             stateJSON: stateJSON(mediaKinds: [.image, .video]),
@@ -408,6 +468,36 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func inlinePipelineShiftUsesOutputTemplate() throws {
+        let directory = try makeTemporaryDirectory()
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+        try PresetStore(environment: environment).persist(SettingsDocument(
+            outputTemplate: "%P/%f-inline"
+        ))
+        let response = PipelineMenu.response(
+            stateJSON: stateJSON(mediaKinds: [.image]),
+            query: "convert(to: webp) ; opt",
+            environment: environment,
+            provider: PipelineProviderStub()
+        )
+
+        let item = try #require(response.items.first)
+        #expect(item.mods?.shift?.subtitle == "Selected file · Output Template")
+        let operation = try JSONDecoder().decode(
+            OperationRequest.self,
+            from: Data((try #require(item.mods?.shift?.arg)).utf8)
+        )
+        #expect(operation.action == .pipeline(PipelineRunRequest(
+            pipeline: "convert(to: webp)",
+            isInline: true,
+            optimizeFirst: true
+        )))
+        #expect(operation.execution.output == .sameFolder(template: "%P/%f-inline"))
+    }
+
+    @Test
     func inlinePipelineCommandUsesWrittenStepsUnlessOptedIntoOptimise() throws {
         let builder = ClopCommandBuilder(discovery: StubDiscovery(
             diagnostics: ClopDiagnostics(
@@ -555,16 +645,15 @@ struct PipelineMenuTests {
     }
 
     @Test
-    func pipelineCommandIgnoresOutputAndCopySettings() throws {
+    func inlinePipelineOutputTemplatePrependsCopyStep() throws {
         let execution = ExecutionOptions(
             showClopUI: true,
-            copyResult: true,
-            output: .sameFolder(template: "%P/%f-small"),
+            copyResult: false,
+            output: .sameFolder(template: #"%P/%f "copy""#),
             backup: .trustClop,
             adaptiveOptimisation: nil,
             pdfDPI: nil,
-            recursiveFolders: true,
-            aggressiveProcessing: true
+            recursiveFolders: false
         )
         let command = try ClopCommandBuilder(discovery: StubDiscovery(
             diagnostics: ClopDiagnostics(
@@ -575,7 +664,11 @@ struct PipelineMenuTests {
             )
         )).command(for: OperationRequest(
             inputs: ["/tmp/image.png"],
-            action: .pipeline(PipelineRunRequest(name: "To WebP")),
+            action: .pipeline(PipelineRunRequest(
+                pipeline: "uploadWith(app: dropshare) -> delete",
+                isInline: true,
+                optimizeFirst: true
+            )),
             execution: execution
         ))
         #expect(command.arguments == [
@@ -585,10 +678,37 @@ struct PipelineMenuTests {
             "--no-progress",
             "--skip-errors",
             "--show-result",
-            "--recursive",
-            "To WebP",
+            #"copy(to: "%P/%f \"copy\"") -> optimise -> uploadWith(app: dropshare) -> delete"#,
             "/tmp/image.png"
         ])
+    }
+
+    @Test
+    func namedPipelineRejectsOutputTemplateWithoutInlineSteps() throws {
+        let execution = ExecutionOptions(
+            showClopUI: true,
+            copyResult: true,
+            output: .sameFolder(template: "%P/%f-small"),
+            backup: .trustClop,
+            adaptiveOptimisation: nil,
+            pdfDPI: nil,
+            recursiveFolders: true,
+            aggressiveProcessing: true
+        )
+        #expect(throws: ClopCommandBuilderError.invalidPipeline) {
+            try ClopCommandBuilder(discovery: StubDiscovery(
+                diagnostics: ClopDiagnostics(
+                    found: true,
+                    path: "/tmp/Clop",
+                    source: "test",
+                    errors: []
+                )
+            )).command(for: OperationRequest(
+                inputs: ["/tmp/image.png"],
+                action: .pipeline(PipelineRunRequest(name: "To WebP")),
+                execution: execution
+            ))
+        }
     }
 
     @Test

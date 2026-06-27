@@ -2,6 +2,9 @@
 
 ## UNRELEASED
 
+### Added
+* Added output-template support for Pipeline runs. Shift-Return in the Pipeline menu and External Trigger output overrides now run saved or inline pipelines from a templated working copy, preserving saved pipeline optimize-first and hide-result settings while leaving the original input untouched.
+
 ---
 ## [v1.1.0](https://github.com/ognistik/alfred-clop/releases/tag/v1.1.0) - 2026/06/25
 ### Changed

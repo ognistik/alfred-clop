@@ -163,6 +163,9 @@ struct ClopCommandBuilder {
             guard !pipeline.pipeline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw ClopCommandBuilderError.invalidPipeline
             }
+            if request.execution.output.template != nil, !pipeline.isInline {
+                throw ClopCommandBuilderError.invalidPipeline
+            }
             arguments = pipelineArguments(
                 for: resolvedRequest,
                 pipeline: pipeline
@@ -612,26 +615,43 @@ struct ClopCommandBuilder {
         if request.execution.recursiveFolders {
             arguments.append("--recursive")
         }
-        return arguments + [pipelineExpression(for: pipeline)] + request.inputs
+        return arguments + [pipelineExpression(
+            for: pipeline,
+            output: request.execution.output
+        )] + request.inputs
     }
 
-    private func pipelineExpression(for pipeline: PipelineRunRequest) -> String {
+    private func pipelineExpression(
+        for pipeline: PipelineRunRequest,
+        output: OutputBehavior
+    ) -> String {
         let expression = pipeline.isInline
             ? PipelineSyntax.normalizedSteps(pipeline.pipeline)
             : pipeline.pipeline
-        guard pipeline.isInline, pipeline.optimizeFirst else {
-            return expression
+        var steps = [String]()
+        if pipeline.isInline, let template = output.template {
+            steps.append(#"copy(to: "\#(pipelineQuotedValue(template))")"#)
         }
-        return "optimise -> \(expression)"
+        if pipeline.isInline, pipeline.optimizeFirst {
+            steps.append("optimise")
+        }
+        steps.append(expression)
+        return steps.joined(separator: " -> ")
+    }
+
+    private func pipelineQuotedValue(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: #"\"#, with: #"\\"#)
+            .replacingOccurrences(of: #"""#, with: #"\""#)
     }
 }
 
 private extension ActionRequest {
     var usesSharedOutputTemplate: Bool {
         switch self {
-        case .optimise, .optimiseMedia, .crop, .downscale, .convert:
+        case .optimise, .optimiseMedia, .crop, .downscale, .convert, .pipeline:
             return true
-        case .cropPDF, .uncropPDF, .stripMetadata, .pipeline:
+        case .cropPDF, .uncropPDF, .stripMetadata:
             return false
         }
     }

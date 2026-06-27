@@ -518,6 +518,110 @@ struct ClopRequestDispatcherTests {
     }
 
     @Test
+    func executeRouteInlinePipelineOutputOverridePrependsCopyStep() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(
+                action: .pipeline(PipelineRunRequest(
+                    pipeline: "convert(to: webp)",
+                    isInline: true,
+                    optimizeFirst: true
+                )),
+                overrides: ExecutionOverrides(output: .customTemplate("%P/%f-pipe"))
+            )
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            environment: Environment(values: ["preserveOriginal": "false"]),
+            builder: dispatcherBuilder(),
+            runner: runner
+        )
+
+        #expect(response.items.first?.title == "Pipeline complete")
+        #expect(runner.command?.arguments.contains(
+            #"copy(to: "%P/%f-pipe") -> optimise -> convert(to: webp)"#
+        ) == true)
+    }
+
+    @Test
+    func executeRouteSavedPipelineOutputOverrideReadsSavedSteps() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(
+                action: .pipeline(PipelineRunRequest(name: "To WebP")),
+                overrides: ExecutionOverrides(output: .template)
+            )
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            builder: dispatcherBuilder(),
+            runner: runner,
+            pipelineProvider: DispatcherPipelineProvider(pipelines: [
+                SavedPipeline(
+                    name: "To WebP",
+                    rawText: "uploadWith(app: dropshare) -> delete",
+                    skipOptimisation: false,
+                    hideResult: true
+                )
+            ])
+        )
+
+        #expect(response.items.first?.title == "Pipeline complete")
+        #expect(runner.command?.arguments.contains(
+            #"copy(to: "%P/%f-clop") -> optimise -> uploadWith(app: dropshare) -> delete"#
+        ) == true)
+        #expect(runner.command?.arguments.contains("--hide-result") == true)
+    }
+
+    @Test
+    func executeRouteSavedPipelineOutputOverrideReportsMissingPipeline() throws {
+        let file = try temporaryFile(named: "image.png")
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let request = ClopRequest(
+            input: .explicit(items: [file.path], extractText: false),
+            route: .execute(
+                action: .pipeline(PipelineRunRequest(name: "Missing")),
+                overrides: ExecutionOverrides(output: .template)
+            )
+        )
+        let runner = CapturingDispatcherRunner()
+
+        let response = ClopRequestDispatcher.response(
+            requestJSON: try JSONOutput.string(
+                for: request,
+                prettyPrinted: false
+            ),
+            clipboard: DispatcherClipboard(),
+            finder: DispatcherFinder(),
+            builder: dispatcherBuilder(),
+            runner: runner,
+            pipelineProvider: DispatcherPipelineProvider(pipelines: [])
+        )
+
+        #expect(response.items.first?.title == "Unable to prepare Pipeline")
+        #expect(response.items.first?.subtitle == "Saved pipeline Missing was not found.")
+        #expect(runner.command == nil)
+    }
+
+    @Test
     func stripMetadataRejectsOutputOverridesBeforeLaunchingClop() throws {
         let file = try temporaryFile(named: "image.png")
         defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
@@ -863,6 +967,22 @@ private final class CapturingDispatcherRunner: ClopProcessRunning,
             standardError: Data()
         )
     }
+}
+
+private struct DispatcherPipelineProvider: ClopPipelineProviding {
+    var pipelines: [SavedPipeline]
+
+    func listPipelines() throws -> [SavedPipeline] {
+        pipelines
+    }
+
+    func pipelinePrompt(task: String) throws -> String {
+        "Prompt"
+    }
+
+    func addPipeline(_ request: PipelineAddRequest) throws {}
+
+    func deletePipeline(named name: String) throws {}
 }
 
 private struct FailingDispatcherRunner: ClopProcessRunning {

@@ -306,10 +306,11 @@ enum PipelineMenu {
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
             ],
-            mods: ScriptFilterMods(control: pipelineDeleteModifier(
+            mods: pipelineModifiers(
                 pipeline,
-                request: request
-            )),
+                request: request,
+                environment: environment
+            ),
             text: ScriptFilterText(
                 largetype: largeTypeDetails(for: pipeline, request: request)
             )
@@ -324,6 +325,63 @@ enum PipelineMenu {
         execution.output = .inPlace
         execution.aggressiveProcessing = nil
         return execution
+    }
+
+    private static func templatedPipelineExecutionOptions(
+        environment: Environment,
+        preserveOriginal: Bool
+    ) -> ExecutionOptions {
+        var execution = pipelineExecutionOptions(environment: environment)
+        guard preserveOriginal else {
+            return execution
+        }
+        let template = (try? PresetStore(environment: environment).load().outputTemplate)
+            ?? SettingsDocument.builtInOutputTemplate
+        execution.output = .sameFolder(template: template)
+        return execution
+    }
+
+    private static func pipelineModifiers(
+        _ pipeline: SavedPipeline,
+        request: ParameterStepRequest,
+        environment: Environment
+    ) -> ScriptFilterMods {
+        let configuredPreserve = environment.preserveOriginal
+        let preservationText = configuredPreserve
+            ? "Replace Originals"
+            : "Output Template"
+        let invertedPreserve = !configuredPreserve
+        let operation = OperationRequest(
+            inputs: request.inputs,
+            action: .pipeline(PipelineRunRequest(
+                pipeline: pipeline.rawText,
+                isInline: true,
+                optimizeFirst: !pipeline.skipOptimisation,
+                hideResult: pipeline.hideResult
+            )),
+            execution: templatedPipelineExecutionOptions(
+                environment: environment,
+                preserveOriginal: invertedPreserve
+            )
+        )
+        let shift = (try? JSONOutput.string(
+            for: operation,
+            prettyPrinted: false
+        )).map {
+            ScriptFilterModifier(
+                arg: $0,
+                subtitle: "\(inputDescription(for: request)) · \(preservationText)",
+                valid: true,
+                variables: [
+                    ActionMenu.requestKindVariable:
+                        WorkflowRequestKind.operation.rawValue
+                ]
+            )
+        }
+        return ScriptFilterMods(
+            control: pipelineDeleteModifier(pipeline, request: request),
+            shift: shift
+        )
     }
 
     private static func inlinePipelineItem(
@@ -346,6 +404,11 @@ enum PipelineMenu {
             )),
             execution: pipelineExecutionOptions(environment: environment)
         )
+        let shift = inlinePipelineTemplateModifier(
+            inline,
+            request: request,
+            environment: environment
+        )
         return ScriptFilterItem(
             uid: "pipeline.inline.\(steps)",
             title: "Run inline pipeline",
@@ -364,14 +427,54 @@ enum PipelineMenu {
                 ActionMenu.requestKindVariable:
                     WorkflowRequestKind.operation.rawValue
             ],
-            mods: ScriptFilterMods(control: inlineSaveModifier(
-                inline,
-                request: request
-            )),
+            mods: ScriptFilterMods(
+                control: inlineSaveModifier(inline, request: request),
+                shift: shift
+            ),
             text: ScriptFilterText(largetype: inlinePipelineDetails(
                 inline: inline,
                 request: request
             ))
+        )
+    }
+
+    private static func inlinePipelineTemplateModifier(
+        _ inline: InlinePipeline,
+        request: ParameterStepRequest,
+        environment: Environment
+    ) -> ScriptFilterModifier? {
+        let configuredPreserve = environment.preserveOriginal
+        let preservationText = configuredPreserve
+            ? "Replace Originals"
+            : "Output Template"
+        let invertedPreserve = !configuredPreserve
+        let operation = OperationRequest(
+            inputs: request.inputs,
+            action: .pipeline(PipelineRunRequest(
+                pipeline: inline.steps,
+                isInline: true,
+                optimizeFirst: inline.optimizeFirst,
+                hideResult: inline.hideResult
+            )),
+            execution: templatedPipelineExecutionOptions(
+                environment: environment,
+                preserveOriginal: invertedPreserve
+            )
+        )
+        guard let arg = try? JSONOutput.string(
+            for: operation,
+            prettyPrinted: false
+        ) else {
+            return nil
+        }
+        return ScriptFilterModifier(
+            arg: arg,
+            subtitle: "\(inputDescription(for: request)) · \(preservationText)",
+            valid: true,
+            variables: [
+                ActionMenu.requestKindVariable:
+                    WorkflowRequestKind.operation.rawValue
+            ]
         )
     }
 

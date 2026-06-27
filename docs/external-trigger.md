@@ -191,7 +191,8 @@ output template: %P/%f-podcast
 
 `output` and `output template` are execute-only parameters. They are rejected
 for `menu:` requests. Strip Metadata does not support a template or in-place
-override; use its normal output behavior.
+override; use its normal output behavior. Pipeline output overrides are supported
+for saved pipeline names and inline pipeline steps.
 
 ## Optimize
 
@@ -486,6 +487,16 @@ hide: true
 /Users/me/Desktop/photo.png
 ```
 
+Inline pipeline with an output template:
+
+```text
+execute: Pipeline
+pipeline: uploadWith(app: dropshare) -> delete
+output template: %P/%f-upload
+
+/Users/me/Desktop/photo.png
+```
+
 Supported parameters:
 
 | Parameter | Meaning |
@@ -499,6 +510,13 @@ Supported parameters:
 When `hide` is not provided, the workflow's Floating Result setting is used.
 Saved pipelines created with hide keep that Clop setting and run quietly when
 selected later.
+
+When an output override is used with pipeline execution, Clop for Alfred starts
+the pipeline with a `copy(to:)` step based on the template. Later pipeline steps
+operate on that working copy, so steps such as move, rename, upload, or delete
+do not touch the original input. For saved pipeline names, the workflow reads
+the saved raw steps first and preserves the saved optimize-first and hide-result
+settings for that one run.
 
 Known newer Clop step names such as `normalize` and `fork` are treated as inline
 pipeline steps.
