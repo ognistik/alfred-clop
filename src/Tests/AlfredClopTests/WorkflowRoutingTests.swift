@@ -337,6 +337,15 @@ struct WorkflowRoutingTests {
         let menuReturnJunction = try #require(objects.first {
             $0["uid"] as? String == "B7AA13C4-9848-496F-9D8F-B81C7F792B9B"
         })
+        let returnScript = try #require(objects.first {
+            $0["uid"] as? String == "F0F0F0F0-F0F0-40F0-80F0-F0F0F0F0F0F0"
+        })
+        let returnScriptConfig = try #require(
+            returnScript["config"] as? [String: Any]
+        )
+        let returnScriptText = try #require(
+            returnScriptConfig["script"] as? String
+        )
 
         #expect(scriptFilterRoutes.contains {
             $0["modifiers"] as? Int == 1_048_576
@@ -348,6 +357,7 @@ struct WorkflowRoutingTests {
         #expect(variableConfig["argument"] as? String == ":")
         #expect(variables[ActionMenu.menuStateVariable] == "")
         #expect(variables[ActionMenu.publicRequestVariable] == nil)
+        #expect(returnScriptText.contains(#""alfred_clop_menu_state":"""#))
         #expect(triggerConfig["externaltriggerid"] as? String == "mainMenu")
         #expect(triggerConfig["passinputasargument"] as? Bool == true)
         #expect(parameterReturn["type"] as? String == "alfred.workflow.utility.argument")

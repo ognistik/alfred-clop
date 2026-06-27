@@ -21,9 +21,9 @@ enum AlfredClopCommand {
                     || ["configure", "automate"].contains(command) {
                     printText(message)
                 } else {
-                    JSONOutput.print(errorResponse(
-                        title: "Unable to initialize settings",
-                        subtitle: error.localizedDescription
+                    JSONOutput.print(settingsRecoveryResponse(
+                        error: error,
+                        environment: Environment()
                     ))
                 }
                 return
@@ -479,6 +479,44 @@ enum AlfredClopCommand {
                 subtitle: subtitle,
                 arg: "",
                 valid: false
+            )
+        ])
+    }
+
+    static func settingsRecoveryResponse(
+        error: Error,
+        environment: Environment = Environment()
+    ) -> ScriptFilterResponse {
+        guard let fileURL = try? PresetStore.fileURL(environment: environment) else {
+            return errorResponse(
+                title: "Unable to initialize settings",
+                subtitle: error.localizedDescription
+            )
+        }
+
+        let directory = fileURL.deletingLastPathComponent()
+        let details = [
+            "SETTINGS RECOVERY",
+            fileURL.path,
+            "",
+            error.localizedDescription,
+            "",
+            "Edit or delete settings.json. If you delete it, Clop for Alfred recreates defaults next time."
+        ].joined(separator: "\n")
+
+        return ScriptFilterResponse(items: [
+            ScriptFilterItem(
+                title: "Unable to initialize settings",
+                subtitle: "Return reveals Settings folder · Fix or delete settings.json",
+                arg: directory.path,
+                valid: true,
+                variables: [
+                    ActionMenu.requestKindVariable:
+                        WorkflowRequestKind.revealFolder.rawValue
+                ],
+                text: ScriptFilterText(copy: details, largetype: details),
+                quickLookURL: fileURL.path,
+                action: ScriptFilterAction(file: fileURL.path)
             )
         ])
     }

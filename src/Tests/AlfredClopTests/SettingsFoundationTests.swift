@@ -17,6 +17,10 @@ struct SettingsFoundationTests {
                 == .explicitExtension(".png")
         )
         #expect(
+            OutputTemplateValidator.validate("%P/%f")
+                == .sourceCollision("%P/%f")
+        )
+        #expect(
             OutputTemplateValidator.validate("%P")
                 == .missingFilename
         )
@@ -381,6 +385,7 @@ struct SettingsFoundationTests {
             ("%f-clop", "predictable"),
             ("%P/%f.%e", "automatically"),
             ("%P/%f-clop.png", "automatically"),
+            ("%P/%f", "overwrite the original file"),
         ] {
             let response = ConfigurationMenu.response(
                 stateJSON: stateJSON,
@@ -922,6 +927,34 @@ struct SettingsFoundationTests {
 
         #expect(response.items.first?.title == "Output Template")
         #expect(response.items.contains { $0.title == "Workflow Settings" })
+    }
+
+    @Test
+    func invalidSettingsErrorCanRevealRecoveryLocation() throws {
+        let directory = try makeTemporaryDirectory()
+        let fileURL = directory.appendingPathComponent("settings.json")
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: directory.path
+        ])
+
+        let response = AlfredClopCommand.settingsRecoveryResponse(
+            error: PresetStoreError.invalidFile,
+            environment: environment
+        )
+        let item = try #require(response.items.first)
+
+        #expect(item.title == "Unable to initialize settings")
+        #expect(item.subtitle.contains("Return reveals Settings folder"))
+        #expect(item.arg == directory.path)
+        #expect(item.valid)
+        #expect(
+            item.variables?[ActionMenu.requestKindVariable]
+                == WorkflowRequestKind.revealFolder.rawValue
+        )
+        #expect(item.quickLookURL == fileURL.path)
+        #expect(item.action?.file == .single(fileURL.path))
+        #expect(item.text?.largetype?.contains(fileURL.path) == true)
+        #expect(item.text?.largetype?.contains("Edit or delete settings.json") == true)
     }
 
     @Test

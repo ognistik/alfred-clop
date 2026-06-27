@@ -989,7 +989,7 @@ escaped_arg="${escaped_arg//$'\n'/\\n}"
 escaped_feedback="${feedback//\\/\\\\}"
 escaped_feedback="${escaped_feedback//\"/\\\"}"
 escaped_feedback="${escaped_feedback//$'\n'/\\n}"
-printf '{"alfredworkflow":{"arg":"%s","variables":{"alfred_clop_notification":"%s"}}}' "$escaped_arg" "$escaped_feedback"</string>
+printf '{"alfredworkflow":{"arg":"%s","variables":{"alfred_clop_menu_state":"","alfred_clop_notification":"%s"}}}' "$escaped_arg" "$escaped_feedback"</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>

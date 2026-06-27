@@ -31,7 +31,10 @@ enum OutputTemplateValidator {
         "%f", "%r", "%i", "%z", "%s", "%x", "%q"
     ]
 
-    static func validate(_ template: String) -> OutputTemplateError? {
+    static func validate(
+        _ template: String,
+        rejectingSourceCollisionPattern: Bool = true
+    ) -> OutputTemplateError? {
         let trimmed = template.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return .empty
@@ -81,6 +84,9 @@ enum OutputTemplateValidator {
         if let explicitExtension = explicitExtension(in: filename) {
             return .explicitExtension(explicitExtension)
         }
+        if rejectingSourceCollisionPattern, trimmed == "%P/%f" {
+            return .sourceCollision(trimmed)
+        }
         return nil
     }
 
@@ -102,7 +108,10 @@ enum OutputTemplateValidator {
         fileManager: FileManager = .default,
         now: Date = Date()
     ) throws -> OutputTemplatePlan {
-        if let error = validate(template) {
+        if let error = validate(
+            template,
+            rejectingSourceCollisionPattern: false
+        ) {
             throw error
         }
 
@@ -314,6 +323,9 @@ extension OutputTemplateError: LocalizedError {
         case .duplicateOutput(let path):
             return "Multiple inputs would write to \(path)."
         case .sourceCollision(let path):
+            if path == "%P/%f" {
+                return "The output template would overwrite the original file."
+            }
             return "The output would overwrite its source at \(path)."
         }
     }
