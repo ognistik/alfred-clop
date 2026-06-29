@@ -852,6 +852,21 @@ struct PipelineMenuTests {
     }
 
     @Test
+    func pipelinesConfigurationPrefersVisiblePromptMatchOverHiddenRemoveKeyword() throws {
+        let environment = Environment(values: [
+            PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path
+        ])
+        let response = ConfigurationMenu.namespaceResponse(
+            query: ":pipelines pr",
+            environment: environment,
+            pipelineProvider: PipelineProviderStub()
+        )
+
+        #expect(response.items.first?.title == "AI pipeline prompt")
+        #expect(response.items.map(\.title).contains("Remove all saved pipelines"))
+    }
+
+    @Test
     func pipelinesConfigurationExactRemoveAllFocusesDestructiveCommand() throws {
         let environment = Environment(values: [
             PresetStore.workflowDataEnvironmentKey: try makeTemporaryDirectory().path

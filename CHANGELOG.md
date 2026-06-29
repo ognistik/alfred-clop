@@ -6,6 +6,7 @@
 * Added output-template support for Pipeline runs. Shift-Return in the Pipeline menu and External Trigger output overrides now run saved or inline pipelines from a templated working copy, preserving saved pipeline optimize-first and hide-result settings while leaving the original input untouched.
 
 ### Fixed
+* Prioritized visible Pipeline configuration menu matches before hidden keyword matches, so searches such as `:pipelines pr` surface `AI pipeline prompt` before destructive reset actions.
 * Rejected output templates such as `%P/%f` that would overwrite the original file.
 * Cleared stale Configuration menu state after applying output-template changes, so the output-template editor can be reopened immediately.
 * Made invalid `settings.json` errors actionable by revealing the Settings folder and exposing the settings file for repair or deletion.

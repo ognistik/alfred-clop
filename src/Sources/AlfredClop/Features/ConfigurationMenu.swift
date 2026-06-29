@@ -927,20 +927,41 @@ enum ConfigurationMenu {
         let nonPipelineItems = [promptItem] + categoryItems + (
             !savedPipelines.isEmpty ? [removePipelinesItem(count: savedPipelines.count)] : []
         )
-        let search = FuzzySearch<ScriptFilterItem>(
+        let visibleSearch = FuzzySearch<ScriptFilterItem>(
             query: trimmed,
-            targetText: {
-                [$0.title, $0.match].compactMap(\.self)
-                    .joined(separator: " ")
-            }
+            targetText: { $0.title }
         )
-        let matches = search.sorted(nonPipelineItems).map {
+        let visibleMatches = visibleSearch.sorted(nonPipelineItems).map {
             (
                 item: nonPipelineItems[$0.targetIndex],
                 score: $0.score,
                 hiddenMatch: false
             )
         }
+        let visibleMatchedTitles = Set(visibleMatches.map(\.item.title))
+        let hiddenSearch = FuzzySearch<ScriptFilterItem>(
+            query: trimmed,
+            targetText: {
+                [$0.title, $0.match].compactMap(\.self)
+                    .joined(separator: " ")
+            }
+        )
+        let hiddenMatches: [(item: ScriptFilterItem, score: Int, hiddenMatch: Bool)] =
+            hiddenSearch.sorted(nonPipelineItems).compactMap { match -> (
+                item: ScriptFilterItem,
+                score: Int,
+                hiddenMatch: Bool
+            )? in
+                let item = nonPipelineItems[match.targetIndex]
+                guard !visibleMatchedTitles.contains(item.title) else {
+                    return nil
+                }
+                return (
+                    item: item,
+                    score: match.score,
+                    hiddenMatch: true
+                )
+            }
         let pipelineMatches = sortedPipelines.enumerated().compactMap { index, pipeline in
             PipelineSearch.match(
                 pipeline,
@@ -961,7 +982,7 @@ enum ConfigurationMenu {
                 hiddenMatch: $0.result.matchedStep != nil
             )
         }
-        let allMatches = (matches + pipelineMatches).sorted { lhs, rhs in
+        let allMatches = (visibleMatches + hiddenMatches + pipelineMatches).sorted { lhs, rhs in
             if lhs.hiddenMatch != rhs.hiddenMatch {
                 return !lhs.hiddenMatch
             }
